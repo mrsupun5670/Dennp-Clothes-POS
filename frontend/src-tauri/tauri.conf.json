@@ -1,0 +1,59 @@
+{
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:5173"
+  },
+  "package": {
+    "productName": "Dennep Clothes POS",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "fs": {
+        "all": true
+      },
+      "path": {
+        "all": true
+      },
+      "window": {
+        "all": true
+      },
+      "shell": {
+        "all": false,
+        "open": true
+      },
+      "dialog": {
+        "all": false,
+        "open": true,
+        "save": true
+      }
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "Dennep Clothes POS",
+        "url": "/",
+        "resizable": true,
+        "fullscreen": false,
+        "width": 1400,
+        "height": 900,
+        "minWidth": 800,
+        "minHeight": 600
+      }
+    ],
+    "bundle": {
+      "active": true,
+      "targets": [
+        "msi",
+        "dmg"
+      ],
+      "identifier": "com.dennep.pos",
+      "icon": [
+        "icons/icon.png",
+        "icons/icon.ico"
+      ]
+    }
+  }
+}

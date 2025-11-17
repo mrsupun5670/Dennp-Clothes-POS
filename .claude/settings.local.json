@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(tree:*)",
+      "Bash(cat:*)",
+      "Bash(dir:*)",
+      "Bash(awk:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 5 bash -c 'while ! curl -s http://localhost:5173/ > /dev/null; do sleep 1; done; echo \"\"Server is running\"\"')",
+      "Bash(npm run tauri-dev:*)",
+      "Bash(npm ls:*)",
+      "Bash(timeout 60 npm run:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm run build:*)",
+      "Bash(python -c:*)",
+      "Bash(timeout 300 npm run tauri-dev)",
+      "Bash(findstr:*)",
+      "mcp__ide__getDiagnostics"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

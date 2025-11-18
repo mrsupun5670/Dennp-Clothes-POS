@@ -89,6 +89,7 @@ interface Customer {
 const CustomersPage: React.FC = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "pending" | "no_dues">("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -230,10 +231,16 @@ const CustomersPage: React.FC = () => {
     },
   };
 
-  // Filter customers based on search
+  // Filter customers based on search and payment status
   const filteredCustomers = useMemo(() => {
     let result = [...customers];
 
+    // Filter by payment status
+    if (paymentFilter !== "all") {
+      result = result.filter((customer) => customer.paymentStatus === paymentFilter);
+    }
+
+    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -245,7 +252,7 @@ const CustomersPage: React.FC = () => {
     }
 
     return result;
-  }, [searchQuery, customers]);
+  }, [searchQuery, customers, paymentFilter]);
 
   const handleAddClick = () => {
     setIsEditMode(false);
@@ -346,6 +353,32 @@ const CustomersPage: React.FC = () => {
     handleCloseModal();
   };
 
+  const getPaymentStatusBadge = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case "no_dues":
+        return "bg-green-900/50 text-green-400 border border-green-600/50";
+      case "pending":
+        return "bg-yellow-900/50 text-yellow-400 border border-yellow-600/50";
+      case "overdue":
+        return "bg-red-900/50 text-red-400 border border-red-600/50";
+      default:
+        return "bg-gray-700/50 text-gray-400";
+    }
+  };
+
+  const getPaymentStatusLabel = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case "no_dues":
+        return "No Dues ✓";
+      case "pending":
+        return "Payment Pending";
+      case "overdue":
+        return "Overdue";
+      default:
+        return "Unknown";
+    }
+  };
+
   return (
     <div className="space-y-6 h-full flex flex-col">
       {/* Header Section */}
@@ -390,6 +423,50 @@ const CustomersPage: React.FC = () => {
         />
       </div>
 
+      {/* Payment Status Filter */}
+      <div className="space-y-2">
+        <label className="block text-sm font-semibold text-red-400">
+          Filter by Payment Status
+        </label>
+        <div className="flex gap-2 flex-wrap">
+          {[
+            {
+              value: "all",
+              label: "All Customers",
+              color: "bg-gray-600 hover:bg-gray-700",
+              count: customers.length,
+            },
+            {
+              value: "pending",
+              label: "Pending Payments",
+              color: "bg-yellow-600 hover:bg-yellow-700",
+              count: customers.filter((c) => c.paymentStatus === "pending").length,
+            },
+            {
+              value: "no_dues",
+              label: "No Dues",
+              color: "bg-green-600 hover:bg-green-700",
+              count: customers.filter((c) => c.paymentStatus === "no_dues").length,
+            },
+          ].map((filter) => (
+            <button
+              key={filter.value}
+              onClick={() => setPaymentFilter(filter.value as "all" | "pending" | "no_dues")}
+              className={`px-4 py-2 rounded-full font-semibold text-white transition-all ${
+                paymentFilter === filter.value
+                  ? `${filter.color} ring-2 ring-offset-2 ring-offset-gray-800`
+                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+              }`}
+            >
+              {filter.label}
+              <span className="ml-2 bg-black/30 px-2 py-0.5 rounded-full text-xs">
+                {filter.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Customers Table - Scrollable */}
       <div className="flex-1 overflow-hidden flex flex-col bg-gray-800/50 border border-gray-700 rounded-lg">
         <div className="overflow-x-auto overflow-y-auto flex-1">
@@ -398,11 +475,11 @@ const CustomersPage: React.FC = () => {
             <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
               <tr>
                 <th className="px-6 py-3 text-left font-semibold text-red-400">Name</th>
-                <th className="px-6 py-3 text-left font-semibold text-red-400">Email</th>
                 <th className="px-6 py-3 text-left font-semibold text-red-400">Mobile</th>
                 <th className="px-6 py-3 text-right font-semibold text-red-400">Total Orders</th>
                 <th className="px-6 py-3 text-right font-semibold text-red-400">Total Spent (Rs.)</th>
-                <th className="px-6 py-3 text-left font-semibold text-red-400">Joined</th>
+                <th className="px-6 py-3 text-right font-semibold text-red-400">Payment Due (Rs.)</th>
+                <th className="px-6 py-3 text-left font-semibold text-red-400">Status</th>
               </tr>
             </thead>
 
@@ -421,7 +498,6 @@ const CustomersPage: React.FC = () => {
                   title="Double-click to view address and edit"
                 >
                   <td className="px-6 py-4 text-gray-200 font-medium">{customer.name}</td>
-                  <td className="px-6 py-4 text-gray-400">{customer.email}</td>
                   <td className="px-6 py-4 text-gray-400">{customer.mobile}</td>
                   <td className="px-6 py-4 text-right text-white font-semibold">
                     {customer.totalOrders}
@@ -429,7 +505,22 @@ const CustomersPage: React.FC = () => {
                   <td className="px-6 py-4 text-right text-red-400 font-semibold">
                     {customer.totalSpent.toFixed(2)}
                   </td>
-                  <td className="px-6 py-4 text-gray-400 text-sm">{customer.joined}</td>
+                  <td
+                    className={`px-6 py-4 text-right font-semibold ${
+                      customer.totalPaymentDue > 0 ? "text-red-400" : "text-green-400"
+                    }`}
+                  >
+                    Rs. {customer.totalPaymentDue.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusBadge(
+                        customer.paymentStatus
+                      )}`}
+                    >
+                      {getPaymentStatusLabel(customer.paymentStatus)}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>

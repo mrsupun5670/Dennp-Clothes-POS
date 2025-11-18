@@ -297,7 +297,7 @@ const InventoryPage: React.FC = () => {
                     {item.name}
                   </td>
                   <td className="px-6 py-4 text-right text-gray-300 font-semibold">
-                    {item.qty}
+                    {item.qty.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 text-right text-gray-300 font-semibold">
                     {item.unitCost.toFixed(2)}
@@ -358,12 +358,13 @@ const InventoryPage: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    placeholder="0"
+                    step="0.01"
+                    placeholder="0.00"
                     value={formData.qty}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        qty: parseInt(e.target.value) || 0,
+                        qty: parseFloat(e.target.value) || 0,
                       })
                     }
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"

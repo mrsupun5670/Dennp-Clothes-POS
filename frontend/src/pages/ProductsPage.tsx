@@ -483,7 +483,7 @@ const ProductsPage: React.FC = () => {
                           : "bg-green-900/50 text-green-400"
                       }`}
                     >
-                      {product.qty}
+                      {product.qty.toFixed(2)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right text-red-400 font-semibold">
@@ -663,11 +663,12 @@ const ProductsPage: React.FC = () => {
                             <input
                               type="number"
                               min="0"
+                              step="0.01"
                               value={row.qty}
                               onChange={(e) =>
-                                updateStockRow(row.id, "qty", parseInt(e.target.value) || 0)
+                                updateStockRow(row.id, "qty", parseFloat(e.target.value) || 0)
                               }
-                              placeholder="0"
+                              placeholder="0.00"
                               className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none text-center"
                             />
                           </div>

@@ -434,6 +434,9 @@ const OrdersPage: React.FC = () => {
     setSelectedOrderId(order.id);
     setEditingStatus(order.status);
     setEditingTrackingNumber(order.trackingNumber);
+    setEditingBalanceAmount(order.remainingAmount.toFixed(2));
+    setEditingPaymentMethod("cash");
+    setEditingPaymentNotes("");
     setShowOrderModal(true);
   };
 
@@ -442,6 +445,9 @@ const OrdersPage: React.FC = () => {
     setSelectedOrderId(null);
     setEditingStatus("pending");
     setEditingTrackingNumber("");
+    setEditingBalanceAmount("");
+    setEditingPaymentMethod("cash");
+    setEditingPaymentNotes("");
   };
 
   const handleUpdateOrder = () => {
@@ -459,6 +465,87 @@ const OrdersPage: React.FC = () => {
     handleCloseModal();
   };
 
+  const handleUpdatePayment = () => {
+    const balanceAmount = parseFloat(editingBalanceAmount) || 0;
+    const selectedOrder = orders.find((order) => order.id === selectedOrderId);
+
+    if (!selectedOrder) return;
+
+    // Validation
+    if (balanceAmount <= 0) {
+      alert("Please enter a valid amount greater than 0");
+      return;
+    }
+
+    if (balanceAmount > selectedOrder.remainingAmount) {
+      alert(
+        `Amount cannot exceed remaining balance of Rs. ${selectedOrder.remainingAmount.toFixed(2)}`
+      );
+      return;
+    }
+
+    // Create new payment transaction
+    const newPaymentId = `PAY${String(
+      Math.max(
+        0,
+        ...orders.flatMap((o) =>
+          o.paymentHistory.map((p) => parseInt(p.id.substring(3)) || 0)
+        )
+      ) + 1
+    ).padStart(3, "0")}`;
+
+    const newPayment: PaymentTransaction = {
+      id: newPaymentId,
+      type: "balance",
+      amount: balanceAmount,
+      method: editingPaymentMethod,
+      date: new Date().toISOString().split("T")[0],
+      time: new Date().toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
+      notes: editingPaymentNotes,
+    };
+
+    // Update order with new payment
+    setOrders(
+      orders.map((order) => {
+        if (order.id === selectedOrderId) {
+          const newBalancePaid = order.balancePaid + balanceAmount;
+          const newTotalPaid = order.advancePaid + newBalancePaid;
+          const newRemainingAmount = order.totalAmount - newTotalPaid;
+          const newPaymentStatus =
+            newTotalPaid >= order.totalAmount ? "fully_paid" : "partial";
+
+          return {
+            ...order,
+            balancePaid: newBalancePaid,
+            totalPaid: newTotalPaid,
+            remainingAmount: Math.max(0, newRemainingAmount),
+            paymentStatus: newPaymentStatus,
+            paymentHistory: [...order.paymentHistory, newPayment],
+            updatedAt: new Date().toISOString().split("T")[0],
+          };
+        }
+        return order;
+      })
+    );
+
+    // Reset form and show success
+    alert(`Payment of Rs. ${balanceAmount.toFixed(2)} recorded successfully!`);
+    setEditingBalanceAmount("");
+    setEditingPaymentNotes("");
+
+    // Refresh the modal to show updated data
+    const updatedOrder = orders.find((o) => o.id === selectedOrderId);
+    if (updatedOrder) {
+      setEditingBalanceAmount(
+        Math.max(0, updatedOrder.remainingAmount - balanceAmount).toFixed(2)
+      );
+    }
+  };
+
   const selectedOrder = orders.find((order) => order.id === selectedOrderId);
 
   const getStatusBadgeColor = (status: string) => {
@@ -474,6 +561,43 @@ const OrdersPage: React.FC = () => {
       default:
         return "bg-gray-700/50 text-gray-400";
     }
+  };
+
+  const getPaymentStatusBadge = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case "unpaid":
+        return "bg-red-900/50 text-red-400 border border-red-600/50";
+      case "partial":
+        return "bg-yellow-900/50 text-yellow-400 border border-yellow-600/50";
+      case "fully_paid":
+        return "bg-green-900/50 text-green-400 border border-green-600/50";
+      default:
+        return "bg-gray-700/50 text-gray-400";
+    }
+  };
+
+  const getPaymentStatusLabel = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case "unpaid":
+        return "UNPAID";
+      case "partial":
+        return "PARTIAL PAYMENT";
+      case "fully_paid":
+        return "FULLY PAID ✓";
+      default:
+        return "UNKNOWN";
+    }
+  };
+
+  const getPaymentPercentage = (order: Order) => {
+    if (order.totalAmount === 0) return 0;
+    return Math.round((order.totalPaid / order.totalAmount) * 100);
+  };
+
+  const getPaymentProgressColor = (percentage: number) => {
+    if (percentage < 50) return "bg-red-600";
+    if (percentage < 100) return "bg-yellow-600";
+    return "bg-green-600";
   };
 
   return (
@@ -687,6 +811,206 @@ const OrdersPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Payment Settlement Section */}
+              <div className="border-t border-gray-700 pt-5">
+                <h3 className="text-lg font-bold text-red-400 mb-4">Payment Settlement</h3>
+
+                {/* Payment Status Summary */}
+                <div className="bg-gray-700/50 border-2 border-gray-600 rounded-lg p-4 mb-4">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <p className="text-xs text-gray-400 font-semibold mb-1">Total Amount</p>
+                      <p className="text-gray-200 font-bold text-lg">
+                        Rs. {selectedOrder.totalAmount.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 font-semibold mb-1">Advance Paid</p>
+                      <p className="text-blue-400 font-bold text-lg">
+                        Rs. {selectedOrder.advancePaid.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 font-semibold mb-1">Balance Paid</p>
+                      <p className="text-blue-400 font-bold text-lg">
+                        Rs. {selectedOrder.balancePaid.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 font-semibold mb-1">Total Paid</p>
+                      <p className="text-green-400 font-bold text-lg">
+                        Rs. {selectedOrder.totalPaid.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment Progress Bar */}
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-400 font-semibold mb-2">
+                      Payment Progress: {getPaymentPercentage(selectedOrder)}%
+                    </p>
+                    <div className="w-full bg-gray-600 rounded-full h-3 overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${getPaymentProgressColor(
+                          getPaymentPercentage(selectedOrder)
+                        )}`}
+                        style={{
+                          width: `${getPaymentPercentage(selectedOrder)}%`,
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Payment Status Badge */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusBadge(
+                          selectedOrder.paymentStatus
+                        )}`}
+                      >
+                        {getPaymentStatusLabel(selectedOrder.paymentStatus)}
+                      </span>
+                      {selectedOrder.paymentLocked && (
+                        <span className="text-xs text-yellow-400 font-semibold flex items-center gap-1">
+                          🔒 Locked
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-400">Remaining Due:</p>
+                      <p
+                        className={`font-bold text-lg ${
+                          selectedOrder.remainingAmount <= 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        Rs. {selectedOrder.remainingAmount.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Update Balance Payment Section - Only for pending/processing without payment lock */}
+                {!selectedOrder.paymentLocked && selectedOrder.remainingAmount > 0 && (
+                  <div className="bg-blue-900/20 border-2 border-blue-600/50 rounded-lg p-4 mb-4">
+                    <h4 className="text-sm font-bold text-blue-400 mb-3">Update Balance Payment</h4>
+
+                    <div className="space-y-3">
+                      {/* Balance Amount Input */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          Amount to Pay (Rs.) <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editingBalanceAmount}
+                          onChange={(e) => setEditingBalanceAmount(e.target.value)}
+                          placeholder={`Max: Rs. ${selectedOrder.remainingAmount.toFixed(2)}`}
+                          className="w-full px-4 py-2 bg-gray-700 border-2 border-blue-600/50 text-white placeholder-gray-500 rounded-lg focus:border-blue-500 focus:outline-none"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">
+                          Maximum available: Rs. {selectedOrder.remainingAmount.toFixed(2)}
+                        </p>
+                      </div>
+
+                      {/* Payment Method */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          Payment Method <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={editingPaymentMethod}
+                          onChange={(e) =>
+                            setEditingPaymentMethod(e.target.value as "cash" | "card" | "check")
+                          }
+                          className="w-full px-4 py-2 bg-gray-700 border-2 border-blue-600/50 text-white rounded-lg focus:border-blue-500 focus:outline-none"
+                        >
+                          <option value="cash">Cash</option>
+                          <option value="card">Card</option>
+                          <option value="check">Check</option>
+                        </select>
+                      </div>
+
+                      {/* Payment Notes */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          Notes / Reference
+                        </label>
+                        <input
+                          type="text"
+                          value={editingPaymentNotes}
+                          onChange={(e) => setEditingPaymentNotes(e.target.value)}
+                          placeholder="Optional: Add reference or notes"
+                          className="w-full px-4 py-2 bg-gray-700 border-2 border-blue-600/50 text-white placeholder-gray-500 rounded-lg focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Update Payment Button */}
+                      <button
+                        onClick={handleUpdatePayment}
+                        className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                      >
+                        Record Payment
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment History */}
+                {selectedOrder.paymentHistory.length > 0 && (
+                  <div className="bg-gray-700/30 border border-gray-600 rounded-lg overflow-hidden mb-4">
+                    <div className="bg-gray-700/50 border-b border-gray-600 px-4 py-2">
+                      <h4 className="text-sm font-bold text-gray-300">Payment History</h4>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-700/30 border-b border-gray-600">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-gray-300">Date/Time</th>
+                            <th className="px-3 py-2 text-left text-gray-300">Type</th>
+                            <th className="px-3 py-2 text-right text-gray-300">Amount (Rs.)</th>
+                            <th className="px-3 py-2 text-left text-gray-300">Method</th>
+                            <th className="px-3 py-2 text-left text-gray-300">Notes</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700">
+                          {selectedOrder.paymentHistory.map((payment) => (
+                            <tr key={payment.id} className="hover:bg-gray-700/20">
+                              <td className="px-3 py-2 text-gray-300">
+                                {payment.date} {payment.time}
+                              </td>
+                              <td className="px-3 py-2">
+                                <span
+                                  className={`px-2 py-1 rounded text-xs font-semibold ${
+                                    payment.type === "advance"
+                                      ? "bg-yellow-900/50 text-yellow-400"
+                                      : "bg-green-900/50 text-green-400"
+                                  }`}
+                                >
+                                  {payment.type === "advance" ? "Advance" : "Balance"}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-right text-gray-200 font-semibold">
+                                Rs. {payment.amount.toFixed(2)}
+                              </td>
+                              <td className="px-3 py-2 text-gray-400 text-xs">
+                                {payment.method.charAt(0).toUpperCase() + payment.method.slice(1)}
+                              </td>
+                              <td className="px-3 py-2 text-gray-500 text-xs">
+                                {payment.notes || "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Order Status and Tracking */}
               <div className="border-t border-gray-700 pt-5">
                 <h3 className="text-lg font-bold text-red-400 mb-4">Order Status & Tracking</h3>
@@ -752,7 +1076,26 @@ const OrdersPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handlePrintSingleOrder(selectedOrder)}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                  disabled={
+                    selectedOrder.paymentStatus !== "fully_paid" ||
+                    (selectedOrder.status !== "processing" &&
+                      selectedOrder.status !== "shipped")
+                  }
+                  className={`flex-1 py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
+                    selectedOrder.paymentStatus === "fully_paid" &&
+                    (selectedOrder.status === "processing" ||
+                      selectedOrder.status === "shipped")
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"
+                  }`}
+                  title={
+                    selectedOrder.paymentStatus !== "fully_paid"
+                      ? `Order must be fully paid (Currently: ${selectedOrder.paymentStatus})`
+                      : selectedOrder.status !== "processing" &&
+                          selectedOrder.status !== "shipped"
+                        ? "Order must be in Processing or Shipped state"
+                        : "Print order details"
+                  }
                 >
                   🖨️ Print Order
                 </button>

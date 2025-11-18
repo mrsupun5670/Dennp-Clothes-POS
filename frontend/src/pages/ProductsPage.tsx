@@ -574,7 +574,14 @@ const ProductsPage: React.FC = () => {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.costPrice}
-                    onChange={(e) => setFormData({ ...formData, costPrice: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      // Remove leading zero if user starts typing
+                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                        value = value.replace(/^0+/, "");
+                      }
+                      setFormData({ ...formData, costPrice: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
                 </div>
@@ -587,7 +594,14 @@ const ProductsPage: React.FC = () => {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.retailPrice}
-                    onChange={(e) => setFormData({ ...formData, retailPrice: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      // Remove leading zero if user starts typing
+                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                        value = value.replace(/^0+/, "");
+                      }
+                      setFormData({ ...formData, retailPrice: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
                 </div>
@@ -600,7 +614,14 @@ const ProductsPage: React.FC = () => {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.wholesalePrice}
-                    onChange={(e) => setFormData({ ...formData, wholesalePrice: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      // Remove leading zero if user starts typing
+                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                        value = value.replace(/^0+/, "");
+                      }
+                      setFormData({ ...formData, wholesalePrice: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
                 </div>
@@ -665,9 +686,14 @@ const ProductsPage: React.FC = () => {
                               min="0"
                               step="0.01"
                               value={row.qty}
-                              onChange={(e) =>
-                                updateStockRow(row.id, "qty", parseFloat(e.target.value) || 0)
-                              }
+                              onChange={(e) => {
+                                let value = e.target.value;
+                                // Remove leading zero if user starts typing
+                                if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                                  value = value.replace(/^0+/, "");
+                                }
+                                updateStockRow(row.id, "qty", parseFloat(value) || 0);
+                              }}
                               placeholder="0.00"
                               className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none text-center"
                             />

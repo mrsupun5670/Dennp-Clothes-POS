@@ -509,7 +509,14 @@ const BankAccountsPage: React.FC = () => {
                   type="number"
                   step="0.01"
                   value={collectedAmount}
-                  onChange={(e) => setCollectedAmount(e.target.value)}
+                  onChange={(e) => {
+                    let value = e.target.value;
+                    // Remove leading zero if user starts typing
+                    if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                      value = value.replace(/^0+/, "");
+                    }
+                    setCollectedAmount(value);
+                  }}
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                 />
                 <p className="text-xs text-gray-400 mt-2">

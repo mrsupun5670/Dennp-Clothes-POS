@@ -1074,7 +1074,14 @@ const OrdersPage: React.FC = () => {
                           type="number"
                           step="0.01"
                           value={editingBalanceAmount}
-                          onChange={(e) => setEditingBalanceAmount(e.target.value)}
+                          onChange={(e) => {
+                            let value = e.target.value;
+                            // Remove leading zero if user starts typing
+                            if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                              value = value.replace(/^0+/, "");
+                            }
+                            setEditingBalanceAmount(value);
+                          }}
                           placeholder={`Max: Rs. ${selectedOrder.remainingAmount.toFixed(2)}`}
                           className="w-full px-4 py-2 bg-gray-700 border-2 border-blue-600/50 text-white placeholder-gray-500 rounded-lg focus:border-blue-500 focus:outline-none"
                         />

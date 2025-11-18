@@ -39,7 +39,19 @@ const SettingsPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300">Tax Rate (%)</label>
-              <input type="number" defaultValue="10" className="mt-1 w-full px-4 py-2 bg-gray-700 border border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" />
+              <input
+                type="number"
+                defaultValue="10"
+                onChange={(e) => {
+                  let value = e.target.value;
+                  // Remove leading zero if user starts typing
+                  if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                    value = value.replace(/^0+/, "");
+                  }
+                  e.target.value = value;
+                }}
+                className="mt-1 w-full px-4 py-2 bg-gray-700 border border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              />
             </div>
           </div>
         </div>

@@ -618,7 +618,14 @@ const SalesPage: React.FC = () => {
                           type="number"
                           min="1"
                           value={selectedQty}
-                          onChange={(e) => setSelectedQty(e.target.value)}
+                          onChange={(e) => {
+                            let value = e.target.value;
+                            // Remove leading zero if user starts typing
+                            if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                              value = value.replace(/^0+/, "");
+                            }
+                            setSelectedQty(value);
+                          }}
                           placeholder="Enter quantity"
                           className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
                         />
@@ -720,7 +727,14 @@ const SalesPage: React.FC = () => {
               min="0"
               step="0.01"
               value={paidAmount}
-              onChange={(e) => setPaidAmount(e.target.value)}
+              onChange={(e) => {
+                let value = e.target.value;
+                // Remove leading zero if user starts typing
+                if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                  value = value.replace(/^0+/, "");
+                }
+                setPaidAmount(value);
+              }}
               placeholder="Enter paid amount"
               className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded focus:border-red-500 focus:outline-none text-sm"
             />
@@ -944,7 +958,14 @@ const SalesPage: React.FC = () => {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.costPrice}
-                    onChange={(e) => setFormData({ ...formData, costPrice: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      // Remove leading zero if user starts typing
+                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                        value = value.replace(/^0+/, "");
+                      }
+                      setFormData({ ...formData, costPrice: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
                 </div>
@@ -957,7 +978,14 @@ const SalesPage: React.FC = () => {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.retailPrice}
-                    onChange={(e) => setFormData({ ...formData, retailPrice: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      // Remove leading zero if user starts typing
+                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                        value = value.replace(/^0+/, "");
+                      }
+                      setFormData({ ...formData, retailPrice: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
                 </div>
@@ -970,7 +998,14 @@ const SalesPage: React.FC = () => {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.wholesalePrice}
-                    onChange={(e) => setFormData({ ...formData, wholesalePrice: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      // Remove leading zero if user starts typing
+                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                        value = value.replace(/^0+/, "");
+                      }
+                      setFormData({ ...formData, wholesalePrice: parseFloat(value) || 0 });
+                    }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
                 </div>
@@ -1034,9 +1069,14 @@ const SalesPage: React.FC = () => {
                               type="number"
                               min="0"
                               value={row.qty}
-                              onChange={(e) =>
-                                updateStockRow(row.id, "qty", parseInt(e.target.value) || 0)
-                              }
+                              onChange={(e) => {
+                                let value = e.target.value;
+                                // Remove leading zero if user starts typing
+                                if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                                  value = value.replace(/^0+/, "");
+                                }
+                                updateStockRow(row.id, "qty", parseInt(value) || 0);
+                              }}
                               placeholder="0"
                               className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none text-center"
                             />

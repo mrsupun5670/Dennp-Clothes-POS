@@ -361,12 +361,17 @@ const InventoryPage: React.FC = () => {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.qty}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      // Remove leading zero if user starts typing
+                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                        value = value.replace(/^0+/, "");
+                      }
                       setFormData({
                         ...formData,
-                        qty: parseFloat(e.target.value) || 0,
-                      })
-                    }
+                        qty: parseFloat(value) || 0,
+                      });
+                    }}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                   />
                 </div>
@@ -379,12 +384,17 @@ const InventoryPage: React.FC = () => {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.unitCost}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      // Remove leading zero if user starts typing
+                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
+                        value = value.replace(/^0+/, "");
+                      }
                       setFormData({
                         ...formData,
-                        unitCost: parseFloat(e.target.value) || 0,
-                      })
-                    }
+                        unitCost: parseFloat(value) || 0,
+                      });
+                    }}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                   />
                 </div>

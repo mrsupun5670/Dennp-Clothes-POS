@@ -595,24 +595,21 @@ const CustomersPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Courier Contact Numbers */}
+              {/* Phone 1 and 2 */}
               {(addressData.courierPhone1 || addressData.courierPhone2) && (
-                <div>
-                  <h3 className="text-lg font-bold text-red-400 mb-4">Courier Contact Numbers</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {addressData.courierPhone1 && (
-                      <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
-                        <p className="text-xs text-gray-400 font-semibold mb-1">Courier Phone 1</p>
-                        <p className="text-gray-200 font-medium">{addressData.courierPhone1}</p>
-                      </div>
-                    )}
-                    {addressData.courierPhone2 && (
-                      <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
-                        <p className="text-xs text-gray-400 font-semibold mb-1">Courier Phone 2</p>
-                        <p className="text-gray-200 font-medium">{addressData.courierPhone2}</p>
-                      </div>
-                    )}
-                  </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {addressData.courierPhone1 && (
+                    <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
+                      <p className="text-xs text-gray-400 font-semibold mb-1">Phone 1</p>
+                      <p className="text-gray-200 font-medium">{addressData.courierPhone1}</p>
+                    </div>
+                  )}
+                  {addressData.courierPhone2 && (
+                    <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
+                      <p className="text-xs text-gray-400 font-semibold mb-1">Phone 2</p>
+                      <p className="text-gray-200 font-medium">{addressData.courierPhone2}</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -658,19 +655,33 @@ const CustomersPage: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-6 space-y-5">
-              {/* Customer ID */}
-              <div>
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Customer ID {!isEditMode && <span className="text-red-500">*</span>}
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., C001"
-                  value={formData.id}
-                  onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-                  disabled={isEditMode}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                />
+              {/* Customer ID and Mobile */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-red-400 mb-2">
+                    Customer ID {!isEditMode && <span className="text-red-500">*</span>}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., C001"
+                    value={formData.id}
+                    onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                    disabled={isEditMode}
+                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-red-400 mb-2">
+                    Mobile <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="e.g., +92-300-1234567"
+                    value={formData.mobile}
+                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                  />
+                </div>
               </div>
 
               {/* Email */}
@@ -683,20 +694,6 @@ const CustomersPage: React.FC = () => {
                   placeholder="e.g., customer@example.com (optional)"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Mobile */}
-              <div>
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Mobile <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  placeholder="e.g., +1 234 567 8900"
-                  value={formData.mobile}
-                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                 />
               </div>
@@ -763,31 +760,6 @@ const CustomersPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* City */}
-                <div className="mb-4">
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    City <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={addressData.city}
-                    onChange={(e) =>
-                      setAddressData({ ...addressData, city: e.target.value })
-                    }
-                    disabled={!addressData.district}
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="">Select City</option>
-                    {addressData.district &&
-                      addressHierarchy.cities[
-                        addressData.district as keyof typeof addressHierarchy.cities
-                      ]?.map((city) => (
-                        <option key={city} value={city}>
-                          {city}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
                 {/* Address Line 1 and Line 2 */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
@@ -820,56 +792,76 @@ const CustomersPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Postal Code */}
-                <div className="mb-4">
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Postal Code <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., 54000"
-                    value={addressData.postalCode}
-                    onChange={(e) =>
-                      setAddressData({ ...addressData, postalCode: e.target.value })
-                    }
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                  />
+                {/* Courier Phone 1 and 2 */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-red-400 mb-2">
+                      Phone 1
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="e.g., +92-300-1234567"
+                      value={addressData.courierPhone1}
+                      onChange={(e) =>
+                        setAddressData({ ...addressData, courierPhone1: e.target.value })
+                      }
+                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-red-400 mb-2">
+                      Phone 2
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="e.g., +92-300-7654321"
+                      value={addressData.courierPhone2}
+                      onChange={(e) =>
+                        setAddressData({ ...addressData, courierPhone2: e.target.value })
+                      }
+                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
                 </div>
 
-                {/* Courier Phone Numbers */}
-                <div className="border-t border-gray-700 pt-4">
-                  <h4 className="text-md font-bold text-red-400 mb-4">Courier Contact Numbers</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-red-400 mb-2">
-                        Courier Phone 1
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="e.g., +92-300-1234567"
-                        value={addressData.courierPhone1}
-                        onChange={(e) =>
-                          setAddressData({ ...addressData, courierPhone1: e.target.value })
-                        }
-                        className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                      />
-                      <p className="text-xs text-gray-400 mt-1">For courier/delivery contact</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-red-400 mb-2">
-                        Courier Phone 2
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="e.g., +92-300-7654321"
-                        value={addressData.courierPhone2}
-                        onChange={(e) =>
-                          setAddressData({ ...addressData, courierPhone2: e.target.value })
-                        }
-                        className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Alternative courier contact</p>
-                    </div>
+                {/* Postal Code and City */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-red-400 mb-2">
+                      Postal Code <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g., 54000"
+                      value={addressData.postalCode}
+                      onChange={(e) =>
+                        setAddressData({ ...addressData, postalCode: e.target.value })
+                      }
+                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-red-400 mb-2">
+                      City <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={addressData.city}
+                      onChange={(e) =>
+                        setAddressData({ ...addressData, city: e.target.value })
+                      }
+                      disabled={!addressData.district}
+                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="">Select City</option>
+                      {addressData.district &&
+                        addressHierarchy.cities[
+                          addressData.district as keyof typeof addressHierarchy.cities
+                        ]?.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                    </select>
                   </div>
                 </div>
               </div>

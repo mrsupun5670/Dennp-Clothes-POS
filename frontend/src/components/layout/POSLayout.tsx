@@ -13,7 +13,7 @@ const POSLayout: React.FC<POSLayoutProps> = ({ currentPage, onPageChange, childr
   };
   const menuItems = [
     { id: "sales", label: "Sales", icon: "🛒" },
-    { id: "products", label: "Products", icon: "📦" },
+    { id: "products", label: "Stock", icon: "📦" },
     { id: "inventory", label: "Inventory", icon: "📦" },
     { id: "customers", label: "Customers", icon: "👥" },
     { id: "orders", label: "Orders", icon: "📋" },

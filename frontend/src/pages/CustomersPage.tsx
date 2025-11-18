@@ -760,6 +760,47 @@ const CustomersPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* City and Postal Code */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-red-400 mb-2">
+                      City <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={addressData.city}
+                      onChange={(e) =>
+                        setAddressData({ ...addressData, city: e.target.value })
+                      }
+                      disabled={!addressData.district}
+                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="">Select City</option>
+                      {addressData.district &&
+                        addressHierarchy.cities[
+                          addressData.district as keyof typeof addressHierarchy.cities
+                        ]?.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-red-400 mb-2">
+                      Postal Code <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g., 54000"
+                      value={addressData.postalCode}
+                      onChange={(e) =>
+                        setAddressData({ ...addressData, postalCode: e.target.value })
+                      }
+                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
                 {/* Address Line 1 and Line 2 */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
@@ -821,47 +862,6 @@ const CustomersPage: React.FC = () => {
                       }
                       className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                     />
-                  </div>
-                </div>
-
-                {/* Postal Code and City */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-red-400 mb-2">
-                      Postal Code <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g., 54000"
-                      value={addressData.postalCode}
-                      onChange={(e) =>
-                        setAddressData({ ...addressData, postalCode: e.target.value })
-                      }
-                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-red-400 mb-2">
-                      City <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={addressData.city}
-                      onChange={(e) =>
-                        setAddressData({ ...addressData, city: e.target.value })
-                      }
-                      disabled={!addressData.district}
-                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="">Select City</option>
-                      {addressData.district &&
-                        addressHierarchy.cities[
-                          addressData.district as keyof typeof addressHierarchy.cities
-                        ]?.map((city) => (
-                          <option key={city} value={city}>
-                            {city}
-                          </option>
-                        ))}
-                    </select>
                   </div>
                 </div>
               </div>

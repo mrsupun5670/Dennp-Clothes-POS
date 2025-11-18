@@ -74,7 +74,6 @@ const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("name");
   const [stockFilter, setStockFilter] = useState<string>("all");
-  const [priceFilter, setPriceFilter] = useState<string>("all");
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("tshirt");
   const [stockRows, setStockRows] = useState<{ id: number; size: string; color: string; qty: number }[]>([]);
@@ -153,16 +152,37 @@ const ProductsPage: React.FC = () => {
       retailPrice: product.retailPrice.toString(),
       wholesalePrice: product.wholesalePrice.toString(),
     });
-    // Populate stock rows with existing product data
-    setStockRows([
-      {
-        id: 1,
-        size: product.sizes.split(",")[0]?.trim() || "",
-        color: product.colors.split(",")[0]?.trim() || "",
-        qty: product.qty,
-      },
-    ]);
-    setNextRowId(2);
+
+    // Parse sizes and colors
+    const sizes = product.sizes.split(",").map((s: string) => s.trim());
+    const colors = product.colors.split(",").map((c: string) => c.trim());
+
+    // Create stock rows for each size/color combination with proportional qty distribution
+    const totalVariants = sizes.length * colors.length;
+    const qtyPerVariant = totalVariants > 0 ? Math.floor(product.qty / totalVariants) : 0;
+    const remainder = totalVariants > 0 ? product.qty % totalVariants : 0;
+
+    const newStockRows: { id: number; size: string; color: string; qty: number }[] = [];
+    let rowId = 1;
+    let qtyAdded = 0;
+
+    colors.forEach((color: string) => {
+      sizes.forEach((size: string) => {
+        // Distribute remainder qty to first few rows
+        const extraQty = qtyAdded < remainder ? 1 : 0;
+        newStockRows.push({
+          id: rowId,
+          size: size,
+          color: color,
+          qty: qtyPerVariant + extraQty,
+        });
+        qtyAdded++;
+        rowId++;
+      });
+    });
+
+    setStockRows(newStockRows);
+    setNextRowId(rowId);
     setCustomSizes([]);
     setCustomColors([]);
   };
@@ -294,17 +314,6 @@ const ProductsPage: React.FC = () => {
       result = result.filter((p) => p.qty > 0);
     }
 
-    // Price range filter
-    if (priceFilter === "0-25") {
-      result = result.filter((p) => p.retailPrice <= 25);
-    } else if (priceFilter === "25-50") {
-      result = result.filter((p) => p.retailPrice > 25 && p.retailPrice <= 50);
-    } else if (priceFilter === "50-100") {
-      result = result.filter((p) => p.retailPrice > 50 && p.retailPrice <= 100);
-    } else if (priceFilter === "100") {
-      result = result.filter((p) => p.retailPrice > 100);
-    }
-
     // Sort products
     if (sortBy === "name") {
       result.sort((a, b) => a.name.localeCompare(b.name));
@@ -316,10 +325,14 @@ const ProductsPage: React.FC = () => {
       result.sort((a, b) => a.retailPrice - b.retailPrice);
     } else if (sortBy === "qty-high") {
       result.sort((a, b) => b.qty - a.qty);
+    } else if (sortBy === "cost-low") {
+      result.sort((a, b) => a.cost - b.cost);
+    } else if (sortBy === "cost-high") {
+      result.sort((a, b) => b.cost - a.cost);
     }
 
     return result;
-  }, [searchQuery, sortBy, stockFilter, priceFilter]);
+  }, [searchQuery, sortBy, stockFilter]);
 
   const totalProducts = filteredAndSortedProducts.length;
 
@@ -327,7 +340,6 @@ const ProductsPage: React.FC = () => {
     setSearchQuery("");
     setSortBy("name");
     setStockFilter("all");
-    setPriceFilter("all");
   };
 
   return (
@@ -385,8 +397,10 @@ const ProductsPage: React.FC = () => {
             >
               <option value="name">Name (A-Z)</option>
               <option value="code">Product Code</option>
-              <option value="price-high">Price (High to Low)</option>
-              <option value="price-low">Price (Low to High)</option>
+              <option value="price-high">Retail Price (High to Low)</option>
+              <option value="price-low">Retail Price (Low to High)</option>
+              <option value="cost-high">Cost Price (High to Low)</option>
+              <option value="cost-low">Cost Price (Low to High)</option>
               <option value="qty-high">Quantity (High to Low)</option>
             </select>
           </div>
@@ -402,21 +416,6 @@ const ProductsPage: React.FC = () => {
               <option value="low">Low Stock (≤ 3)</option>
               <option value="out">Out of Stock</option>
               <option value="in">In Stock</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-2">Price Range</label>
-            <select
-              value={priceFilter}
-              onChange={(e) => setPriceFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
-            >
-              <option value="all">All Prices</option>
-              <option value="0-25">$0 - $25</option>
-              <option value="25-50">$25 - $50</option>
-              <option value="50-100">$50 - $100</option>
-              <option value="100">$100+</option>
             </select>
           </div>
 
@@ -611,6 +610,43 @@ const ProductsPage: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* Stock Summary by Size and Color */}
+              {isEditMode && stockRows.length > 0 && (
+                <div className="bg-gray-700/30 border border-gray-600 rounded-lg p-4 mb-4">
+                  <label className="block text-sm font-semibold text-red-400 mb-3">Stock Breakdown by Size & Color</label>
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    {/* Size Summary */}
+                    <div>
+                      <p className="text-gray-300 font-semibold mb-2">By Size:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[...new Set(stockRows.map(r => r.size))].filter(s => s).map((size) => (
+                          <div key={size} className="bg-blue-900/40 border border-blue-600/50 text-blue-300 px-3 py-1 rounded">
+                            {size}: <span className="font-bold">{stockRows.filter(r => r.size === size).reduce((sum, r) => sum + r.qty, 0)} units</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Color Summary */}
+                    <div>
+                      <p className="text-gray-300 font-semibold mb-2">By Color:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[...new Set(stockRows.map(r => r.color))].filter(c => c).map((color) => (
+                          <div key={color} className="bg-purple-900/40 border border-purple-600/50 text-purple-300 px-3 py-1 rounded">
+                            {color}: <span className="font-bold">{stockRows.filter(r => r.color === color).reduce((sum, r) => sum + r.qty, 0)} units</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Total */}
+                    <div className="border-t border-gray-600 pt-2 mt-2">
+                      <p className="text-gray-300">
+                        <span className="font-semibold">Total Stock:</span> <span className="text-red-400 font-bold text-lg">{stockRows.reduce((sum, r) => sum + r.qty, 0)} units</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Stock Entry Rows - Row-Based System */}
               <div>

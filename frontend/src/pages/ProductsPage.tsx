@@ -89,9 +89,9 @@ const ProductsPage: React.FC = () => {
   const [formData, setFormData] = useState({
     code: "",
     name: "",
-    costPrice: 0,
-    retailPrice: 0,
-    wholesalePrice: 0,
+    costPrice: "",
+    retailPrice: "",
+    wholesalePrice: "",
   });
 
   // Size options by category
@@ -139,7 +139,7 @@ const ProductsPage: React.FC = () => {
   const handleCloseModal = () => {
     setShowAddProductModal(false);
     setIsEditMode(false);
-    setFormData({ code: "", name: "", costPrice: 0, retailPrice: 0, wholesalePrice: 0 });
+    setFormData({ code: "", name: "", costPrice: "", retailPrice: "", wholesalePrice: "" });
   };
 
   const handleEditProduct = (product: any) => {
@@ -149,9 +149,9 @@ const ProductsPage: React.FC = () => {
     setFormData({
       code: product.code,
       name: product.name,
-      costPrice: product.cost,
-      retailPrice: product.retailPrice,
-      wholesalePrice: product.wholesalePrice,
+      costPrice: product.cost.toString(),
+      retailPrice: product.retailPrice.toString(),
+      wholesalePrice: product.wholesalePrice.toString(),
     });
     // Populate stock rows with existing product data
     setStockRows([
@@ -575,12 +575,7 @@ const ProductsPage: React.FC = () => {
                     placeholder="0.00"
                     value={formData.costPrice}
                     onChange={(e) => {
-                      let value = e.target.value;
-                      // Remove leading zero if user starts typing
-                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
-                        value = value.replace(/^0+/, "");
-                      }
-                      setFormData({ ...formData, costPrice: parseFloat(value) || 0 });
+                      setFormData({ ...formData, costPrice: e.target.value });
                     }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
@@ -595,12 +590,7 @@ const ProductsPage: React.FC = () => {
                     placeholder="0.00"
                     value={formData.retailPrice}
                     onChange={(e) => {
-                      let value = e.target.value;
-                      // Remove leading zero if user starts typing
-                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
-                        value = value.replace(/^0+/, "");
-                      }
-                      setFormData({ ...formData, retailPrice: parseFloat(value) || 0 });
+                      setFormData({ ...formData, retailPrice: e.target.value });
                     }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
@@ -615,12 +605,7 @@ const ProductsPage: React.FC = () => {
                     placeholder="0.00"
                     value={formData.wholesalePrice}
                     onChange={(e) => {
-                      let value = e.target.value;
-                      // Remove leading zero if user starts typing
-                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
-                        value = value.replace(/^0+/, "");
-                      }
-                      setFormData({ ...formData, wholesalePrice: parseFloat(value) || 0 });
+                      setFormData({ ...formData, wholesalePrice: e.target.value });
                     }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />

@@ -75,8 +75,8 @@ const InventoryPage: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    qty: 0,
-    unitCost: 0,
+    qty: "",
+    unitCost: "",
   });
 
   // Sample raw materials data
@@ -140,7 +140,7 @@ const InventoryPage: React.FC = () => {
 
   const handleAddClick = () => {
     setIsEditMode(false);
-    setFormData({ name: "", qty: 0, unitCost: 0 });
+    setFormData({ name: "", qty: "", unitCost: "" });
     setShowAddModal(true);
   };
 
@@ -149,8 +149,8 @@ const InventoryPage: React.FC = () => {
     setSelectedItemId(item.id);
     setFormData({
       name: item.name,
-      qty: item.qty,
-      unitCost: item.unitCost,
+      qty: item.qty.toString(),
+      unitCost: item.unitCost.toString(),
     });
     setShowAddModal(true);
   };
@@ -159,10 +159,13 @@ const InventoryPage: React.FC = () => {
     setShowAddModal(false);
     setIsEditMode(false);
     setSelectedItemId(null);
-    setFormData({ name: "", qty: 0, unitCost: 0 });
+    setFormData({ name: "", qty: "", unitCost: "" });
   };
 
   const handleSaveItem = () => {
+    const qty = parseFloat(formData.qty as string) || 0;
+    const unitCost = parseFloat(formData.unitCost as string) || 0;
+
     if (isEditMode && selectedItemId !== null) {
       // Update existing item
       setRawMaterials(
@@ -171,8 +174,8 @@ const InventoryPage: React.FC = () => {
             ? {
                 ...item,
                 name: formData.name,
-                qty: formData.qty,
-                unitCost: formData.unitCost,
+                qty: qty,
+                unitCost: unitCost,
                 lastUpdated: new Date().toISOString().split("T")[0],
               }
             : item
@@ -183,8 +186,8 @@ const InventoryPage: React.FC = () => {
       const newItem: RawMaterial = {
         id: Math.max(...rawMaterials.map((item) => item.id), 0) + 1,
         name: formData.name,
-        qty: formData.qty,
-        unitCost: formData.unitCost,
+        qty: qty,
+        unitCost: unitCost,
         lastUpdated: new Date().toISOString().split("T")[0],
       };
       setRawMaterials([...rawMaterials, newItem]);
@@ -362,14 +365,9 @@ const InventoryPage: React.FC = () => {
                     placeholder="0.00"
                     value={formData.qty}
                     onChange={(e) => {
-                      let value = e.target.value;
-                      // Remove leading zero if user starts typing
-                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
-                        value = value.replace(/^0+/, "");
-                      }
                       setFormData({
                         ...formData,
-                        qty: parseFloat(value) || 0,
+                        qty: e.target.value,
                       });
                     }}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
@@ -385,14 +383,9 @@ const InventoryPage: React.FC = () => {
                     placeholder="0.00"
                     value={formData.unitCost}
                     onChange={(e) => {
-                      let value = e.target.value;
-                      // Remove leading zero if user starts typing
-                      if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
-                        value = value.replace(/^0+/, "");
-                      }
                       setFormData({
                         ...formData,
-                        unitCost: parseFloat(value) || 0,
+                        unitCost: e.target.value,
                       });
                     }}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
@@ -404,7 +397,7 @@ const InventoryPage: React.FC = () => {
               <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Total Value</p>
                 <p className="text-2xl font-bold text-red-400">
-                  Rs. {(formData.qty * formData.unitCost).toFixed(2)}
+                  Rs. {((parseFloat(formData.qty as string) || 0) * (parseFloat(formData.unitCost as string) || 0)).toFixed(2)}
                 </p>
               </div>
 

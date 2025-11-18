@@ -8,6 +8,14 @@ fn main() {
     .setup(|_app| {
       // Initialize app
       println!("Dennep Clothes POS Desktop App initialized");
+
+      // Log platform info
+      #[cfg(target_os = "macos")]
+      println!("Running on macOS");
+
+      #[cfg(target_os = "windows")]
+      println!("Running on Windows");
+
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![

@@ -76,6 +76,14 @@ interface Customer {
   totalOrders: number;
   joined: string;
   address: Address;
+
+  // Payment tracking
+  totalPaymentDue: number; // Total outstanding payments
+  pendingPaymentOrders: string[]; // Array of order IDs with pending payments
+  paymentStatus: "no_dues" | "pending" | "overdue"; // Payment status
+  lastOrderDate?: string;
+  notes?: string;
+  isActive: boolean;
 }
 
 const CustomersPage: React.FC = () => {
@@ -105,9 +113,9 @@ const CustomersPage: React.FC = () => {
       id: "C001",
       name: "John Doe",
       email: "john@example.com",
-      mobile: "+1 234 567 8900",
-      totalSpent: 15250.50,
-      totalOrders: 8,
+      mobile: "+92-300-1234567",
+      totalSpent: 12750.50,
+      totalOrders: 3,
       joined: "2023-06-15",
       address: {
         province: "Western",
@@ -117,14 +125,20 @@ const CustomersPage: React.FC = () => {
         line2: "Apartment 4B",
         postalCode: "00100",
       },
+      totalPaymentDue: 3750.50,
+      pendingPaymentOrders: ["ORD001"],
+      paymentStatus: "pending",
+      lastOrderDate: "2024-11-15",
+      notes: "Reliable customer",
+      isActive: true,
     },
     {
       id: "C002",
       name: "Sarah Smith",
       email: "sarah@example.com",
-      mobile: "+1 234 567 8901",
-      totalSpent: 8750.25,
-      totalOrders: 5,
+      mobile: "+92-300-5678901",
+      totalSpent: 6000.75,
+      totalOrders: 2,
       joined: "2023-08-20",
       address: {
         province: "Central",
@@ -134,14 +148,20 @@ const CustomersPage: React.FC = () => {
         line2: "",
         postalCode: "20000",
       },
+      totalPaymentDue: 1200.00,
+      pendingPaymentOrders: ["ORD005"],
+      paymentStatus: "pending",
+      lastOrderDate: "2024-11-05",
+      notes: "New customer",
+      isActive: true,
     },
     {
       id: "C003",
       name: "Ahmed Khan",
       email: "ahmed@example.com",
-      mobile: "+1 234 567 8902",
-      totalSpent: 22500.00,
-      totalOrders: 12,
+      mobile: "+92-300-9876543",
+      totalSpent: 4250.00,
+      totalOrders: 1,
       joined: "2023-03-10",
       address: {
         province: "Southern",
@@ -151,6 +171,12 @@ const CustomersPage: React.FC = () => {
         line2: "House 42",
         postalCode: "80000",
       },
+      totalPaymentDue: 0,
+      pendingPaymentOrders: [],
+      paymentStatus: "no_dues",
+      lastOrderDate: "2024-11-08",
+      notes: "Paid in full",
+      isActive: true,
     },
   ]);
 
@@ -308,6 +334,12 @@ const CustomersPage: React.FC = () => {
         totalOrders: 0,
         joined: new Date().toISOString().split("T")[0],
         address: addressData,
+        totalPaymentDue: 0,
+        pendingPaymentOrders: [],
+        paymentStatus: "no_dues",
+        lastOrderDate: undefined,
+        notes: "",
+        isActive: true,
       };
       setCustomers([...customers, newCustomer]);
     }

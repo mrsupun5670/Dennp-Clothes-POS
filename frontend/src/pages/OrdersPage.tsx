@@ -148,15 +148,46 @@ interface OrderItem {
   price: number;
 }
 
+interface PaymentTransaction {
+  id: string;
+  type: "advance" | "balance";
+  amount: number;
+  method: "cash" | "card" | "check";
+  date: string;
+  time: string;
+  notes?: string;
+  paidBy?: string;
+}
+
 interface Order {
   id: string;
   customerId: string;
   customerName: string;
+  customerMobile: string;
+  customerAddress: string;
+  customerEmail?: string;
   orderDate: string;
+
+  // Payment tracking
   totalAmount: number;
+  advancePaid: number;
+  balancePaid: number;
+  totalPaid: number; // = advancePaid + balancePaid
+  remainingAmount: number; // = totalAmount - totalPaid
+  paymentStatus: "unpaid" | "partial" | "fully_paid";
+  paymentLocked: boolean; // true when status = 'shipped'
+  paymentHistory: PaymentTransaction[];
+
+  // Order workflow
   status: "pending" | "processing" | "shipped" | "delivered";
   trackingNumber: string;
+
   items: OrderItem[];
+
+  // Metadata
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
 }
 
 const OrdersPage: React.FC = () => {
@@ -169,62 +200,199 @@ const OrdersPage: React.FC = () => {
       id: "ORD001",
       customerId: "C001",
       customerName: "John Doe",
+      customerMobile: "+92-300-1234567",
+      customerAddress: "123 Main Street, Karachi",
+      customerEmail: "john@example.com",
       orderDate: "2024-11-15",
       totalAmount: 5250.50,
+      advancePaid: 1500.00,
+      balancePaid: 0,
+      totalPaid: 1500.00,
+      remainingAmount: 3750.50,
+      paymentStatus: "partial",
+      paymentLocked: false,
       status: "pending",
       trackingNumber: "",
       items: [
         { productName: "T-Shirt Blue", quantity: 2, price: 1250.00 },
         { productName: "Jeans Black", quantity: 1, price: 3000.50 },
       ],
+      paymentHistory: [
+        {
+          id: "PAY001",
+          type: "advance",
+          amount: 1500.00,
+          method: "cash",
+          date: "2024-11-15",
+          time: "10:30",
+          notes: "Initial advance payment",
+        },
+      ],
+      createdAt: "2024-11-15",
+      updatedAt: "2024-11-15",
     },
     {
       id: "ORD002",
       customerId: "C002",
       customerName: "Sarah Smith",
+      customerMobile: "+92-300-5678901",
+      customerAddress: "456 Oak Avenue, Lahore",
+      customerEmail: "sarah@example.com",
       orderDate: "2024-11-14",
       totalAmount: 3500.75,
+      advancePaid: 2000.00,
+      balancePaid: 1500.75,
+      totalPaid: 3500.75,
+      remainingAmount: 0,
+      paymentStatus: "fully_paid",
+      paymentLocked: false,
       status: "processing",
       trackingNumber: "",
       items: [
         { productName: "Dress White", quantity: 1, price: 3500.75 },
       ],
+      paymentHistory: [
+        {
+          id: "PAY002",
+          type: "advance",
+          amount: 2000.00,
+          method: "cash",
+          date: "2024-11-14",
+          time: "09:15",
+          notes: "Advance payment",
+        },
+        {
+          id: "PAY003",
+          type: "balance",
+          amount: 1500.75,
+          method: "card",
+          date: "2024-11-18",
+          time: "14:00",
+          notes: "Balance payment",
+        },
+      ],
+      createdAt: "2024-11-14",
+      updatedAt: "2024-11-18",
     },
     {
       id: "ORD003",
       customerId: "C001",
       customerName: "John Doe",
+      customerMobile: "+92-300-1234567",
+      customerAddress: "123 Main Street, Karachi",
+      customerEmail: "john@example.com",
       orderDate: "2024-11-10",
       totalAmount: 7500.00,
+      advancePaid: 3000.00,
+      balancePaid: 4500.00,
+      totalPaid: 7500.00,
+      remainingAmount: 0,
+      paymentStatus: "fully_paid",
+      paymentLocked: true,
       status: "shipped",
       trackingNumber: "TRK123456789",
       items: [
         { productName: "Jacket Navy", quantity: 2, price: 3750.00 },
       ],
+      paymentHistory: [
+        {
+          id: "PAY004",
+          type: "advance",
+          amount: 3000.00,
+          method: "cash",
+          date: "2024-11-10",
+          time: "11:00",
+          notes: "Advance payment",
+        },
+        {
+          id: "PAY005",
+          type: "balance",
+          amount: 4500.00,
+          method: "cash",
+          date: "2024-11-12",
+          time: "15:30",
+          notes: "Balance payment",
+        },
+      ],
+      createdAt: "2024-11-10",
+      updatedAt: "2024-11-12",
     },
     {
       id: "ORD004",
       customerId: "C003",
       customerName: "Ahmed Khan",
+      customerMobile: "+92-300-9876543",
+      customerAddress: "789 Pine Road, Islamabad",
+      customerEmail: "ahmed@example.com",
       orderDate: "2024-11-08",
       totalAmount: 4250.00,
+      advancePaid: 2125.00,
+      balancePaid: 2125.00,
+      totalPaid: 4250.00,
+      remainingAmount: 0,
+      paymentStatus: "fully_paid",
+      paymentLocked: true,
       status: "delivered",
       trackingNumber: "TRK987654321",
       items: [
         { productName: "Shirt Red", quantity: 3, price: 1416.67 },
       ],
+      paymentHistory: [
+        {
+          id: "PAY006",
+          type: "advance",
+          amount: 2125.00,
+          method: "card",
+          date: "2024-11-08",
+          time: "12:00",
+          notes: "Advance payment",
+        },
+        {
+          id: "PAY007",
+          type: "balance",
+          amount: 2125.00,
+          method: "card",
+          date: "2024-11-10",
+          time: "16:45",
+          notes: "Balance payment",
+        },
+      ],
+      createdAt: "2024-11-08",
+      updatedAt: "2024-11-10",
     },
     {
       id: "ORD005",
       customerId: "C002",
       customerName: "Sarah Smith",
+      customerMobile: "+92-300-5678901",
+      customerAddress: "456 Oak Avenue, Lahore",
+      customerEmail: "sarah@example.com",
       orderDate: "2024-11-05",
       totalAmount: 2500.00,
+      advancePaid: 1300.00,
+      balancePaid: 0,
+      totalPaid: 1300.00,
+      remainingAmount: 1200.00,
+      paymentStatus: "partial",
+      paymentLocked: false,
       status: "pending",
       trackingNumber: "",
       items: [
         { productName: "T-Shirt Black", quantity: 2, price: 1250.00 },
       ],
+      paymentHistory: [
+        {
+          id: "PAY008",
+          type: "advance",
+          amount: 1300.00,
+          method: "cash",
+          date: "2024-11-05",
+          time: "13:20",
+          notes: "Advance payment",
+        },
+      ],
+      createdAt: "2024-11-05",
+      updatedAt: "2024-11-05",
     },
   ]);
 
@@ -232,6 +400,9 @@ const OrdersPage: React.FC = () => {
   const [editingStatus, setEditingStatus] = useState<
     "pending" | "processing" | "shipped" | "delivered"
   >("pending");
+  const [editingBalanceAmount, setEditingBalanceAmount] = useState("");
+  const [editingPaymentMethod, setEditingPaymentMethod] = useState<"cash" | "card" | "check">("cash");
+  const [editingPaymentNotes, setEditingPaymentNotes] = useState("");
 
   // Filter and search orders
   const filteredOrders = useMemo(() => {

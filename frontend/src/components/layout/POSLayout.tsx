@@ -1,4 +1,5 @@
 import React from "react";
+import { appWindow } from "@tauri-apps/api/window";
 
 interface POSLayoutProps {
   currentPage: string;
@@ -7,6 +8,9 @@ interface POSLayoutProps {
 }
 
 const POSLayout: React.FC<POSLayoutProps> = ({ currentPage, onPageChange, children }) => {
+  const handleCloseApp = async () => {
+    await appWindow.close();
+  };
   const menuItems = [
     { id: "sales", label: "Sales", icon: "🛒" },
     { id: "products", label: "Products", icon: "📦" },
@@ -45,6 +49,14 @@ const POSLayout: React.FC<POSLayoutProps> = ({ currentPage, onPageChange, childr
               </div>
               <span className="text-sm font-medium text-red-400">Admin</span>
             </div>
+            <button
+              onClick={handleCloseApp}
+              className="ml-4 px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-semibold rounded border border-red-700 transition-colors duration-200 flex items-center gap-2"
+              title="Close Application"
+            >
+              <span>✕</span>
+              <span className="text-xs">Close</span>
+            </button>
           </div>
         </div>
 

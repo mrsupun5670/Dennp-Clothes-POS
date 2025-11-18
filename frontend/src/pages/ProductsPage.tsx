@@ -348,12 +348,12 @@ const ProductsPage: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-red-500">Products</h1>
+            <h1 className="text-3xl font-bold text-red-500">Stock</h1>
             <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
               {totalProducts} items
             </span>
           </div>
-          <p className="text-gray-400 mt-2">Manage your product catalog and inventory</p>
+          <p className="text-gray-400 mt-2">Manage your stock catalog and inventory</p>
         </div>
         <div className="flex gap-3">
           <button

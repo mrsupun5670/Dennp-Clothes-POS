@@ -178,6 +178,11 @@ interface Order {
   paymentLocked: boolean; // true when status = 'shipped'
   paymentHistory: PaymentTransaction[];
 
+  // Overdue tracking
+  expectedPaymentDate?: string; // Date when balance payment is expected
+  daysOverdue: number; // 0 if on time, >0 if overdue
+  isOverdue: boolean; // true if past expected date and not fully paid
+
   // Order workflow
   status: "pending" | "processing" | "shipped" | "delivered";
   trackingNumber: string;
@@ -211,6 +216,9 @@ const OrdersPage: React.FC = () => {
       remainingAmount: 3750.50,
       paymentStatus: "partial",
       paymentLocked: false,
+      expectedPaymentDate: "2024-11-28",
+      daysOverdue: 0,
+      isOverdue: false,
       status: "pending",
       trackingNumber: "",
       items: [
@@ -246,6 +254,9 @@ const OrdersPage: React.FC = () => {
       remainingAmount: 0,
       paymentStatus: "fully_paid",
       paymentLocked: false,
+      expectedPaymentDate: "2024-11-25",
+      daysOverdue: 0,
+      isOverdue: false,
       status: "processing",
       trackingNumber: "",
       items: [
@@ -289,6 +300,9 @@ const OrdersPage: React.FC = () => {
       remainingAmount: 0,
       paymentStatus: "fully_paid",
       paymentLocked: true,
+      expectedPaymentDate: "2024-11-22",
+      daysOverdue: 0,
+      isOverdue: false,
       status: "shipped",
       trackingNumber: "TRK123456789",
       items: [
@@ -332,6 +346,9 @@ const OrdersPage: React.FC = () => {
       remainingAmount: 0,
       paymentStatus: "fully_paid",
       paymentLocked: true,
+      expectedPaymentDate: "2024-11-20",
+      daysOverdue: 0,
+      isOverdue: false,
       status: "delivered",
       trackingNumber: "TRK987654321",
       items: [
@@ -375,6 +392,9 @@ const OrdersPage: React.FC = () => {
       remainingAmount: 1200.00,
       paymentStatus: "partial",
       paymentLocked: false,
+      expectedPaymentDate: "2024-11-18",
+      daysOverdue: 0,
+      isOverdue: false,
       status: "pending",
       trackingNumber: "",
       items: [
@@ -598,6 +618,20 @@ const OrdersPage: React.FC = () => {
     if (percentage < 50) return "bg-red-600";
     if (percentage < 100) return "bg-yellow-600";
     return "bg-green-600";
+  };
+
+  const calculateDaysOverdue = (order: Order) => {
+    if (order.paymentStatus === "fully_paid" || !order.expectedPaymentDate) {
+      return { days: 0, isOverdue: false };
+    }
+    const expectedDate = new Date(order.expectedPaymentDate);
+    const today = new Date();
+    const differenceInTime = today.getTime() - expectedDate.getTime();
+    const differenceInDays = Math.ceil(differenceInTime / (1000 * 3600 * 24));
+    return {
+      days: differenceInDays > 0 ? differenceInDays : 0,
+      isOverdue: differenceInDays > 0,
+    };
   };
 
   return (
@@ -874,6 +908,11 @@ const OrdersPage: React.FC = () => {
                       {selectedOrder.paymentLocked && (
                         <span className="text-xs text-yellow-400 font-semibold flex items-center gap-1">
                           🔒 Locked
+                        </span>
+                      )}
+                      {calculateDaysOverdue(selectedOrder).isOverdue && (
+                        <span className="text-xs text-red-400 font-semibold flex items-center gap-1">
+                          ⚠️ Overdue {calculateDaysOverdue(selectedOrder).days} days
                         </span>
                       )}
                     </div>

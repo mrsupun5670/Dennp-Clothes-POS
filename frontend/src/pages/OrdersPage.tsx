@@ -183,6 +183,11 @@ interface Order {
   daysOverdue: number; // 0 if on time, >0 if overdue
   isOverdue: boolean; // true if past expected date and not fully paid
 
+  // Payment reminders
+  lastReminderSentDate?: string; // Last reminder sent date
+  reminderStatus: "not_sent" | "pending" | "sent"; // Reminder tracking
+  reminderCount: number; // How many reminders sent
+
   // Order workflow
   status: "pending" | "processing" | "shipped" | "delivered";
   trackingNumber: string;
@@ -219,6 +224,9 @@ const OrdersPage: React.FC = () => {
       expectedPaymentDate: "2024-11-28",
       daysOverdue: 0,
       isOverdue: false,
+      lastReminderSentDate: undefined,
+      reminderStatus: "not_sent",
+      reminderCount: 0,
       status: "pending",
       trackingNumber: "",
       items: [
@@ -257,6 +265,9 @@ const OrdersPage: React.FC = () => {
       expectedPaymentDate: "2024-11-25",
       daysOverdue: 0,
       isOverdue: false,
+      lastReminderSentDate: undefined,
+      reminderStatus: "not_sent",
+      reminderCount: 0,
       status: "processing",
       trackingNumber: "",
       items: [
@@ -303,6 +314,9 @@ const OrdersPage: React.FC = () => {
       expectedPaymentDate: "2024-11-22",
       daysOverdue: 0,
       isOverdue: false,
+      lastReminderSentDate: undefined,
+      reminderStatus: "not_sent",
+      reminderCount: 0,
       status: "shipped",
       trackingNumber: "TRK123456789",
       items: [
@@ -349,6 +363,9 @@ const OrdersPage: React.FC = () => {
       expectedPaymentDate: "2024-11-20",
       daysOverdue: 0,
       isOverdue: false,
+      lastReminderSentDate: undefined,
+      reminderStatus: "not_sent",
+      reminderCount: 0,
       status: "delivered",
       trackingNumber: "TRK987654321",
       items: [
@@ -395,6 +412,9 @@ const OrdersPage: React.FC = () => {
       expectedPaymentDate: "2024-11-18",
       daysOverdue: 0,
       isOverdue: false,
+      lastReminderSentDate: undefined,
+      reminderStatus: "not_sent",
+      reminderCount: 0,
       status: "pending",
       trackingNumber: "",
       items: [
@@ -632,6 +652,73 @@ const OrdersPage: React.FC = () => {
       days: differenceInDays > 0 ? differenceInDays : 0,
       isOverdue: differenceInDays > 0,
     };
+  };
+
+  const canSendReminder = (order: Order): boolean => {
+    // Can only send reminder if order is overdue and not fully paid
+    if (order.paymentStatus === "fully_paid") return false;
+
+    const overdue = calculateDaysOverdue(order);
+    if (!overdue.isOverdue) return false;
+
+    // Can send if: never sent, or last sent more than 3 days ago
+    if (!order.lastReminderSentDate) return overdue.days >= 1;
+
+    const lastReminderDate = new Date(order.lastReminderSentDate);
+    const today = new Date();
+    const daysSinceReminder = Math.floor((today.getTime() - lastReminderDate.getTime()) / (1000 * 3600 * 24));
+    return daysSinceReminder >= 3;
+  };
+
+  const handleSendReminder = () => {
+    if (!selectedOrder) return;
+
+    // Check if reminder can be sent
+    if (!canSendReminder(selectedOrder)) {
+      const overdue = calculateDaysOverdue(selectedOrder);
+      if (!overdue.isOverdue) {
+        alert("Payment is not overdue yet. Cannot send reminder.");
+        return;
+      }
+      if (selectedOrder.lastReminderSentDate) {
+        alert("Reminder was already sent. You can send another reminder after 3 days.");
+        return;
+      }
+    }
+
+    // Send reminder (simulate notification)
+    const today = new Date().toISOString().split("T")[0];
+    const currentTime = new Date().toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+    setOrders(
+      orders.map((order) => {
+        if (order.id === selectedOrderId) {
+          return {
+            ...order,
+            lastReminderSentDate: today,
+            reminderStatus: "sent",
+            reminderCount: order.reminderCount + 1,
+          };
+        }
+        return order;
+      })
+    );
+
+    // Show success message with details
+    const overdue = calculateDaysOverdue(selectedOrder);
+    alert(
+      `Payment reminder sent successfully!\n\n` +
+      `Order: ${selectedOrder.id}\n` +
+      `Customer: ${selectedOrder.customerName}\n` +
+      `Mobile: ${selectedOrder.customerMobile}\n` +
+      `Overdue by: ${overdue.days} days\n` +
+      `Outstanding Amount: Rs. ${selectedOrder.remainingAmount.toFixed(2)}\n` +
+      `Reminder Time: ${currentTime}`
+    );
   };
 
   return (
@@ -896,7 +983,7 @@ const OrdersPage: React.FC = () => {
                   </div>
 
                   {/* Payment Status Badge */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusBadge(
@@ -929,6 +1016,45 @@ const OrdersPage: React.FC = () => {
                       </p>
                     </div>
                   </div>
+
+                  {/* Reminder Status Section */}
+                  {calculateDaysOverdue(selectedOrder).isOverdue && selectedOrder.paymentStatus !== "fully_paid" && (
+                    <div className="bg-orange-900/30 border-2 border-orange-600/50 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">🔔</span>
+                          <div>
+                            <p className="text-xs text-gray-400 font-semibold">Payment Reminder</p>
+                            {selectedOrder.lastReminderSentDate ? (
+                              <p className="text-xs text-orange-400">
+                                Last sent: {selectedOrder.lastReminderSentDate} (Sent {selectedOrder.reminderCount}x)
+                              </p>
+                            ) : (
+                              <p className="text-xs text-orange-300">Not sent yet</p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleSendReminder}
+                          disabled={!canSendReminder(selectedOrder)}
+                          className={`px-3 py-1 rounded font-semibold text-xs transition-colors ${
+                            canSendReminder(selectedOrder)
+                              ? "bg-orange-600 text-white hover:bg-orange-700"
+                              : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"
+                          }`}
+                          title={
+                            canSendReminder(selectedOrder)
+                              ? "Send payment reminder to customer"
+                              : selectedOrder.lastReminderSentDate
+                              ? "Reminder sent recently. Try again after 3 days."
+                              : "Payment is not overdue yet"
+                          }
+                        >
+                          Send Reminder
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Update Balance Payment Section - Only for pending/processing without payment lock */}

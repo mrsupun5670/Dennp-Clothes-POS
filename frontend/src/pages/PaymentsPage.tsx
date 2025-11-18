@@ -8,8 +8,11 @@ interface Payment {
   branchName: string;
   dateTime: string;
   customerId: string;
+  customerNumber: string; // Customer number/phone
   customerMobile: string;
   amount: number;
+  totalAmount: number; // Total order amount
+  change: number; // Change given (paid - total)
   // Payment system enhancements
   orderId: string; // Link to order
   paymentType: "advance" | "balance"; // Type of payment
@@ -31,11 +34,14 @@ const PaymentsPage: React.FC = () => {
       receiptNumber: "RCP001",
       referenceNumber: "REF-2024-001",
       bankName: "Bank of Ceylon",
-      branchName: "Colombo Main Branch",
+      branchName: "Colombo Main",
       dateTime: "2024-11-15 10:30:00",
       customerId: "C001",
-      customerMobile: "+92-300-1234567",
+      customerNumber: "701-234-5678",
+      customerMobile: "+94-71-234-5678",
       amount: 1500.00,
+      totalAmount: 1500.00,
+      change: 0.00,
       orderId: "ORD001",
       paymentType: "advance",
       paymentMethod: "cash",
@@ -49,8 +55,11 @@ const PaymentsPage: React.FC = () => {
       branchName: "Kandy Branch",
       dateTime: "2024-11-14 09:15:00",
       customerId: "C002",
-      customerMobile: "+92-300-5678901",
+      customerNumber: "702-567-8901",
+      customerMobile: "+94-76-567-8901",
       amount: 2000.00,
+      totalAmount: 1980.00,
+      change: 20.00,
       orderId: "ORD002",
       paymentType: "advance",
       paymentMethod: "cash",
@@ -60,12 +69,15 @@ const PaymentsPage: React.FC = () => {
       id: "PAY003",
       receiptNumber: "RCP003",
       referenceNumber: "REF-2024-003",
-      bankName: "Sampath Bank",
+      bankName: "Commercial Bank",
       branchName: "Galle Branch",
       dateTime: "2024-11-18 14:00:00",
       customerId: "C002",
-      customerMobile: "+92-300-5678901",
+      customerNumber: "702-567-8901",
+      customerMobile: "+94-76-567-8901",
       amount: 1500.75,
+      totalAmount: 1500.75,
+      change: 0.00,
       orderId: "ORD002",
       paymentType: "balance",
       paymentMethod: "card",
@@ -76,11 +88,14 @@ const PaymentsPage: React.FC = () => {
       receiptNumber: "RCP004",
       referenceNumber: "REF-2024-004",
       bankName: "Bank of Ceylon",
-      branchName: "Colombo Main Branch",
+      branchName: "Colombo Main",
       dateTime: "2024-11-10 11:00:00",
       customerId: "C001",
-      customerMobile: "+92-300-1234567",
-      amount: 3000.00,
+      customerNumber: "701-234-5678",
+      customerMobile: "+94-71-234-5678",
+      amount: 3500.00,
+      totalAmount: 3500.00,
+      change: 0.00,
       orderId: "ORD003",
       paymentType: "advance",
       paymentMethod: "cash",
@@ -91,11 +106,14 @@ const PaymentsPage: React.FC = () => {
       receiptNumber: "RCP005",
       referenceNumber: "REF-2024-005",
       bankName: "Commercial Bank",
-      branchName: "Colombo Branch",
+      branchName: "Colombo Main",
       dateTime: "2024-11-12 15:30:00",
       customerId: "C001",
-      customerMobile: "+92-300-1234567",
+      customerNumber: "701-234-5678",
+      customerMobile: "+94-71-234-5678",
       amount: 4500.00,
+      totalAmount: 4500.00,
+      change: 0.00,
       orderId: "ORD003",
       paymentType: "balance",
       paymentMethod: "cash",
@@ -105,12 +123,15 @@ const PaymentsPage: React.FC = () => {
       id: "PAY006",
       receiptNumber: "RCP006",
       referenceNumber: "REF-2024-006",
-      bankName: "Hatton National Bank",
-      branchName: "Colombo Main Branch",
+      bankName: "Bank of Ceylon",
+      branchName: "Colombo Main",
       dateTime: "2024-11-08 12:00:00",
       customerId: "C003",
-      customerMobile: "+92-300-9876543",
-      amount: 2125.00,
+      customerNumber: "703-890-1234",
+      customerMobile: "+94-77-890-1234",
+      amount: 2500.00,
+      totalAmount: 2500.00,
+      change: 0.00,
       orderId: "ORD004",
       paymentType: "advance",
       paymentMethod: "card",
@@ -120,12 +141,15 @@ const PaymentsPage: React.FC = () => {
       id: "PAY007",
       receiptNumber: "RCP007",
       referenceNumber: "REF-2024-007",
-      bankName: "Hatton National Bank",
-      branchName: "Colombo Main Branch",
+      bankName: "Bank of Ceylon",
+      branchName: "Colombo Fort",
       dateTime: "2024-11-10 16:45:00",
       customerId: "C003",
-      customerMobile: "+92-300-9876543",
-      amount: 2125.00,
+      customerNumber: "703-890-1234",
+      customerMobile: "+94-77-890-1234",
+      amount: 2500.00,
+      totalAmount: 2500.00,
+      change: 0.00,
       orderId: "ORD004",
       paymentType: "balance",
       paymentMethod: "card",
@@ -135,12 +159,15 @@ const PaymentsPage: React.FC = () => {
       id: "PAY008",
       receiptNumber: "RCP008",
       referenceNumber: "REF-2024-008",
-      bankName: "Bank of Ceylon",
-      branchName: "Colombo Main Branch",
+      bankName: "Commercial Bank",
+      branchName: "Colombo Main",
       dateTime: "2024-11-05 13:20:00",
       customerId: "C002",
-      customerMobile: "+92-300-5678901",
-      amount: 1300.00,
+      customerNumber: "702-567-8901",
+      customerMobile: "+94-76-567-8901",
+      amount: 1500.00,
+      totalAmount: 1500.00,
+      change: 0.00,
       orderId: "ORD005",
       paymentType: "advance",
       paymentMethod: "cash",
@@ -209,40 +236,6 @@ const PaymentsPage: React.FC = () => {
     setSelectedBranch("all"); // Reset branch when bank changes
   };
 
-  const getPaymentTypeBadge = (paymentType: string) => {
-    switch (paymentType) {
-      case "advance":
-        return "bg-yellow-900/50 text-yellow-400 border border-yellow-600/50";
-      case "balance":
-        return "bg-green-900/50 text-green-400 border border-green-600/50";
-      default:
-        return "bg-gray-700/50 text-gray-400";
-    }
-  };
-
-  const getPaymentTypeLabel = (paymentType: string) => {
-    switch (paymentType) {
-      case "advance":
-        return "ADVANCE";
-      case "balance":
-        return "BALANCE";
-      default:
-        return "UNKNOWN";
-    }
-  };
-
-  const getPaymentMethodIcon = (method: string) => {
-    switch (method) {
-      case "cash":
-        return "💵";
-      case "card":
-        return "💳";
-      case "check":
-        return "📋";
-      default:
-        return "📌";
-    }
-  };
 
   return (
     <div className="space-y-6 h-full flex flex-col">
@@ -364,22 +357,19 @@ const PaymentsPage: React.FC = () => {
                   Order ID
                 </th>
                 <th className="px-4 py-3 text-left font-semibold text-red-400">
-                  Type
-                </th>
-                <th className="px-4 py-3 text-left font-semibold text-red-400">
                   Receipt Number
                 </th>
                 <th className="px-4 py-3 text-left font-semibold text-red-400">
-                  Customer ID
+                  Bank
                 </th>
                 <th className="px-4 py-3 text-left font-semibold text-red-400">
-                  Mobile
+                  Branch
                 </th>
                 <th className="px-4 py-3 text-left font-semibold text-red-400">
                   Date & Time
                 </th>
-                <th className="px-4 py-3 text-left font-semibold text-red-400 text-center">
-                  Method
+                <th className="px-4 py-3 text-left font-semibold text-red-400">
+                  Customer ID : Number
                 </th>
                 <th className="px-4 py-3 text-right font-semibold text-red-400">
                   Amount (Rs.)
@@ -407,30 +397,25 @@ const PaymentsPage: React.FC = () => {
                           setSelectedPaymentId(payment.orderId);
                         }}
                         className="hover:text-blue-400 hover:underline transition-colors"
-                        title="View order details - Click to view order in Orders tab"
+                        title="View order details"
                       >
                         {payment.orderId}
                       </button>
                     </td>
-                    <td className="px-4 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${getPaymentTypeBadge(payment.paymentType)}`}>
-                        {getPaymentTypeLabel(payment.paymentType)}
-                      </span>
-                    </td>
                     <td className="px-4 py-4 text-gray-300 font-medium text-sm">
                       {payment.receiptNumber}
                     </td>
-                    <td className="px-4 py-4 text-gray-200 font-medium text-sm font-mono">
-                      {payment.customerId}
+                    <td className="px-4 py-4 text-gray-300 text-sm">
+                      {payment.bankName}
                     </td>
-                    <td className="px-4 py-4 text-gray-400 text-sm">
-                      {payment.customerMobile}
+                    <td className="px-4 py-4 text-gray-300 text-sm">
+                      {payment.branchName}
                     </td>
                     <td className="px-4 py-4 text-gray-400 text-xs">
                       {payment.dateTime}
                     </td>
-                    <td className="px-4 py-4 text-center text-lg">
-                      {getPaymentMethodIcon(payment.paymentMethod)}
+                    <td className="px-4 py-4 text-gray-200 font-medium text-sm">
+                      <span className="font-mono">{payment.customerId}</span> : <span className="text-gray-400">{payment.customerNumber}</span>
                     </td>
                     <td className="px-4 py-4 text-right text-red-400 font-semibold">
                       Rs. {payment.amount.toFixed(2)}
@@ -439,7 +424,7 @@ const PaymentsPage: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
                     No payments found matching your filters.
                   </td>
                 </tr>

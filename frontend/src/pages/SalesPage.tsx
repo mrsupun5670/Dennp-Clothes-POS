@@ -151,12 +151,25 @@ interface ColorOption {
   [key: string]: string[];
 }
 
+interface BankBranches {
+  [key: string]: string[];
+}
+
+// Bank branches data
+const bankBranches: BankBranches = {
+  boc: ["Colombo Main", "Colombo Fort", "Kandy Branch", "Galle Branch", "Matara Branch"],
+  commercial: ["Colombo Main", "Colombo Slave Island", "Kandy Branch", "Jaffna Branch", "Galle Branch"],
+};
+
 const SalesPage: React.FC = () => {
   // State Management
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [paidAmount, setPaidAmount] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
+  const [selectedBank, setSelectedBank] = useState("");
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [isOnlineTransfer, setIsOnlineTransfer] = useState(false);
 
   // Modal States
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
@@ -373,9 +386,19 @@ const SalesPage: React.FC = () => {
       alert("Please add items to cart");
       return;
     }
+    if (paidAmount && !isOnlineTransfer && !selectedBank) {
+      alert("Please select a bank for payment");
+      return;
+    }
+    if (paidAmount && !isOnlineTransfer && selectedBank && !selectedBranch) {
+      alert("Please select a branch");
+      return;
+    }
 
     const orderId = `ORD-${Date.now()}`;
     const orderStatus = paid >= total ? "Paid" : isAdvance ? "Advance" : "Pending";
+
+    const paymentMethod = isOnlineTransfer ? "Online Transfer" : selectedBank ? `${selectedBank.toUpperCase()} - ${selectedBranch}` : "Not specified";
 
     console.log({
       orderId,
@@ -385,6 +408,10 @@ const SalesPage: React.FC = () => {
       paidAmount: paid,
       balance,
       orderStatus,
+      paymentMethod,
+      isOnlineTransfer,
+      bank: selectedBank,
+      branch: selectedBranch,
       notes: orderNotes,
       date: new Date().toISOString(),
     });
@@ -395,6 +422,9 @@ const SalesPage: React.FC = () => {
     setPaidAmount("");
     setOrderNotes("");
     setSelectedCustomer(null);
+    setSelectedBank("");
+    setSelectedBranch("");
+    setIsOnlineTransfer(false);
   };
 
   const handlePrintBill = () => {
@@ -410,6 +440,9 @@ const SalesPage: React.FC = () => {
     setPaidAmount("");
     setOrderNotes("");
     setSelectedCustomer(null);
+    setSelectedBank("");
+    setSelectedBranch("");
+    setIsOnlineTransfer(false);
   };
 
   const sizeOptions = selectedProduct
@@ -744,6 +777,70 @@ const SalesPage: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Payment Method Section - Show when paid amount is entered */}
+          {paidAmount && (
+            <div className="space-y-3 mb-4 pb-4 border-b border-gray-700">
+              <label className="block text-xs font-semibold text-red-400">Payment Method</label>
+
+              {/* Online Transfer Checkbox */}
+              <div className="flex items-center gap-2 bg-gray-700/50 p-2 rounded">
+                <input
+                  type="checkbox"
+                  id="onlineTransfer"
+                  checked={isOnlineTransfer}
+                  onChange={(e) => {
+                    setIsOnlineTransfer(e.target.checked);
+                    if (e.target.checked) {
+                      setSelectedBranch("");
+                    }
+                  }}
+                  className="w-4 h-4 accent-red-600 cursor-pointer"
+                />
+                <label htmlFor="onlineTransfer" className="text-sm text-gray-300 cursor-pointer flex-1">
+                  Online Transfer
+                </label>
+              </div>
+
+              {/* Bank Selection - Disabled if Online Transfer is selected */}
+              {!isOnlineTransfer && (
+                <div>
+                  <label className="block text-xs font-semibold text-red-400 mb-1">Select Bank</label>
+                  <select
+                    value={selectedBank}
+                    onChange={(e) => {
+                      setSelectedBank(e.target.value);
+                      setSelectedBranch("");
+                    }}
+                    className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                  >
+                    <option value="">-- Select Bank --</option>
+                    <option value="boc">Bank of Ceylon (BOC)</option>
+                    <option value="commercial">Commercial Bank</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Branch Selection - Show only if bank is selected and not online transfer */}
+              {selectedBank && !isOnlineTransfer && (
+                <div>
+                  <label className="block text-xs font-semibold text-red-400 mb-1">Select Branch</label>
+                  <select
+                    value={selectedBranch}
+                    onChange={(e) => setSelectedBranch(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                  >
+                    <option value="">-- Select Branch --</option>
+                    {bankBranches[selectedBank]?.map((branch) => (
+                      <option key={branch} value={branch}>
+                        {branch}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="space-y-2">

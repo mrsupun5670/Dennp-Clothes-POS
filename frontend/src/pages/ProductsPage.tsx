@@ -30,8 +30,8 @@ const handlePrintProducts = (products: any[]) => {
               <th>Name</th>
               <th>Colors</th>
               <th>Sizes</th>
-              <th class="text-right">Cost (Rs.)</th>
-              <th class="text-right">Qty</th>
+              <th class="text-right">Product Cost (Rs.)</th>
+              <th class="text-right">Print Cost (Rs.)</th>
               <th class="text-right">Retail Price (Rs.)</th>
               <th class="text-right">Wholesale Price (Rs.)</th>
             </tr>
@@ -44,7 +44,7 @@ const handlePrintProducts = (products: any[]) => {
                 <td>${p.colors}</td>
                 <td>${p.sizes}</td>
                 <td class="text-right">${p.cost.toFixed(2)}</td>
-                <td class="text-right">${p.qty}</td>
+                <td class="text-right">${p.printCost ? p.printCost.toFixed(2) : '0.00'}</td>
                 <td class="text-right">${p.retailPrice.toFixed(2)}</td>
                 <td class="text-right">${p.wholesalePrice.toFixed(2)}</td>
               </tr>
@@ -89,6 +89,7 @@ const ProductsPage: React.FC = () => {
     code: "",
     name: "",
     costPrice: "",
+    printCost: "",
     retailPrice: "",
     wholesalePrice: "",
   });
@@ -138,7 +139,7 @@ const ProductsPage: React.FC = () => {
   const handleCloseModal = () => {
     setShowAddProductModal(false);
     setIsEditMode(false);
-    setFormData({ code: "", name: "", costPrice: "", retailPrice: "", wholesalePrice: "" });
+    setFormData({ code: "", name: "", costPrice: "", printCost: "", retailPrice: "", wholesalePrice: "" });
   };
 
   const handleEditProduct = (product: any) => {
@@ -149,6 +150,7 @@ const ProductsPage: React.FC = () => {
       code: product.code,
       name: product.name,
       costPrice: product.cost.toString(),
+      printCost: product.printCost ? product.printCost.toString() : "",
       retailPrice: product.retailPrice.toString(),
       wholesalePrice: product.wholesalePrice.toString(),
     });
@@ -240,6 +242,7 @@ const ProductsPage: React.FC = () => {
       colors: "Blue",
       sizes: "S, M, L, XL",
       cost: 12.50,
+      printCost: 8.50,
       qty: 45,
       retailPrice: 29.99,
       wholesalePrice: 18.99,
@@ -251,6 +254,7 @@ const ProductsPage: React.FC = () => {
       colors: "Black",
       sizes: "28, 30, 32, 34, 36",
       cost: 25.00,
+      printCost: 15.00,
       qty: 2,
       retailPrice: 59.99,
       wholesalePrice: 38.99,
@@ -262,6 +266,7 @@ const ProductsPage: React.FC = () => {
       colors: "Red, White",
       sizes: "XS, S, M, L",
       cost: 18.75,
+      printCost: 12.00,
       qty: 0,
       retailPrice: 49.99,
       wholesalePrice: 32.99,
@@ -273,6 +278,7 @@ const ProductsPage: React.FC = () => {
       colors: "White",
       sizes: "S, M, L",
       cost: 30.00,
+      printCost: 18.50,
       qty: 12,
       retailPrice: 79.99,
       wholesalePrice: 52.99,
@@ -284,6 +290,7 @@ const ProductsPage: React.FC = () => {
       colors: "Navy Blue",
       sizes: "S, M, L, XL, XXL",
       cost: 35.00,
+      printCost: 22.00,
       qty: 8,
       retailPrice: 89.99,
       wholesalePrice: 65.99,
@@ -442,8 +449,8 @@ const ProductsPage: React.FC = () => {
                 <th className="px-4 py-3 text-left font-semibold text-red-400">Name</th>
                 <th className="px-4 py-3 text-left font-semibold text-red-400">Colors</th>
                 <th className="px-4 py-3 text-left font-semibold text-red-400">Sizes</th>
-                <th className="px-4 py-3 text-right font-semibold text-red-400">Cost (Rs.)</th>
-                <th className="px-4 py-3 text-right font-semibold text-red-400">Qty</th>
+                <th className="px-4 py-3 text-right font-semibold text-red-400">Product Cost (Rs.)</th>
+                <th className="px-4 py-3 text-right font-semibold text-red-400">Print Cost (Rs.)</th>
                 <th className="px-4 py-3 text-right font-semibold text-red-400">Retail Price (Rs.)</th>
                 <th className="px-4 py-3 text-right font-semibold text-red-400">Wholesale Price (Rs.)</th>
               </tr>
@@ -472,18 +479,8 @@ const ProductsPage: React.FC = () => {
                   <td className="px-4 py-3 text-right text-gray-300 font-semibold">
                     {product.cost.toFixed(2)}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <span
-                      className={`px-2 py-1 rounded font-semibold ${
-                        product.qty === 0
-                          ? "bg-red-900/50 text-red-400"
-                          : product.qty <= 3
-                          ? "bg-orange-900/50 text-orange-400"
-                          : "bg-green-900/50 text-green-400"
-                      }`}
-                    >
-                      {product.qty.toFixed(2)}
-                    </span>
+                  <td className="px-4 py-3 text-right text-gray-300 font-semibold">
+                    {product.printCost ? product.printCost.toFixed(2) : "0.00"}
                   </td>
                   <td className="px-4 py-3 text-right text-red-400 font-semibold">
                     {product.retailPrice.toFixed(2)}
@@ -515,22 +512,43 @@ const ProductsPage: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-6 space-y-5">
-              {/* Product Code */}
-              <div>
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Product Code <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., TSB-001"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  disabled={isEditMode}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                />
+              {/* Row 1: Product Code & Category */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Product Code */}
+                <div>
+                  <label className="block text-sm font-semibold text-red-400 mb-2">
+                    Product Code <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., TSB-001"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    disabled={isEditMode}
+                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-sm font-semibold text-red-400 mb-2">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => handleCategoryChange(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              {/* Product Name */}
+              {/* Row 2: Product Name */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-2">
                   Product Name <span className="text-red-500">*</span>
@@ -544,29 +562,11 @@ const ProductsPage: React.FC = () => {
                 />
               </div>
 
-              {/* Category */}
-              <div>
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => handleCategoryChange(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
-                >
-                  {categories.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Prices */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Row 3: Prices (4 columns) */}
+              <div className="grid grid-cols-4 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-red-400 mb-2">
-                    Cost Price (Rs.) <span className="text-red-500">*</span>
+                    Product Cost (Rs.) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -575,6 +575,21 @@ const ProductsPage: React.FC = () => {
                     value={formData.costPrice}
                     onChange={(e) => {
                       setFormData({ ...formData, costPrice: e.target.value });
+                    }}
+                    className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-red-400 mb-2">
+                    Print Cost (Rs.) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={formData.printCost}
+                    onChange={(e) => {
+                      setFormData({ ...formData, printCost: e.target.value });
                     }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />

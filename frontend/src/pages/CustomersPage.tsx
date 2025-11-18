@@ -63,6 +63,8 @@ interface Address {
   line1: string;
   line2: string;
   postalCode: string;
+  courierPhone1?: string;
+  courierPhone2?: string;
 }
 
 interface Customer {
@@ -102,6 +104,8 @@ const CustomersPage: React.FC = () => {
     line1: "",
     line2: "",
     postalCode: "",
+    courierPhone1: "",
+    courierPhone2: "",
   });
 
   // Sample customers data
@@ -120,6 +124,8 @@ const CustomersPage: React.FC = () => {
         line1: "123 Main Street",
         line2: "Apartment 4B",
         postalCode: "00100",
+        courierPhone1: "+92-300-1111111",
+        courierPhone2: "+92-300-2222222",
       },
       totalPaymentDue: 3750.50,
       pendingPaymentOrders: ["ORD001"],
@@ -142,6 +148,7 @@ const CustomersPage: React.FC = () => {
         line1: "456 Oak Avenue",
         line2: "",
         postalCode: "20000",
+        courierPhone1: "+92-300-3333333",
       },
       totalPaymentDue: 1200.00,
       pendingPaymentOrders: ["ORD005"],
@@ -164,6 +171,8 @@ const CustomersPage: React.FC = () => {
         line1: "789 Pine Road",
         line2: "House 42",
         postalCode: "80000",
+        courierPhone1: "+92-300-4444444",
+        courierPhone2: "+92-300-5555555",
       },
       totalPaymentDue: 0,
       pendingPaymentOrders: [],
@@ -257,6 +266,8 @@ const CustomersPage: React.FC = () => {
       line1: "",
       line2: "",
       postalCode: "",
+      courierPhone1: "",
+      courierPhone2: "",
     });
     setShowAddModal(true);
   };
@@ -295,6 +306,8 @@ const CustomersPage: React.FC = () => {
       line1: "",
       line2: "",
       postalCode: "",
+      courierPhone1: "",
+      courierPhone2: "",
     });
   };
 
@@ -582,6 +595,27 @@ const CustomersPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Courier Contact Numbers */}
+              {(addressData.courierPhone1 || addressData.courierPhone2) && (
+                <div>
+                  <h3 className="text-lg font-bold text-red-400 mb-4">Courier Contact Numbers</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {addressData.courierPhone1 && (
+                      <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
+                        <p className="text-xs text-gray-400 font-semibold mb-1">Courier Phone 1</p>
+                        <p className="text-gray-200 font-medium">{addressData.courierPhone1}</p>
+                      </div>
+                    )}
+                    {addressData.courierPhone2 && (
+                      <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
+                        <p className="text-xs text-gray-400 font-semibold mb-1">Courier Phone 2</p>
+                        <p className="text-gray-200 font-medium">{addressData.courierPhone2}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-700">
                 <button
@@ -787,7 +821,7 @@ const CustomersPage: React.FC = () => {
                 </div>
 
                 {/* Postal Code */}
-                <div>
+                <div className="mb-4">
                   <label className="block text-sm font-semibold text-red-400 mb-2">
                     Postal Code <span className="text-red-500">*</span>
                   </label>
@@ -800,6 +834,43 @@ const CustomersPage: React.FC = () => {
                     }
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                   />
+                </div>
+
+                {/* Courier Phone Numbers */}
+                <div className="border-t border-gray-700 pt-4">
+                  <h4 className="text-md font-bold text-red-400 mb-4">Courier Contact Numbers</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-red-400 mb-2">
+                        Courier Phone 1
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="e.g., +92-300-1234567"
+                        value={addressData.courierPhone1}
+                        onChange={(e) =>
+                          setAddressData({ ...addressData, courierPhone1: e.target.value })
+                        }
+                        className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">For courier/delivery contact</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-red-400 mb-2">
+                        Courier Phone 2
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="e.g., +92-300-7654321"
+                        value={addressData.courierPhone2}
+                        onChange={(e) =>
+                          setAddressData({ ...addressData, courierPhone2: e.target.value })
+                        }
+                        className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Alternative courier contact</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 

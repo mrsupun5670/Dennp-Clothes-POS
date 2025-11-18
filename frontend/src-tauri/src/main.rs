@@ -3,11 +3,9 @@
   windows_subsystem = "windows"
 )]
 
-use tauri::Manager;
-
 fn main() {
   tauri::Builder::default()
-    .setup(|app| {
+    .setup(|_app| {
       // Initialize app
       println!("Dennep Clothes POS Desktop App initialized");
       Ok(())
@@ -36,7 +34,7 @@ fn get_orders() -> String {
 }
 
 #[tauri::command]
-fn create_order(customer_name: String, items: Vec<String>) -> String {
+fn create_order(customer_name: String, _items: Vec<String>) -> String {
   // TODO: Save to database
   serde_json::json!({
     "success": true,
@@ -65,7 +63,7 @@ fn get_inventory() -> String {
 }
 
 #[tauri::command]
-fn update_inventory(product_id: i32, quantity: i32) -> String {
+fn update_inventory(product_id: i32, _quantity: i32) -> String {
   // TODO: Update database
   serde_json::json!({
     "success": true,

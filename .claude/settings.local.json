@@ -16,7 +16,11 @@
       "Bash(python -c:*)",
       "Bash(timeout 300 npm run tauri-dev)",
       "Bash(findstr:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(timeout 15 npm run tauri-dev:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(powershell -Command \"Remove-Item -Path ''$env:LOCALAPPDATA\\Temp\\*'' -Force -Recurse -ErrorAction SilentlyContinue; Remove-Item -Path ''$env:USERPROFILE\\AppData\\Local\\Temp'' -Force -Recurse -ErrorAction SilentlyContinue; Write-Host ''Temp files cleared''\")"
     ],
     "deny": [],
     "ask": []

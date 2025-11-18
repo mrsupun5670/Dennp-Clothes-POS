@@ -8,7 +8,6 @@ interface Payment {
   branchName: string;
   dateTime: string;
   customerId: string;
-  customerName: string;
   customerMobile: string;
   amount: number;
   // Payment system enhancements
@@ -35,7 +34,6 @@ const PaymentsPage: React.FC = () => {
       branchName: "Colombo Main Branch",
       dateTime: "2024-11-15 10:30:00",
       customerId: "C001",
-      customerName: "John Doe",
       customerMobile: "+92-300-1234567",
       amount: 1500.00,
       orderId: "ORD001",
@@ -51,7 +49,6 @@ const PaymentsPage: React.FC = () => {
       branchName: "Kandy Branch",
       dateTime: "2024-11-14 09:15:00",
       customerId: "C002",
-      customerName: "Sarah Smith",
       customerMobile: "+92-300-5678901",
       amount: 2000.00,
       orderId: "ORD002",
@@ -67,7 +64,6 @@ const PaymentsPage: React.FC = () => {
       branchName: "Galle Branch",
       dateTime: "2024-11-18 14:00:00",
       customerId: "C002",
-      customerName: "Sarah Smith",
       customerMobile: "+92-300-5678901",
       amount: 1500.75,
       orderId: "ORD002",
@@ -83,7 +79,6 @@ const PaymentsPage: React.FC = () => {
       branchName: "Colombo Main Branch",
       dateTime: "2024-11-10 11:00:00",
       customerId: "C001",
-      customerName: "John Doe",
       customerMobile: "+92-300-1234567",
       amount: 3000.00,
       orderId: "ORD003",
@@ -99,7 +94,6 @@ const PaymentsPage: React.FC = () => {
       branchName: "Colombo Branch",
       dateTime: "2024-11-12 15:30:00",
       customerId: "C001",
-      customerName: "John Doe",
       customerMobile: "+92-300-1234567",
       amount: 4500.00,
       orderId: "ORD003",
@@ -115,7 +109,6 @@ const PaymentsPage: React.FC = () => {
       branchName: "Colombo Main Branch",
       dateTime: "2024-11-08 12:00:00",
       customerId: "C003",
-      customerName: "Ahmed Khan",
       customerMobile: "+92-300-9876543",
       amount: 2125.00,
       orderId: "ORD004",
@@ -131,7 +124,6 @@ const PaymentsPage: React.FC = () => {
       branchName: "Colombo Main Branch",
       dateTime: "2024-11-10 16:45:00",
       customerId: "C003",
-      customerName: "Ahmed Khan",
       customerMobile: "+92-300-9876543",
       amount: 2125.00,
       orderId: "ORD004",
@@ -147,7 +139,6 @@ const PaymentsPage: React.FC = () => {
       branchName: "Colombo Main Branch",
       dateTime: "2024-11-05 13:20:00",
       customerId: "C002",
-      customerName: "Sarah Smith",
       customerMobile: "+92-300-5678901",
       amount: 1300.00,
       orderId: "ORD005",
@@ -192,7 +183,7 @@ const PaymentsPage: React.FC = () => {
       result = result.filter((payment) => payment.branchName === selectedBranch);
     }
 
-    // Search by reference number, order id, customer id, name, or mobile
+    // Search by reference number, order id, customer id, or mobile
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -200,7 +191,6 @@ const PaymentsPage: React.FC = () => {
           payment.referenceNumber.toLowerCase().includes(query) ||
           payment.orderId.toLowerCase().includes(query) ||
           payment.customerId.toLowerCase().includes(query) ||
-          payment.customerName.toLowerCase().includes(query) ||
           payment.customerMobile.includes(query)
       );
     }
@@ -380,7 +370,10 @@ const PaymentsPage: React.FC = () => {
                   Receipt Number
                 </th>
                 <th className="px-4 py-3 text-left font-semibold text-red-400">
-                  Customer
+                  Customer ID
+                </th>
+                <th className="px-4 py-3 text-left font-semibold text-red-400">
+                  Mobile
                 </th>
                 <th className="px-4 py-3 text-left font-semibold text-red-400">
                   Date & Time
@@ -427,9 +420,11 @@ const PaymentsPage: React.FC = () => {
                     <td className="px-4 py-4 text-gray-300 font-medium text-sm">
                       {payment.receiptNumber}
                     </td>
-                    <td className="px-4 py-4 text-gray-200 text-sm">
-                      <div>{payment.customerName}</div>
-                      <div className="text-xs text-gray-400">{payment.customerMobile}</div>
+                    <td className="px-4 py-4 text-gray-200 font-medium text-sm font-mono">
+                      {payment.customerId}
+                    </td>
+                    <td className="px-4 py-4 text-gray-400 text-sm">
+                      {payment.customerMobile}
                     </td>
                     <td className="px-4 py-4 text-gray-400 text-xs">
                       {payment.dateTime}
@@ -444,7 +439,7 @@ const PaymentsPage: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
                     No payments found matching your filters.
                   </td>
                 </tr>

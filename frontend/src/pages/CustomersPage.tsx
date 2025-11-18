@@ -26,9 +26,8 @@ const handlePrintCustomers = (customers: any[]) => {
           <thead>
             <tr>
               <th>Customer ID</th>
-              <th>Name</th>
-              <th>Email</th>
               <th>Mobile</th>
+              <th>Email</th>
               <th class="text-right">Total Spent (Rs.)</th>
               <th class="text-right">Total Orders</th>
               <th>Joined Date</th>
@@ -38,9 +37,8 @@ const handlePrintCustomers = (customers: any[]) => {
             ${customers.map(c => `
               <tr>
                 <td>${c.id}</td>
-                <td>${c.name}</td>
-                <td>${c.email}</td>
                 <td>${c.mobile}</td>
+                <td>${c.email || '-'}</td>
                 <td class="text-right">Rs. ${c.totalSpent.toFixed(2)}</td>
                 <td class="text-right">${c.totalOrders}</td>
                 <td>${c.joined}</td>
@@ -69,8 +67,7 @@ interface Address {
 
 interface Customer {
   id: string;
-  name: string;
-  email: string;
+  email?: string;
   mobile: string;
   totalSpent: number;
   totalOrders: number;
@@ -95,7 +92,6 @@ const CustomersPage: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({
     id: "",
-    name: "",
     email: "",
     mobile: "",
   });
@@ -112,7 +108,6 @@ const CustomersPage: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([
     {
       id: "C001",
-      name: "John Doe",
       email: "john@example.com",
       mobile: "+92-300-1234567",
       totalSpent: 12750.50,
@@ -135,7 +130,6 @@ const CustomersPage: React.FC = () => {
     },
     {
       id: "C002",
-      name: "Sarah Smith",
       email: "sarah@example.com",
       mobile: "+92-300-5678901",
       totalSpent: 6000.75,
@@ -158,7 +152,6 @@ const CustomersPage: React.FC = () => {
     },
     {
       id: "C003",
-      name: "Ahmed Khan",
       email: "ahmed@example.com",
       mobile: "+92-300-9876543",
       totalSpent: 4250.00,
@@ -245,8 +238,8 @@ const CustomersPage: React.FC = () => {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (customer) =>
-          customer.name.toLowerCase().includes(query) ||
-          customer.email.toLowerCase().includes(query) ||
+          customer.id.toLowerCase().includes(query) ||
+          (customer.email?.toLowerCase().includes(query) || false) ||
           customer.mobile.includes(query)
       );
     }
@@ -256,7 +249,7 @@ const CustomersPage: React.FC = () => {
 
   const handleAddClick = () => {
     setIsEditMode(false);
-    setFormData({ id: "", name: "", email: "", mobile: "" });
+    setFormData({ id: "", email: "", mobile: "" });
     setAddressData({
       province: "",
       district: "",
@@ -273,8 +266,7 @@ const CustomersPage: React.FC = () => {
     setSelectedCustomerId(customer.id);
     setFormData({
       id: customer.id,
-      name: customer.name,
-      email: customer.email,
+      email: customer.email || "",
       mobile: customer.mobile,
     });
     setAddressData(customer.address);
@@ -284,8 +276,7 @@ const CustomersPage: React.FC = () => {
   const handleViewAddress = (customer: Customer) => {
     setFormData({
       id: customer.id,
-      name: customer.name,
-      email: customer.email,
+      email: customer.email || "",
       mobile: customer.mobile,
     });
     setAddressData(customer.address);
@@ -296,7 +287,7 @@ const CustomersPage: React.FC = () => {
     setShowAddModal(false);
     setIsEditMode(false);
     setSelectedCustomerId(null);
-    setFormData({ id: "", name: "", email: "", mobile: "" });
+    setFormData({ id: "", email: "", mobile: "" });
     setAddressData({
       province: "",
       district: "",
@@ -315,7 +306,6 @@ const CustomersPage: React.FC = () => {
           customer.id === selectedCustomerId
             ? {
                 ...customer,
-                name: formData.name,
                 email: formData.email,
                 mobile: formData.mobile,
                 address: addressData,
@@ -329,12 +319,11 @@ const CustomersPage: React.FC = () => {
         Math.max(
           ...customers
             .map((c) => parseInt(c.id.substring(1)) || 0)
-        )
+        ) + 1
       ).padStart(3, "0")}`;
 
       const newCustomer: Customer = {
         id: newId,
-        name: formData.name,
         email: formData.email,
         mobile: formData.mobile,
         totalSpent: 0,
@@ -416,7 +405,7 @@ const CustomersPage: React.FC = () => {
         </label>
         <input
           type="text"
-          placeholder="Search by name, email, or phone..."
+          placeholder="Search by customer ID, email, or phone..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full px-4 py-3 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-colors"
@@ -474,7 +463,7 @@ const CustomersPage: React.FC = () => {
             {/* Sticky Table Header */}
             <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
               <tr>
-                <th className="px-6 py-3 text-left font-semibold text-red-400">Name</th>
+                <th className="px-6 py-3 text-left font-semibold text-red-400">Customer ID</th>
                 <th className="px-6 py-3 text-left font-semibold text-red-400">Mobile</th>
                 <th className="px-6 py-3 text-right font-semibold text-red-400">Total Orders</th>
                 <th className="px-6 py-3 text-right font-semibold text-red-400">Total Spent (Rs.)</th>
@@ -497,7 +486,7 @@ const CustomersPage: React.FC = () => {
                   }`}
                   title="Double-click to view address and edit"
                 >
-                  <td className="px-6 py-4 text-gray-200 font-medium">{customer.name}</td>
+                  <td className="px-6 py-4 text-gray-200 font-medium font-mono">{customer.id}</td>
                   <td className="px-6 py-4 text-gray-400">{customer.mobile}</td>
                   <td className="px-6 py-4 text-right text-white font-semibold">
                     {customer.totalOrders}
@@ -535,8 +524,8 @@ const CustomersPage: React.FC = () => {
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-6 border-b border-red-600 flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold">{formData.name}</h2>
-                <p className="text-red-200 text-sm mt-1">Customer ID: {formData.id}</p>
+                <h2 className="text-2xl font-bold font-mono">{formData.id}</h2>
+                <p className="text-red-200 text-sm mt-1">Mobile: {formData.mobile}</p>
               </div>
               <button
                 onClick={() => setShowAddressModal(false)}
@@ -650,32 +639,18 @@ const CustomersPage: React.FC = () => {
                 />
               </div>
 
-              {/* Name and Email */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., John Doe"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Email <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="e.g., john@example.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                  />
-                </div>
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-semibold text-red-400 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  placeholder="e.g., customer@example.com (optional)"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                />
               </div>
 
               {/* Mobile */}

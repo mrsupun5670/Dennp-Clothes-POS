@@ -31,7 +31,8 @@ const handlePrintAllOrders = (orders: any[]) => {
           <thead>
             <tr>
               <th>Order ID</th>
-              <th>Customer Name</th>
+              <th>Customer ID</th>
+              <th>Mobile</th>
               <th>Order Date</th>
               <th class="text-right">Total Amount (Rs.)</th>
               <th>Status</th>
@@ -42,7 +43,8 @@ const handlePrintAllOrders = (orders: any[]) => {
             ${orders.map(o => `
               <tr>
                 <td>${o.id}</td>
-                <td>${o.customerName}</td>
+                <td>${o.customerId}</td>
+                <td>${o.customerMobile}</td>
                 <td>${o.orderDate}</td>
                 <td class="text-right">Rs. ${o.totalAmount.toFixed(2)}</td>
                 <td><span class="status-badge status-${o.status}">${o.status.toUpperCase()}</span></td>
@@ -99,7 +101,7 @@ const handlePrintSingleOrder = (order: any) => {
         <div class="order-info">
           <div class="info-section">
             <strong>Order Date:</strong> ${order.orderDate}<br>
-            <strong>Customer:</strong> ${order.customerName} (ID: ${order.customerId})<br>
+            <strong>Customer ID:</strong> ${order.customerId}<br>
             <strong>Status:</strong> <span class="status-badge status-${order.status}">${order.status.toUpperCase()}</span>
           </div>
           <div class="info-section">
@@ -732,7 +734,7 @@ const OrdersPage: React.FC = () => {
               {totalOrders} orders
             </span>
           </div>
-          <p className="text-gray-400 mt-2">Manage and track customer orders</p>
+          <p className="text-gray-400 mt-2">Manage and track orders and payments</p>
         </div>
         <div className="flex flex-col items-end gap-3">
           <div className="text-right">
@@ -801,8 +803,8 @@ const OrdersPage: React.FC = () => {
             <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
               <tr>
                 <th className="px-6 py-3 text-left font-semibold text-red-400">Order ID</th>
-                <th className="px-6 py-3 text-left font-semibold text-red-400">Customer</th>
                 <th className="px-6 py-3 text-left font-semibold text-red-400">Customer ID</th>
+                <th className="px-6 py-3 text-left font-semibold text-red-400">Mobile</th>
                 <th className="px-6 py-3 text-left font-semibold text-red-400">Order Date</th>
                 <th className="px-6 py-3 text-right font-semibold text-red-400">Amount (Rs.)</th>
                 <th className="px-6 py-3 text-left font-semibold text-red-400">Status</th>
@@ -827,8 +829,8 @@ const OrdersPage: React.FC = () => {
                   <td className="px-6 py-4 text-gray-200 font-medium font-mono">
                     {order.id}
                   </td>
-                  <td className="px-6 py-4 text-gray-200">{order.customerName}</td>
-                  <td className="px-6 py-4 text-gray-400 font-mono">{order.customerId}</td>
+                  <td className="px-6 py-4 text-gray-200 font-mono">{order.customerId}</td>
+                  <td className="px-6 py-4 text-gray-400">{order.customerMobile}</td>
                   <td className="px-6 py-4 text-gray-400 text-sm">{order.orderDate}</td>
                   <td className="px-6 py-4 text-right text-red-400 font-semibold">
                     {order.totalAmount.toFixed(2)}
@@ -877,12 +879,12 @@ const OrdersPage: React.FC = () => {
                 <h3 className="text-lg font-bold text-red-400 mb-4">Customer Information</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
-                    <p className="text-xs text-gray-400 font-semibold mb-1">Customer Name</p>
-                    <p className="text-gray-200 font-medium">{selectedOrder.customerName}</p>
-                  </div>
-                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
                     <p className="text-xs text-gray-400 font-semibold mb-1">Customer ID</p>
                     <p className="text-gray-200 font-medium font-mono">{selectedOrder.customerId}</p>
+                  </div>
+                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
+                    <p className="text-xs text-gray-400 font-semibold mb-1">Mobile</p>
+                    <p className="text-gray-200 font-medium">{selectedOrder.customerMobile}</p>
                   </div>
                   <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
                     <p className="text-xs text-gray-400 font-semibold mb-1">Order Date</p>

@@ -611,43 +611,6 @@ const ProductsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Stock Summary by Size and Color */}
-              {isEditMode && stockRows.length > 0 && (
-                <div className="bg-gray-700/30 border border-gray-600 rounded-lg p-4 mb-4">
-                  <label className="block text-sm font-semibold text-red-400 mb-3">Stock Breakdown by Size & Color</label>
-                  <div className="grid grid-cols-1 gap-2 text-xs">
-                    {/* Size Summary */}
-                    <div>
-                      <p className="text-gray-300 font-semibold mb-2">By Size:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {[...new Set(stockRows.map(r => r.size))].filter(s => s).map((size) => (
-                          <div key={size} className="bg-blue-900/40 border border-blue-600/50 text-blue-300 px-3 py-1 rounded">
-                            {size}: <span className="font-bold">{stockRows.filter(r => r.size === size).reduce((sum, r) => sum + r.qty, 0)} units</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Color Summary */}
-                    <div>
-                      <p className="text-gray-300 font-semibold mb-2">By Color:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {[...new Set(stockRows.map(r => r.color))].filter(c => c).map((color) => (
-                          <div key={color} className="bg-purple-900/40 border border-purple-600/50 text-purple-300 px-3 py-1 rounded">
-                            {color}: <span className="font-bold">{stockRows.filter(r => r.color === color).reduce((sum, r) => sum + r.qty, 0)} units</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Total */}
-                    <div className="border-t border-gray-600 pt-2 mt-2">
-                      <p className="text-gray-300">
-                        <span className="font-semibold">Total Stock:</span> <span className="text-red-400 font-bold text-lg">{stockRows.reduce((sum, r) => sum + r.qty, 0)} units</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Stock Entry Rows - Row-Based System */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-3">

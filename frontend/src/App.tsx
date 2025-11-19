@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import POSLayout from "./components/layout/POSLayout";
 import SalesPage from "./pages/SalesPage";
@@ -14,6 +14,15 @@ type PageType = "sales" | "products" | "inventory" | "customers" | "orders" | "p
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>("sales");
+
+  // Listen for navigation requests from other pages
+  useEffect(() => {
+    const navigateToSales = sessionStorage.getItem('navigateToSales');
+    if (navigateToSales === 'true') {
+      setCurrentPage('sales');
+      sessionStorage.removeItem('navigateToSales');
+    }
+  }, [currentPage]);
 
   const renderPage = () => {
     switch (currentPage) {

@@ -443,8 +443,6 @@ const OrdersPage: React.FC = () => {
     "pending" | "processing" | "shipped" | "delivered"
   >("pending");
   const [editingBalanceAmount, setEditingBalanceAmount] = useState("");
-  const [editingPaymentMethod, setEditingPaymentMethod] = useState<"cash" | "card" | "check">("cash");
-  const [editingPaymentNotes, setEditingPaymentNotes] = useState("");
 
   // Filter and search orders
   const filteredOrders = useMemo(() => {
@@ -477,8 +475,6 @@ const OrdersPage: React.FC = () => {
     setEditingStatus(order.status);
     setEditingTrackingNumber(order.trackingNumber);
     setEditingBalanceAmount(order.remainingAmount.toFixed(2));
-    setEditingPaymentMethod("cash");
-    setEditingPaymentNotes("");
     setShowOrderModal(true);
   };
 
@@ -488,8 +484,6 @@ const OrdersPage: React.FC = () => {
     setEditingStatus("pending");
     setEditingTrackingNumber("");
     setEditingBalanceAmount("");
-    setEditingPaymentMethod("cash");
-    setEditingPaymentNotes("");
   };
 
   const handleUpdateOrder = () => {
@@ -540,14 +534,13 @@ const OrdersPage: React.FC = () => {
       id: newPaymentId,
       type: "balance",
       amount: balanceAmount,
-      method: editingPaymentMethod,
+      method: "cash", // Default payment method
       date: new Date().toISOString().split("T")[0],
       time: new Date().toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
       }),
-      notes: editingPaymentNotes,
     };
 
     // Update order with new payment
@@ -577,7 +570,6 @@ const OrdersPage: React.FC = () => {
     // Reset form and show success
     alert(`Payment of Rs. ${balanceAmount.toFixed(2)} recorded successfully!`);
     setEditingBalanceAmount("");
-    setEditingPaymentNotes("");
 
     // Refresh the modal to show updated data
     const updatedOrder = orders.find((o) => o.id === selectedOrderId);
@@ -603,124 +595,6 @@ const OrdersPage: React.FC = () => {
       default:
         return "bg-gray-700/50 text-gray-400";
     }
-  };
-
-  const getPaymentStatusBadge = (paymentStatus: string) => {
-    switch (paymentStatus) {
-      case "unpaid":
-        return "bg-red-900/50 text-red-400 border border-red-600/50";
-      case "partial":
-        return "bg-yellow-900/50 text-yellow-400 border border-yellow-600/50";
-      case "fully_paid":
-        return "bg-green-900/50 text-green-400 border border-green-600/50";
-      default:
-        return "bg-gray-700/50 text-gray-400";
-    }
-  };
-
-  const getPaymentStatusLabel = (paymentStatus: string) => {
-    switch (paymentStatus) {
-      case "unpaid":
-        return "UNPAID";
-      case "partial":
-        return "PARTIAL PAYMENT";
-      case "fully_paid":
-        return "FULLY PAID ✓";
-      default:
-        return "UNKNOWN";
-    }
-  };
-
-  const getPaymentPercentage = (order: Order) => {
-    if (order.totalAmount === 0) return 0;
-    return Math.round((order.totalPaid / order.totalAmount) * 100);
-  };
-
-  const getPaymentProgressColor = (percentage: number) => {
-    if (percentage < 50) return "bg-red-600";
-    if (percentage < 100) return "bg-yellow-600";
-    return "bg-green-600";
-  };
-
-  const calculateDaysOverdue = (order: Order) => {
-    if (order.paymentStatus === "fully_paid" || !order.expectedPaymentDate) {
-      return { days: 0, isOverdue: false };
-    }
-    const expectedDate = new Date(order.expectedPaymentDate);
-    const today = new Date();
-    const differenceInTime = today.getTime() - expectedDate.getTime();
-    const differenceInDays = Math.ceil(differenceInTime / (1000 * 3600 * 24));
-    return {
-      days: differenceInDays > 0 ? differenceInDays : 0,
-      isOverdue: differenceInDays > 0,
-    };
-  };
-
-  const canSendReminder = (order: Order): boolean => {
-    // Can only send reminder if order is overdue and not fully paid
-    if (order.paymentStatus === "fully_paid") return false;
-
-    const overdue = calculateDaysOverdue(order);
-    if (!overdue.isOverdue) return false;
-
-    // Can send if: never sent, or last sent more than 3 days ago
-    if (!order.lastReminderSentDate) return overdue.days >= 1;
-
-    const lastReminderDate = new Date(order.lastReminderSentDate);
-    const today = new Date();
-    const daysSinceReminder = Math.floor((today.getTime() - lastReminderDate.getTime()) / (1000 * 3600 * 24));
-    return daysSinceReminder >= 3;
-  };
-
-  const handleSendReminder = () => {
-    if (!selectedOrder) return;
-
-    // Check if reminder can be sent
-    if (!canSendReminder(selectedOrder)) {
-      const overdue = calculateDaysOverdue(selectedOrder);
-      if (!overdue.isOverdue) {
-        alert("Payment is not overdue yet. Cannot send reminder.");
-        return;
-      }
-      if (selectedOrder.lastReminderSentDate) {
-        alert("Reminder was already sent. You can send another reminder after 3 days.");
-        return;
-      }
-    }
-
-    // Send reminder (simulate notification)
-    const today = new Date().toISOString().split("T")[0];
-    const currentTime = new Date().toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-
-    setOrders(
-      orders.map((order) => {
-        if (order.id === selectedOrderId) {
-          return {
-            ...order,
-            lastReminderSentDate: today,
-            reminderStatus: "sent",
-            reminderCount: order.reminderCount + 1,
-          };
-        }
-        return order;
-      })
-    );
-
-    // Show success message with details
-    const overdue = calculateDaysOverdue(selectedOrder);
-    alert(
-      `Payment reminder sent successfully!\n\n` +
-      `Order: ${selectedOrder.id}\n` +
-      `Customer: ${selectedOrder.customerName}\n` +
-      `Mobile: ${selectedOrder.customerMobile}\n` +
-      `Overdue by: ${overdue.days} days\n` +
-      `Outstanding Amount: Rs. ${selectedOrder.remainingAmount.toFixed(2)}\n` +
-      `Reminder Time: ${currentTime}`
-    );
   };
 
   return (
@@ -934,246 +808,46 @@ const OrdersPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Payment Settlement Section */}
+              {/* Payment Summary Section - Simplified */}
               <div className="border-t border-gray-700 pt-5">
-                <h3 className="text-lg font-bold text-red-400 mb-4">Payment Settlement</h3>
+                <h3 className="text-lg font-bold text-red-400 mb-4">Payment Summary</h3>
 
-                {/* Payment Status Summary */}
-                <div className="bg-gray-700/50 border-2 border-gray-600 rounded-lg p-4 mb-4">
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <p className="text-xs text-gray-400 font-semibold mb-1">Total Amount</p>
-                      <p className="text-gray-200 font-bold text-lg">
-                        Rs. {selectedOrder.totalAmount.toFixed(2)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400 font-semibold mb-1">Advance Paid</p>
-                      <p className="text-blue-400 font-bold text-lg">
-                        Rs. {selectedOrder.advancePaid.toFixed(2)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400 font-semibold mb-1">Balance Paid</p>
-                      <p className="text-blue-400 font-bold text-lg">
-                        Rs. {selectedOrder.balancePaid.toFixed(2)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400 font-semibold mb-1">Total Paid</p>
-                      <p className="text-green-400 font-bold text-lg">
-                        Rs. {selectedOrder.totalPaid.toFixed(2)}
-                      </p>
-                    </div>
+                <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 mb-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <p className="text-gray-300 font-medium">Total Amount:</p>
+                    <p className="text-gray-100 font-bold text-lg">Rs. {selectedOrder.totalAmount.toFixed(2)}</p>
                   </div>
-
-                  {/* Payment Progress Bar */}
-                  <div className="mb-3">
-                    <p className="text-xs text-gray-400 font-semibold mb-2">
-                      Payment Progress: {getPaymentPercentage(selectedOrder)}%
+                  <div className="flex justify-between items-center border-t border-gray-600 pt-3">
+                    <p className="text-gray-300 font-medium">Amount Paid:</p>
+                    <p className="text-green-400 font-bold text-lg">Rs. {selectedOrder.totalPaid.toFixed(2)}</p>
+                  </div>
+                  <div className="flex justify-between items-center border-t border-gray-600 pt-3">
+                    <p className="text-gray-300 font-medium">Remaining to Pay:</p>
+                    <p className={`font-bold text-lg ${selectedOrder.remainingAmount <= 0 ? "text-green-400" : "text-red-400"}`}>
+                      Rs. {selectedOrder.remainingAmount.toFixed(2)}
                     </p>
-                    <div className="w-full bg-gray-600 rounded-full h-3 overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-300 ${getPaymentProgressColor(
-                          getPaymentPercentage(selectedOrder)
-                        )}`}
-                        style={{
-                          width: `${getPaymentPercentage(selectedOrder)}%`,
-                        }}
-                      ></div>
-                    </div>
                   </div>
-
-                  {/* Payment Status Badge */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusBadge(
-                          selectedOrder.paymentStatus
-                        )}`}
-                      >
-                        {getPaymentStatusLabel(selectedOrder.paymentStatus)}
-                      </span>
-                      {selectedOrder.paymentLocked && (
-                        <span className="text-xs text-yellow-400 font-semibold flex items-center gap-1">
-                          🔒 Locked
-                        </span>
-                      )}
-                      {calculateDaysOverdue(selectedOrder).isOverdue && (
-                        <span className="text-xs text-red-400 font-semibold flex items-center gap-1">
-                          ⚠️ Overdue {calculateDaysOverdue(selectedOrder).days} days
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400">Remaining Due:</p>
-                      <p
-                        className={`font-bold text-lg ${
-                          selectedOrder.remainingAmount <= 0
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }`}
-                      >
-                        Rs. {selectedOrder.remainingAmount.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Reminder Status Section */}
-                  {calculateDaysOverdue(selectedOrder).isOverdue && selectedOrder.paymentStatus !== "fully_paid" && (
-                    <div className="bg-orange-900/30 border-2 border-orange-600/50 rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">🔔</span>
-                          <div>
-                            <p className="text-xs text-gray-400 font-semibold">Payment Reminder</p>
-                            {selectedOrder.lastReminderSentDate ? (
-                              <p className="text-xs text-orange-400">
-                                Last sent: {selectedOrder.lastReminderSentDate} (Sent {selectedOrder.reminderCount}x)
-                              </p>
-                            ) : (
-                              <p className="text-xs text-orange-300">Not sent yet</p>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          onClick={handleSendReminder}
-                          disabled={!canSendReminder(selectedOrder)}
-                          className={`px-3 py-1 rounded font-semibold text-xs transition-colors ${
-                            canSendReminder(selectedOrder)
-                              ? "bg-orange-600 text-white hover:bg-orange-700"
-                              : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"
-                          }`}
-                          title={
-                            canSendReminder(selectedOrder)
-                              ? "Send payment reminder to customer"
-                              : selectedOrder.lastReminderSentDate
-                              ? "Reminder sent recently. Try again after 3 days."
-                              : "Payment is not overdue yet"
-                          }
-                        >
-                          Send Reminder
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* Update Balance Payment Section - Only for pending/processing without payment lock */}
-                {!selectedOrder.paymentLocked && selectedOrder.remainingAmount > 0 && (
+                {/* Balance Payment Input - Only show if balance remaining */}
+                {selectedOrder.remainingAmount > 0 && (
                   <div className="bg-blue-900/20 border-2 border-blue-600/50 rounded-lg p-4 mb-4">
-                    <h4 className="text-sm font-bold text-blue-400 mb-3">Update Balance Payment</h4>
-
-                    <div className="space-y-3">
-                      {/* Balance Amount Input */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          Amount to Pay (Rs.) <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editingBalanceAmount}
-                          onChange={(e) => setEditingBalanceAmount(e.target.value)}
-                          placeholder={`Max: Rs. ${selectedOrder.remainingAmount.toFixed(2)}`}
-                          className="w-full px-4 py-2 bg-gray-700 border-2 border-blue-600/50 text-white placeholder-gray-500 rounded-lg focus:border-blue-500 focus:outline-none"
-                        />
-                        <p className="text-xs text-gray-400 mt-1">
-                          Maximum available: Rs. {selectedOrder.remainingAmount.toFixed(2)}
-                        </p>
-                      </div>
-
-                      {/* Payment Method */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          Payment Method <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                          value={editingPaymentMethod}
-                          onChange={(e) =>
-                            setEditingPaymentMethod(e.target.value as "cash" | "card" | "check")
-                          }
-                          className="w-full px-4 py-2 bg-gray-700 border-2 border-blue-600/50 text-white rounded-lg focus:border-blue-500 focus:outline-none"
-                        >
-                          <option value="cash">Cash</option>
-                          <option value="card">Card</option>
-                          <option value="check">Check</option>
-                        </select>
-                      </div>
-
-                      {/* Payment Notes */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          Notes / Reference
-                        </label>
-                        <input
-                          type="text"
-                          value={editingPaymentNotes}
-                          onChange={(e) => setEditingPaymentNotes(e.target.value)}
-                          placeholder="Optional: Add reference or notes"
-                          className="w-full px-4 py-2 bg-gray-700 border-2 border-blue-600/50 text-white placeholder-gray-500 rounded-lg focus:border-blue-500 focus:outline-none"
-                        />
-                      </div>
-
-                      {/* Update Payment Button */}
-                      <button
-                        onClick={handleUpdatePayment}
-                        className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                      >
-                        Record Payment
-                      </button>
+                    <div className="flex justify-between items-center mb-3">
+                      <label className="text-sm font-semibold text-blue-400">Balance to Pay:</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editingBalanceAmount}
+                        onChange={(e) => setEditingBalanceAmount(e.target.value)}
+                        className="w-32 px-3 py-1 bg-gray-700 border border-blue-600/50 text-white rounded text-sm focus:border-blue-500 focus:outline-none text-right"
+                      />
                     </div>
-                  </div>
-                )}
-
-                {/* Payment History */}
-                {selectedOrder.paymentHistory.length > 0 && (
-                  <div className="bg-gray-700/30 border border-gray-600 rounded-lg overflow-hidden mb-4">
-                    <div className="bg-gray-700/50 border-b border-gray-600 px-4 py-2">
-                      <h4 className="text-sm font-bold text-gray-300">Payment History</h4>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead className="bg-gray-700/30 border-b border-gray-600">
-                          <tr>
-                            <th className="px-3 py-2 text-left text-gray-300">Date/Time</th>
-                            <th className="px-3 py-2 text-left text-gray-300">Type</th>
-                            <th className="px-3 py-2 text-right text-gray-300">Amount (Rs.)</th>
-                            <th className="px-3 py-2 text-left text-gray-300">Method</th>
-                            <th className="px-3 py-2 text-left text-gray-300">Notes</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-700">
-                          {selectedOrder.paymentHistory.map((payment) => (
-                            <tr key={payment.id} className="hover:bg-gray-700/20">
-                              <td className="px-3 py-2 text-gray-300">
-                                {payment.date} {payment.time}
-                              </td>
-                              <td className="px-3 py-2">
-                                <span
-                                  className={`px-2 py-1 rounded text-xs font-semibold ${
-                                    payment.type === "advance"
-                                      ? "bg-yellow-900/50 text-yellow-400"
-                                      : "bg-green-900/50 text-green-400"
-                                  }`}
-                                >
-                                  {payment.type === "advance" ? "Advance" : "Balance"}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2 text-right text-gray-200 font-semibold">
-                                Rs. {payment.amount.toFixed(2)}
-                              </td>
-                              <td className="px-3 py-2 text-gray-400 text-xs">
-                                {payment.method.charAt(0).toUpperCase() + payment.method.slice(1)}
-                              </td>
-                              <td className="px-3 py-2 text-gray-500 text-xs">
-                                {payment.notes || "—"}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <button
+                      onClick={handleUpdatePayment}
+                      className="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                    >
+                      Pay Now
+                    </button>
                   </div>
                 )}
               </div>
@@ -1235,6 +909,36 @@ const OrdersPage: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-700">
+                <button
+                  onClick={() => {
+                    // Store order data for SalesPage editing
+                    sessionStorage.setItem('orderToEdit', JSON.stringify({
+                      orderId: selectedOrder.id,
+                      customerId: selectedOrder.customerId,
+                      customerName: selectedOrder.customerName,
+                      customerMobile: selectedOrder.customerMobile,
+                      items: selectedOrder.items,
+                      totalAmount: selectedOrder.totalAmount
+                    }));
+                    // Store page navigation request
+                    sessionStorage.setItem('navigateToSales', 'true');
+                    // Close the modal
+                    handleCloseModal();
+                  }}
+                  disabled={selectedOrder.status !== "pending" && selectedOrder.status !== "processing"}
+                  className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${
+                    selectedOrder.status === "pending" || selectedOrder.status === "processing"
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"
+                  }`}
+                  title={
+                    selectedOrder.status === "pending" || selectedOrder.status === "processing"
+                      ? "Edit this order in Sales tab"
+                      : `Order cannot be edited. Current status: ${selectedOrder.status}`
+                  }
+                >
+                  Edit in Sales
+                </button>
                 <button
                   onClick={handleUpdateOrder}
                   className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors"

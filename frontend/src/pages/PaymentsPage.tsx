@@ -22,9 +22,6 @@ interface Payment {
 
 const PaymentsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBank, setSelectedBank] = useState<string>("all");
-  const [selectedBranch, setSelectedBranch] = useState<string>("all");
-  const [paymentTypeFilter, setPaymentTypeFilter] = useState<"all" | "advance" | "balance">("all");
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
 
   // Sample payments data - linked to orders
@@ -175,66 +172,30 @@ const PaymentsPage: React.FC = () => {
     },
   ]);
 
-  // Get unique banks and branches
-  const uniqueBanks = Array.from(
-    new Set(payments.map((payment) => payment.bankName))
-  ).sort();
-
-  const branchesForBank =
-    selectedBank === "all"
-      ? Array.from(new Set(payments.map((payment) => payment.branchName))).sort()
-      : Array.from(
-          new Set(
-            payments
-              .filter((payment) => payment.bankName === selectedBank)
-              .map((payment) => payment.branchName)
-          )
-        ).sort();
-
-  // Filter payments based on search and filters
+  // Filter payments based on search query only
   const filteredPayments = useMemo(() => {
     let result = [...payments];
 
-    // Filter by payment type
-    if (paymentTypeFilter !== "all") {
-      result = result.filter((payment) => payment.paymentType === paymentTypeFilter);
-    }
-
-    // Filter by bank
-    if (selectedBank !== "all") {
-      result = result.filter((payment) => payment.bankName === selectedBank);
-    }
-
-    // Filter by branch
-    if (selectedBranch !== "all") {
-      result = result.filter((payment) => payment.branchName === selectedBranch);
-    }
-
-    // Search by reference number, order id, customer id, or mobile
+    // Search by order id, receipt number, customer id, or mobile
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (payment) =>
-          payment.referenceNumber.toLowerCase().includes(query) ||
           payment.orderId.toLowerCase().includes(query) ||
+          payment.receiptNumber.toLowerCase().includes(query) ||
           payment.customerId.toLowerCase().includes(query) ||
           payment.customerMobile.includes(query)
       );
     }
 
     return result;
-  }, [selectedBank, selectedBranch, searchQuery, payments, paymentTypeFilter]);
+  }, [searchQuery, payments]);
 
   const totalPayments = filteredPayments.length;
   const totalAmount = filteredPayments.reduce(
     (sum, payment) => sum + payment.amount,
     0
   );
-
-  const handleBankChange = (bank: string) => {
-    setSelectedBank(bank);
-    setSelectedBranch("all"); // Reset branch when bank changes
-  };
 
 
   return (
@@ -272,79 +233,7 @@ const PaymentsPage: React.FC = () => {
         />
       </div>
 
-      {/* Payment Type Filter */}
-      <div className="space-y-2">
-        <label className="block text-sm font-semibold text-red-400">
-          Filter by Payment Type
-        </label>
-        <div className="flex gap-2 flex-wrap">
-          {[
-            { value: "all", label: "All Payments", count: payments.length },
-            { value: "advance", label: "Advance Payments", count: payments.filter(p => p.paymentType === "advance").length },
-            { value: "balance", label: "Balance Payments", count: payments.filter(p => p.paymentType === "balance").length },
-          ].map((filter) => (
-            <button
-              key={filter.value}
-              onClick={() => setPaymentTypeFilter(filter.value as "all" | "advance" | "balance")}
-              className={`px-4 py-2 rounded-full font-semibold text-white transition-all ${
-                paymentTypeFilter === filter.value
-                  ? filter.value === "advance"
-                    ? "bg-yellow-600 hover:bg-yellow-700 ring-2 ring-offset-2 ring-offset-gray-800"
-                    : filter.value === "balance"
-                    ? "bg-green-600 hover:bg-green-700 ring-2 ring-offset-2 ring-offset-gray-800"
-                    : "bg-gray-600 hover:bg-gray-700 ring-2 ring-offset-2 ring-offset-gray-800"
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-              }`}
-            >
-              {filter.label}
-              <span className="ml-2 bg-black/30 px-2 py-0.5 rounded-full text-xs">
-                {filter.count}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Bank and Branch Filters */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Bank Filter */}
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-red-400">
-            Filter by Bank
-          </label>
-          <select
-            value={selectedBank}
-            onChange={(e) => handleBankChange(e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
-          >
-            <option value="all">All Banks</option>
-            {uniqueBanks.map((bank) => (
-              <option key={bank} value={bank}>
-                {bank}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Branch Filter */}
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-red-400">
-            Filter by Branch
-          </label>
-          <select
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
-          >
-            <option value="all">All Branches</option>
-            {branchesForBank.map((branch) => (
-              <option key={branch} value={branch}>
-                {branch}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      {/* Search is sufficient for simplified view - removed filters */}
 
       {/* Payments Table - Scrollable */}
       <div className="flex-1 overflow-hidden flex flex-col bg-gray-800/50 border border-gray-700 rounded-lg">

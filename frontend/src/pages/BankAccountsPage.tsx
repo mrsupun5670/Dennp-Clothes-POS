@@ -21,9 +21,9 @@ interface BankAccount {
 }
 
 const BankAccountsPage: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState<"summary" | "tracking" | "history">(
-    "summary"
-  );
+  const [selectedTab, setSelectedTab] = useState<
+    "summary" | "tracking" | "history"
+  >("summary");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBank, setSelectedBank] = useState<string>("all");
   const [showReconcileModal, setShowReconcileModal] = useState(false);
@@ -189,7 +189,9 @@ const BankAccountsPage: React.FC = () => {
               {bankAccounts.length} accounts
             </span>
           </div>
-          <p className="text-gray-400 mt-2">Manage bank collections & reconciliation</p>
+          <p className="text-gray-400 mt-2">
+            Manage bank collections & reconciliation
+          </p>
         </div>
         <div className="text-right">
           <p className="text-sm text-gray-400">Total Pending</p>
@@ -279,7 +281,9 @@ const BankAccountsPage: React.FC = () => {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-gray-400 mb-1">Pending Amount</p>
+                      <p className="text-xs text-gray-400 mb-1">
+                        Pending Amount
+                      </p>
                       <p className="text-2xl font-bold text-yellow-400">
                         Rs. {account.totalPendingAmount.toFixed(2)}
                       </p>
@@ -346,8 +350,12 @@ const BankAccountsPage: React.FC = () => {
                       <td className="px-6 py-4 text-gray-200 font-medium font-mono">
                         {col.id}
                       </td>
-                      <td className="px-6 py-4 text-gray-300">{col.bankName}</td>
-                      <td className="px-6 py-4 text-gray-400">{col.branchName}</td>
+                      <td className="px-6 py-4 text-gray-300">
+                        {col.bankName}
+                      </td>
+                      <td className="px-6 py-4 text-gray-400">
+                        {col.branchName}
+                      </td>
                       <td className="px-6 py-4 text-gray-400 text-xs">
                         {col.fromDate} to {col.toDate}
                       </td>
@@ -371,7 +379,10 @@ const BankAccountsPage: React.FC = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
+                    <td
+                      colSpan={7}
+                      className="px-6 py-8 text-center text-gray-400"
+                    >
                       No pending collections found
                     </td>
                   </tr>
@@ -422,8 +433,12 @@ const BankAccountsPage: React.FC = () => {
                       <td className="px-6 py-4 text-gray-200 font-medium font-mono">
                         {col.id}
                       </td>
-                      <td className="px-6 py-4 text-gray-300">{col.bankName}</td>
-                      <td className="px-6 py-4 text-gray-400">{col.branchName}</td>
+                      <td className="px-6 py-4 text-gray-300">
+                        {col.bankName}
+                      </td>
+                      <td className="px-6 py-4 text-gray-400">
+                        {col.branchName}
+                      </td>
                       <td className="px-6 py-4 text-gray-400 text-xs">
                         {col.fromDate} to {col.toDate}
                       </td>
@@ -440,7 +455,10 @@ const BankAccountsPage: React.FC = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
+                    <td
+                      colSpan={7}
+                      className="px-6 py-8 text-center text-gray-400"
+                    >
                       No reconciliation history found
                     </td>
                   </tr>
@@ -484,7 +502,9 @@ const BankAccountsPage: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Branch:</span>
-                  <span className="text-gray-200">{selectedCollection.branchName}</span>
+                  <span className="text-gray-200">
+                    {selectedCollection.branchName}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Period:</span>
@@ -493,7 +513,9 @@ const BankAccountsPage: React.FC = () => {
                   </span>
                 </div>
                 <div className="border-t border-gray-600 pt-3 flex justify-between">
-                  <span className="text-gray-300 font-semibold">Pending Amount:</span>
+                  <span className="text-gray-300 font-semibold">
+                    Pending Amount:
+                  </span>
                   <span className="text-yellow-400 font-bold text-lg">
                     Rs. {selectedCollection.pendingAmount.toFixed(2)}
                   </span>
@@ -517,9 +539,9 @@ const BankAccountsPage: React.FC = () => {
                   selectedCollection.pendingAmount
                     ? "✓ Full amount matched"
                     : parseFloat(collectedAmount || "0") >
-                      selectedCollection.pendingAmount
-                    ? "⚠ Amount exceeds pending"
-                    : "Partial collection"}
+                        selectedCollection.pendingAmount
+                      ? "⚠ Amount exceeds pending"
+                      : "Partial collection"}
                 </p>
               </div>
 

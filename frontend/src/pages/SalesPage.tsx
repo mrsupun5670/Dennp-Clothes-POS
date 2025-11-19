@@ -170,6 +170,47 @@ const SalesPage: React.FC = () => {
   const [selectedBank, setSelectedBank] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("");
   const [isOnlineTransfer, setIsOnlineTransfer] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+
+  // Load order from sessionStorage on component mount
+  React.useEffect(() => {
+    const orderData = sessionStorage.getItem('orderToEdit');
+    if (orderData) {
+      try {
+        const order = JSON.parse(orderData);
+        setEditingOrderId(order.orderId);
+
+        // Set customer
+        const customer: Customer = {
+          id: order.customerId,
+          name: order.customerName,
+          email: "",
+          mobile: order.customerMobile,
+          totalSpent: 0,
+          totalOrders: 0,
+          joined: "",
+        };
+        setSelectedCustomer(customer);
+
+        // Load cart items
+        const newCartItems: CartItem[] = order.items.map((item: any, idx: number) => ({
+          id: `edit-${idx}-${Date.now()}`,
+          productCode: `CODE-${idx}`,
+          productName: item.productName,
+          size: item.size || "N/A",
+          color: item.color || "N/A",
+          quantity: item.quantity,
+          price: item.price,
+        }));
+        setCartItems(newCartItems);
+
+        // Clear the sessionStorage after loading
+        sessionStorage.removeItem('orderToEdit');
+      } catch (error) {
+        console.error('Error loading order data:', error);
+      }
+    }
+  }, []);
 
   // Modal States
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
@@ -416,7 +457,11 @@ const SalesPage: React.FC = () => {
       date: new Date().toISOString(),
     });
 
-    alert(`Order ${orderId} saved successfully!`);
+    if (editingOrderId) {
+      alert(`Order ${editingOrderId} updated successfully!`);
+    } else {
+      alert(`Order ${orderId} saved successfully!`);
+    }
     // Reset form
     setCartItems([]);
     setPaidAmount("");
@@ -425,6 +470,7 @@ const SalesPage: React.FC = () => {
     setSelectedBank("");
     setSelectedBranch("");
     setIsOnlineTransfer(false);
+    setEditingOrderId(null);
   };
 
   const handlePrintBill = () => {
@@ -457,12 +503,16 @@ const SalesPage: React.FC = () => {
       {/* Header */}
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold text-red-500">Sales & Orders</h1>
+          <h1 className="text-3xl font-bold text-red-500">{editingOrderId ? `Edit Order: ${editingOrderId}` : "Sales & Orders"}</h1>
           <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
             {cartItems.length} items
           </span>
         </div>
-        <p className="text-gray-400 mt-2">Create orders from online or WhatsApp enquiries</p>
+        <p className="text-gray-400 mt-2">
+          {editingOrderId
+            ? "Update order items and details"
+            : "Create orders from online or WhatsApp enquiries"}
+        </p>
       </div>
 
       {/* Main Content - Two Columns */}
@@ -849,7 +899,7 @@ const SalesPage: React.FC = () => {
               disabled={!selectedCustomer || cartItems.length === 0}
               className="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
             >
-              Save Order
+              {editingOrderId ? "Update Order" : "Save Order"}
             </button>
             <button
               onClick={handlePrintBill}

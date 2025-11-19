@@ -15,7 +15,7 @@ export const handleValidationErrors = (
       timestamp: new Date().toISOString(),
     });
   }
-  next();
+  return next();
 };
 
 export const validateEmail = (email: string): boolean => {

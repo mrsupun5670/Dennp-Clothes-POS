@@ -11,7 +11,7 @@ class CategoryController {
   /**
    * GET /categories - Get all categories
    */
-  async getAllCategories(req: Request, res: Response): Promise<void> {
+  async getAllCategories(_req: Request, res: Response): Promise<void> {
     try {
       const categories = await CategoryModel.getAllCategories();
 

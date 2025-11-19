@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { updateProductStock, clearProductStock } from "../services/productService";
 
 // Helper function to generate PDF-like table (using print)
 const handlePrintProducts = (products: any[]) => {
@@ -37,18 +38,22 @@ const handlePrintProducts = (products: any[]) => {
             </tr>
           </thead>
           <tbody>
-            ${products.map(p => `
+            ${products
+              .map(
+                (p) => `
               <tr>
                 <td>${p.code}</td>
                 <td>${p.name}</td>
                 <td>${p.colors}</td>
                 <td>${p.sizes}</td>
                 <td class="text-right">${p.cost.toFixed(2)}</td>
-                <td class="text-right">${p.printCost ? p.printCost.toFixed(2) : '0.00'}</td>
+                <td class="text-right">${p.printCost ? p.printCost.toFixed(2) : "0.00"}</td>
                 <td class="text-right">${p.retailPrice.toFixed(2)}</td>
                 <td class="text-right">${p.wholesalePrice.toFixed(2)}</td>
               </tr>
-            `).join('')}
+            `
+              )
+              .join("")}
           </tbody>
         </table>
         <p style="margin-top: 30px; color: #666; font-size: 12px;">Total Products: ${products.length}</p>
@@ -70,13 +75,17 @@ interface ColorOption {
 }
 
 const ProductsPage: React.FC = () => {
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(
+    null
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>("name");
   const [stockFilter, setStockFilter] = useState<string>("all");
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("tshirt");
-  const [stockRows, setStockRows] = useState<{ id: number; size: string; color: string; qty: number }[]>([]);
+  const [stockRows, setStockRows] = useState<
+    { id: number; size: string; color: string; qty: number }[]
+  >([]);
   const [nextRowId, setNextRowId] = useState(1);
   const [customSizes, setCustomSizes] = useState<string[]>([]);
   const [customColors, setCustomColors] = useState<string[]>([]);
@@ -96,41 +105,12 @@ const ProductsPage: React.FC = () => {
 
   // Backend state
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
   const [dbCategories, setDbCategories] = useState<any[]>([]);
   const [dbColors, setDbColors] = useState<any[]>([]);
   const [dbSizes, setDbSizes] = useState<any[]>([]);
   const [dbProducts, setDbProducts] = useState<any[]>([]);
-
-  // Size options by category
-  const sizesByCategory: SizeOption = {
-    tshirt: ["XS", "S", "M", "L", "XL", "XXL"],
-    shirt: ["15", "15.5", "16", "16.5", "17", "17.5"],
-    trouser: ["28", "30", "32", "34", "36", "38"],
-    croptop: ["XS", "S", "M", "L", "XL"],
-    jacket: ["S", "M", "L", "XL", "XXL"],
-    dress: ["XS", "S", "M", "L", "XL"],
-  };
-
-  // Color options by category
-  const colorsByCategory: ColorOption = {
-    tshirt: ["Black", "White", "Blue", "Red", "Green", "Yellow", "Gray"],
-    shirt: ["White", "Blue", "Black", "Light Blue", "Cream"],
-    trouser: ["Black", "Blue", "Gray", "Brown", "Khaki"],
-    croptop: ["Black", "White", "Red", "Pink", "Purple"],
-    jacket: ["Black", "Blue", "Brown", "Navy", "Gray"],
-    dress: ["Black", "White", "Red", "Blue", "Maroon"],
-  };
-
-  const categories = [
-    { value: "tshirt", label: "T-Shirt" },
-    { value: "shirt", label: "Shirt" },
-    { value: "trouser", label: "Trouser" },
-    { value: "croptop", label: "Crop Top" },
-    { value: "jacket", label: "Jacket" },
-    { value: "dress", label: "Dress" },
-  ];
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [notificationType, setNotificationType] = useState<"error" | "success" | "">("");
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
@@ -148,7 +128,14 @@ const ProductsPage: React.FC = () => {
   const handleCloseModal = () => {
     setShowAddProductModal(false);
     setIsEditMode(false);
-    setFormData({ code: "", name: "", costPrice: "", printCost: "", retailPrice: "", wholesalePrice: "" });
+    setFormData({
+      code: "",
+      name: "",
+      costPrice: "",
+      printCost: "",
+      retailPrice: "",
+      wholesalePrice: "",
+    });
   };
 
   const handleEditProduct = (product: any) => {
@@ -170,10 +157,16 @@ const ProductsPage: React.FC = () => {
 
     // Create stock rows for each size/color combination with proportional qty distribution
     const totalVariants = sizes.length * colors.length;
-    const qtyPerVariant = totalVariants > 0 ? Math.floor(product.qty / totalVariants) : 0;
+    const qtyPerVariant =
+      totalVariants > 0 ? Math.floor(product.qty / totalVariants) : 0;
     const remainder = totalVariants > 0 ? product.qty % totalVariants : 0;
 
-    const newStockRows: { id: number; size: string; color: string; qty: number }[] = [];
+    const newStockRows: {
+      id: number;
+      size: string;
+      color: string;
+      qty: number;
+    }[] = [];
     let rowId = 1;
     let qtyAdded = 0;
 
@@ -199,10 +192,16 @@ const ProductsPage: React.FC = () => {
   };
 
   // Get all available sizes (predefined + custom)
-  const getAllSizes = () => [...sizesByCategory[selectedCategory], ...customSizes];
+  const getAllSizes = () => [
+    ...dbSizes.map((s) => s.size_name),
+    ...customSizes,
+  ];
 
   // Get all available colors (predefined + custom)
-  const getAllColors = () => [...colorsByCategory[selectedCategory], ...customColors];
+  const getAllColors = () => [
+    ...dbColors.map((c) => c.color_name),
+    ...customColors,
+  ];
 
   // ===================== BACKEND API FUNCTIONS =====================
 
@@ -269,38 +268,62 @@ const ProductsPage: React.FC = () => {
   /**
    * Create or update product in backend
    */
+  const showNotification = (message: string, type: "error" | "success") => {
+    setNotificationMessage(message);
+    setNotificationType(type);
+    setTimeout(() => {
+      setNotificationMessage("");
+      setNotificationType("");
+    }, 3000);
+  };
+
   const handleSaveProduct = async () => {
-    // Validation
+    // === SYNCHRONOUS VALIDATION FIRST - NEVER CLOSE MODAL ON THESE ===
+
+    // Validate form data
     if (!formData.code.trim()) {
-      setErrorMessage("Product Code is required");
-      return;
+      showNotification("Product Code is required", "error");
+      return; // Exit early, modal stays open
     }
     if (!formData.name.trim()) {
-      setErrorMessage("Product Name is required");
-      return;
+      showNotification("Product Name is required", "error");
+      return; // Exit early, modal stays open
     }
     if (!formData.costPrice || parseFloat(formData.costPrice) < 0) {
-      setErrorMessage("Valid Product Cost is required");
-      return;
+      showNotification("Valid Product Cost is required", "error");
+      return; // Exit early, modal stays open
     }
     if (!formData.printCost || parseFloat(formData.printCost) < 0) {
-      setErrorMessage("Valid Print Cost is required");
-      return;
+      showNotification("Valid Print Cost is required", "error");
+      return; // Exit early, modal stays open
     }
     if (!formData.retailPrice || parseFloat(formData.retailPrice) < 0) {
-      setErrorMessage("Valid Retail Price is required");
-      return;
+      showNotification("Valid Retail Price is required", "error");
+      return; // Exit early, modal stays open
     }
 
-    // Check stock rows
-    if (stockRows.length === 0 || stockRows.some((row) => !row.size || !row.color)) {
-      setErrorMessage("Please fill all size/color combinations");
-      return;
+    // Validate stock rows
+    if (stockRows.length === 0) {
+      showNotification("Please add at least one stock entry.", "error");
+      return; // Exit early, modal stays open
     }
 
+    // Check for incomplete rows
+    const hasIncompleteRows = stockRows.some((row) => !row.size || !row.color);
+    if (hasIncompleteRows) {
+      showNotification("Please fill all size/color combinations for stock entries.", "error");
+      return; // Exit early, modal stays open
+    }
+
+    // Check for rows with zero quantity
+    const hasZeroQtyRows = stockRows.some((row) => row.qty <= 0);
+    if (hasZeroQtyRows) {
+      showNotification("All stock entries must have a quantity greater than 0.", "error");
+      return; // Exit early, modal stays open
+    }
+
+    // === ALL VALIDATION PASSED - NOW ATTEMPT SAVE ===
     setIsLoading(true);
-    setErrorMessage("");
-    setSuccessMessage("");
 
     try {
       // Create product first
@@ -309,10 +332,12 @@ const ProductsPage: React.FC = () => {
         product_name: formData.name,
         category_id: 1, // Default category - you should get this from the selected category
         description: "",
-        cost_price: parseFloat(formData.costPrice),
+        product_cost: parseFloat(formData.costPrice),
         print_cost: parseFloat(formData.printCost),
         retail_price: parseFloat(formData.retailPrice),
-        wholesale_price: formData.wholesalePrice ? parseFloat(formData.wholesalePrice) : null,
+        wholesale_price: formData.wholesalePrice
+          ? parseFloat(formData.wholesalePrice)
+          : null,
         product_status: "active",
       };
 
@@ -320,51 +345,66 @@ const ProductsPage: React.FC = () => {
 
       if (isEditMode && selectedProductId) {
         // Update existing product
-        const updateResponse = await fetch(`http://localhost:3000/api/v1/products/${selectedProductId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(productPayload),
-        });
+        const updateResponse = await fetch(
+          `http://localhost:3000/api/v1/products/${selectedProductId}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(productPayload),
+          }
+        );
 
         const updateResult = await updateResponse.json();
         if (!updateResult.success) {
-          setErrorMessage(updateResult.error || "Failed to update product");
+          showNotification(updateResult.error || "Failed to update product", "error");
           setIsLoading(false);
-          return;
+          return; // Exit early, modal stays open on API error
         }
         productId = selectedProductId;
       } else {
         // Create new product
-        const createResponse = await fetch("http://localhost:3000/api/v1/products", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(productPayload),
-        });
+        const createResponse = await fetch(
+          "http://localhost:3000/api/v1/products",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(productPayload),
+          }
+        );
 
         const createResult = await createResponse.json();
         if (!createResult.success) {
-          setErrorMessage(createResult.error || "Failed to create product");
+          showNotification(createResult.error || "Failed to create product", "error");
           setIsLoading(false);
-          return;
+          return; // Exit early, modal stays open on API error
         }
         productId = createResult.data.product_id;
       }
 
       // Add colors and sizes to the product
-      const colors = stockRows.map((row) => row.color).filter((c, i, a) => a.indexOf(c) === i);
-      const sizes = stockRows.map((row) => row.size).filter((s, i, a) => a.indexOf(s) === i);
+      const colors = stockRows
+        .map((row) => row.color)
+        .filter((c, i, a) => a.indexOf(c) === i);
+      const sizes = stockRows
+        .map((row) => row.size)
+        .filter((s, i, a) => a.indexOf(s) === i);
 
       // Add colors
       for (const colorName of colors) {
-        let colorId = dbColors.find((c) => c.color_name.toLowerCase() === colorName.toLowerCase())?.color_id;
+        let colorId = dbColors.find(
+          (c) => c.color_name.toLowerCase() === colorName.toLowerCase()
+        )?.color_id;
 
         if (!colorId) {
           // Create new color if it doesn't exist
-          const colorResponse = await fetch("http://localhost:3000/api/v1/colors", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ color_name: colorName }),
-          });
+          const colorResponse = await fetch(
+            "http://localhost:3000/api/v1/colors",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ color_name: colorName }),
+            }
+          );
 
           const colorResult = await colorResponse.json();
           if (colorResult.success) {
@@ -381,11 +421,14 @@ const ProductsPage: React.FC = () => {
           ?.colors?.some((c: any) => c.color_id === colorId);
 
         if (!hasColor) {
-          await fetch(`http://localhost:3000/api/v1/products/${productId}/colors`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ color_id: colorId }),
-          });
+          await fetch(
+            `http://localhost:3000/api/v1/products/${productId}/colors`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ color_id: colorId }),
+            }
+          );
         }
       }
 
@@ -395,11 +438,14 @@ const ProductsPage: React.FC = () => {
 
         if (!sizeId) {
           // Create new size if it doesn't exist
-          const sizeResponse = await fetch("http://localhost:3000/api/v1/sizes", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ size_name: sizeName, size_type_id: 1 }), // Default size type
-          });
+          const sizeResponse = await fetch(
+            "http://localhost:3000/api/v1/sizes",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ size_name: sizeName, size_type_id: 1 }), // Default size type
+            }
+          );
 
           const sizeResult = await sizeResponse.json();
           if (sizeResult.success) {
@@ -416,23 +462,53 @@ const ProductsPage: React.FC = () => {
           ?.sizes?.some((s: any) => s.size_id === sizeId);
 
         if (!hasSize) {
-          await fetch(`http://localhost:3000/api/v1/products/${productId}/sizes`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ size_id: sizeId }),
-          });
+          await fetch(
+            `http://localhost:3000/api/v1/products/${productId}/sizes`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ size_id: sizeId }),
+            }
+          );
         }
       }
 
-      setSuccessMessage(isEditMode ? "Product updated successfully!" : "Product created successfully!");
-      setTimeout(() => {
-        handleCloseModal();
-        fetchProducts(); // Refresh product list
-      }, 1500);
-    } catch (error: any) {
-      setErrorMessage(error.message || "An error occurred while saving the product");
-    } finally {
+      // Clear existing stock entries for this product first (to remove deleted rows)
+      if (isEditMode) {
+        try {
+          await clearProductStock(productId);
+        } catch (error) {
+          console.error("Failed to clear product stock:", error);
+          // Continue with update even if clear fails
+        }
+      }
+
+      // Update stock for each row
+      for (const row of stockRows) {
+        const sizeId = dbSizes.find((s) => s.size_name === row.size)?.size_id;
+        const colorId = dbColors.find((c) => c.color_name === row.color)?.color_id;
+
+        console.log("Updating stock:", { productId, sizeId, colorId, qty: row.qty });
+        if (productId && sizeId && colorId && row.qty > 0) {
+          try {
+            await updateProductStock(productId, sizeId, colorId, row.qty);
+          } catch (error) {
+            console.error("Failed to update stock for a row:", { productId, sizeId, colorId, error });
+          }
+        }
+      }
+
+      // === SUCCESS - ONLY CLOSE MODAL HERE ===
       setIsLoading(false);
+      showNotification(isEditMode ? "Product updated successfully!" : "Product created successfully!", "success");
+      fetchProducts(); // Refresh product list
+      handleCloseModal(); // ONLY close modal on complete success
+
+    } catch (error: any) {
+      // === ERROR - KEEP MODAL OPEN ===
+      setIsLoading(false);
+      showNotification(error.message || "An error occurred while saving the product", "error");
+      // DO NOT close modal on error - user needs to see their data
     }
   };
 
@@ -444,24 +520,30 @@ const ProductsPage: React.FC = () => {
     fetchSizes();
   }, []);
 
-  // Add new stock row
+  // Add new stock row - Fixed to use functional updates
   const addStockRow = () => {
-    setStockRows([...stockRows, { id: nextRowId, size: "", color: "", qty: 0 }]);
-    setNextRowId(nextRowId + 1);
+    setStockRows((currentRows) => [
+      ...currentRows,
+      { id: nextRowId, size: "", color: "", qty: 0 },
+    ]);
+    setNextRowId((currentId) => currentId + 1);
   };
 
-  // Update stock row
+  // Update stock row - Fixed to use functional updates
   const updateStockRow = (id: number, field: string, value: any) => {
-    setStockRows(
-      stockRows.map((row) =>
-        row.id === id ? { ...row, [field]: value } : row
-      )
+    setStockRows((currentRows) =>
+      currentRows.map((row) => (row.id === id ? { ...row, [field]: value } : row))
     );
   };
 
-  // Remove stock row
+  // Remove stock row - Fixed to prevent duplication
   const removeStockRow = (id: number) => {
-    setStockRows(stockRows.filter((row) => row.id !== id));
+    // Use functional update to ensure we're working with latest state
+    setStockRows((currentRows) => {
+      const filteredRows = currentRows.filter((row) => row.id !== id);
+      // Return new array reference to force React re-render
+      return [...filteredRows];
+    });
   };
 
   // Add custom size
@@ -483,86 +565,23 @@ const ProductsPage: React.FC = () => {
   };
 
   // Sample product data
-  const allProducts = [
-    {
-      id: 1,
-      code: "TSB-001",
-      name: "T-Shirt Blue",
-      colors: "Blue",
-      sizes: "S, M, L, XL",
-      cost: 12.50,
-      printCost: 8.50,
-      qty: 45,
-      retailPrice: 29.99,
-      wholesalePrice: 18.99,
-    },
-    {
-      id: 2,
-      code: "JB-001",
-      name: "Jeans Black",
-      colors: "Black",
-      sizes: "28, 30, 32, 34, 36",
-      cost: 25.00,
-      printCost: 15.00,
-      qty: 2,
-      retailPrice: 59.99,
-      wholesalePrice: 38.99,
-    },
-    {
-      id: 3,
-      code: "SR-001",
-      name: "Shirt Red",
-      colors: "Red, White",
-      sizes: "XS, S, M, L",
-      cost: 18.75,
-      printCost: 12.00,
-      qty: 0,
-      retailPrice: 49.99,
-      wholesalePrice: 32.99,
-    },
-    {
-      id: 4,
-      code: "DW-001",
-      name: "Dress White",
-      colors: "White",
-      sizes: "S, M, L",
-      cost: 30.00,
-      printCost: 18.50,
-      qty: 12,
-      retailPrice: 79.99,
-      wholesalePrice: 52.99,
-    },
-    {
-      id: 5,
-      code: "JN-002",
-      name: "Jacket Navy",
-      colors: "Navy Blue",
-      sizes: "S, M, L, XL, XXL",
-      cost: 35.00,
-      printCost: 22.00,
-      qty: 8,
-      retailPrice: 89.99,
-      wholesalePrice: 65.99,
-    },
-  ];
+  // const allProducts = [ ... ]; // This is now removed and we will use dbProducts
 
   // Filter and sort products based on all criteria
   const filteredAndSortedProducts = useMemo(() => {
-    // Use backend products if available, otherwise use sample data
-    const productsToFilter = dbProducts.length > 0 ?
-      dbProducts.map((p: any) => ({
+    // Use backend products
+    const productsToFilter = dbProducts.map((p: any) => ({
         id: p.product_id,
         code: p.sku,
         name: p.product_name,
         colors: p.colors?.map((c: any) => c.color_name).join(", ") || "N/A",
         sizes: p.sizes?.map((s: any) => s.size_name).join(", ") || "N/A",
-        cost: p.cost_price || 0,
+        cost: p.product_cost || 0,
         printCost: p.print_cost || 0,
-        qty: 0, // Backend doesn't track qty yet
+        qty: p.stock || 0,
         retailPrice: p.retail_price,
         wholesalePrice: p.wholesale_price || 0,
-      }))
-      : allProducts;
+      }));
 
     let result = [...productsToFilter];
 
@@ -604,7 +623,7 @@ const ProductsPage: React.FC = () => {
     }
 
     return result;
-  }, [searchQuery, sortBy, stockFilter]);
+  }, [searchQuery, sortBy, stockFilter, dbProducts]);
 
   const totalProducts = filteredAndSortedProducts.length;
 
@@ -613,6 +632,7 @@ const ProductsPage: React.FC = () => {
     setSortBy("name");
     setStockFilter("all");
   };
+
 
   return (
     <div className="space-y-6 h-full flex flex-col">
@@ -625,7 +645,9 @@ const ProductsPage: React.FC = () => {
               {totalProducts} items
             </span>
           </div>
-          <p className="text-gray-400 mt-2">Manage your stock catalog and inventory</p>
+          <p className="text-gray-400 mt-2">
+            Manage your stock catalog and inventory
+          </p>
         </div>
         <div className="flex gap-3">
           <button
@@ -648,7 +670,9 @@ const ProductsPage: React.FC = () => {
       <div className="space-y-4 bg-gray-800/30 border border-gray-700 rounded-lg p-5">
         {/* Search Bar */}
         <div>
-          <label className="block text-sm font-semibold text-red-400 mb-2">Search Products</label>
+          <label className="block text-sm font-semibold text-red-400 mb-2">
+            Search Products
+          </label>
           <input
             type="text"
             placeholder="Search by product code, name, or color..."
@@ -661,7 +685,9 @@ const ProductsPage: React.FC = () => {
         {/* Sorting Options */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-2">Sort By</label>
+            <label className="block text-xs font-semibold text-gray-400 mb-2">
+              Sort By
+            </label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -678,7 +704,9 @@ const ProductsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-2">Stock Status</label>
+            <label className="block text-xs font-semibold text-gray-400 mb-2">
+              Stock Status
+            </label>
             <select
               value={stockFilter}
               onChange={(e) => setStockFilter(e.target.value)}
@@ -692,7 +720,9 @@ const ProductsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-2">Action</label>
+            <label className="block text-xs font-semibold text-gray-400 mb-2">
+              Action
+            </label>
             <button
               onClick={handleResetFilters}
               className="w-full px-3 py-2 bg-red-600/20 border border-red-600 text-red-400 text-sm rounded-lg hover:bg-red-600/30 transition-colors font-semibold"
@@ -710,14 +740,30 @@ const ProductsPage: React.FC = () => {
             {/* Sticky Table Header */}
             <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-red-400">Product Code</th>
-                <th className="px-4 py-3 text-left font-semibold text-red-400">Name</th>
-                <th className="px-4 py-3 text-left font-semibold text-red-400">Colors</th>
-                <th className="px-4 py-3 text-left font-semibold text-red-400">Sizes</th>
-                <th className="px-4 py-3 text-right font-semibold text-red-400">Product Cost (Rs.)</th>
-                <th className="px-4 py-3 text-right font-semibold text-red-400">Print Cost (Rs.)</th>
-                <th className="px-4 py-3 text-right font-semibold text-red-400">Retail Price (Rs.)</th>
-                <th className="px-4 py-3 text-right font-semibold text-red-400">Wholesale Price (Rs.)</th>
+                <th className="px-4 py-3 text-left font-semibold text-red-400">
+                  Product Code
+                </th>
+                <th className="px-4 py-3 text-left font-semibold text-red-400">
+                  Name
+                </th>
+                <th className="px-4 py-3 text-left font-semibold text-red-400">
+                  Colors
+                </th>
+                <th className="px-4 py-3 text-left font-semibold text-red-400">
+                  Sizes
+                </th>
+                <th className="px-4 py-3 text-right font-semibold text-red-400">
+                  Product Cost (Rs.)
+                </th>
+                <th className="px-4 py-3 text-right font-semibold text-red-400">
+                  Print Cost (Rs.)
+                </th>
+                <th className="px-4 py-3 text-right font-semibold text-red-400">
+                  Retail Price (Rs.)
+                </th>
+                <th className="px-4 py-3 text-right font-semibold text-red-400">
+                  Wholesale Price (Rs.)
+                </th>
               </tr>
             </thead>
 
@@ -738,9 +784,13 @@ const ProductsPage: React.FC = () => {
                   <td className="px-4 py-3 text-gray-300 font-mono font-semibold">
                     {product.code}
                   </td>
-                  <td className="px-4 py-3 text-gray-100 font-medium">{product.name}</td>
+                  <td className="px-4 py-3 text-gray-100 font-medium">
+                    {product.name}
+                  </td>
                   <td className="px-4 py-3 text-gray-400">{product.colors}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{product.sizes}</td>
+                  <td className="px-4 py-3 text-gray-400 text-xs">
+                    {product.sizes}
+                  </td>
                   <td className="px-4 py-3 text-right text-gray-300 font-semibold">
                     {product.cost.toFixed(2)}
                   </td>
@@ -766,7 +816,9 @@ const ProductsPage: React.FC = () => {
           <div className="bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-4xl">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-6 border-b border-red-600 flex justify-between items-center">
-              <h2 className="text-2xl font-bold">{isEditMode ? "Edit Product" : "Add New Product"}</h2>
+              <h2 className="text-2xl font-bold">
+                {isEditMode ? "Edit Product" : "Add New Product"}
+              </h2>
               <button
                 onClick={handleCloseModal}
                 className="text-white hover:text-red-200 transition-colors text-2xl"
@@ -777,6 +829,17 @@ const ProductsPage: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-6 space-y-5">
+              {/* Notification Display */}
+              {notificationMessage && (
+                <div className={`p-3 rounded-lg text-sm font-semibold ${
+                  notificationType === "error"
+                    ? "bg-red-900/30 border border-red-600/50 text-red-400"
+                    : "bg-green-900/30 border border-green-600/50 text-green-400"
+                }`}>
+                  {notificationMessage}
+                </div>
+              )}
+
               {/* Row 1: Product Code & Category */}
               <div className="grid grid-cols-2 gap-3">
                 {/* Product Code */}
@@ -788,7 +851,9 @@ const ProductsPage: React.FC = () => {
                     type="text"
                     placeholder="e.g., TSB-001"
                     value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, code: e.target.value })
+                    }
                     disabled={isEditMode}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   />
@@ -804,9 +869,9 @@ const ProductsPage: React.FC = () => {
                     onChange={(e) => handleCategoryChange(e.target.value)}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
                   >
-                    {categories.map((cat) => (
-                      <option key={cat.value} value={cat.value}>
-                        {cat.label}
+                    {dbCategories.map((cat) => (
+                      <option key={cat.category_id} value={cat.category_id}>
+                        {cat.category_name}
                       </option>
                     ))}
                   </select>
@@ -822,7 +887,9 @@ const ProductsPage: React.FC = () => {
                   type="text"
                   placeholder="e.g., Blue T-Shirt"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                 />
               </div>
@@ -876,7 +943,8 @@ const ProductsPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-red-400 mb-2">
-                    Wholesale Price (Rs.) <span className="text-red-500">*</span>
+                    Wholesale Price (Rs.){" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -884,7 +952,10 @@ const ProductsPage: React.FC = () => {
                     placeholder="0.00"
                     value={formData.wholesalePrice}
                     onChange={(e) => {
-                      setFormData({ ...formData, wholesalePrice: e.target.value });
+                      setFormData({
+                        ...formData,
+                        wholesalePrice: e.target.value,
+                      });
                     }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
@@ -894,115 +965,116 @@ const ProductsPage: React.FC = () => {
               {/* Stock Entry Rows - Row-Based System */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-3">
-                  Stock Entries (Size, Color & Quantity) <span className="text-red-500">*</span>
+                  Stock Entries (Size, Color & Quantity){" "}
+                  <span className="text-red-500">*</span>
                 </label>
 
                 {/* Stock Rows Table with Scroll */}
-                <div className="mb-4 bg-gray-900/50 border border-gray-700 rounded-lg p-4 h-64 overflow-y-auto">
-                  {stockRows.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-6">No stock entries yet. Click "Add Row" to start adding stock.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {stockRows.map((row) => (
-                        <div
-                          key={row.id}
-                          className="flex gap-2 items-end bg-gray-800/50 border border-gray-700 rounded-lg p-3 hover:border-red-600/50 transition-colors"
-                        >
-                          {/* Size Dropdown */}
-                          <div className="flex-1 min-w-[120px]">
-                            <label className="block text-xs text-gray-400 font-semibold mb-1">Size</label>
-                            <select
-                              value={row.size}
-                              onChange={(e) => updateStockRow(row.id, "size", e.target.value)}
-                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
-                            >
-                              <option value="">Select Size</option>
-                              {getAllSizes().map((size) => (
-                                <option key={size} value={size}>
-                                  {size}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Color Dropdown */}
-                          <div className="flex-1 min-w-[120px]">
-                            <label className="block text-xs text-gray-400 font-semibold mb-1">Color</label>
-                            <select
-                              value={row.color}
-                              onChange={(e) => updateStockRow(row.id, "color", e.target.value)}
-                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
-                            >
-                              <option value="">Select Color</option>
-                              {getAllColors().map((color) => (
-                                <option key={color} value={color}>
-                                  {color}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Quantity Input */}
-                          <div className="flex-1 min-w-[100px]">
-                            <label className="block text-xs text-gray-400 font-semibold mb-1">Qty</label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={row.qty}
-                              onChange={(e) => {
-                                let value = e.target.value;
-                                // Remove leading zero if user starts typing
-                                if (value.startsWith("0") && value.length > 1 && value[1] !== ".") {
-                                  value = value.replace(/^0+/, "");
-                                }
-                                updateStockRow(row.id, "qty", parseFloat(value) || 0);
-                              }}
-                              placeholder="0.00"
-                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none text-center"
-                            />
-                          </div>
-
-                          {/* Add Size Button */}
-                          <button
-                            onClick={() => setShowAddSizeModal(true)}
-                            className="px-3 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg hover:border-red-500 hover:text-red-400 transition-colors font-semibold"
-                            title="Add custom size"
-                          >
-                            + Size
-                          </button>
-
-                          {/* Add Color Button */}
-                          <button
-                            onClick={() => setShowAddColorModal(true)}
-                            className="px-3 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg hover:border-red-500 hover:text-red-400 transition-colors font-semibold"
-                            title="Add custom color"
-                          >
-                            + Color
-                          </button>
-
-                          {/* Delete Row Button */}
-                          <button
-                            onClick={() => removeStockRow(row.id)}
-                            className="px-3 py-2 bg-red-900/30 border border-red-600/50 text-red-400 text-sm rounded-lg hover:bg-red-900/50 transition-colors font-semibold"
-                            title="Delete this row"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Add Row Button */}
-                <button
-                  onClick={addStockRow}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-dashed border-red-600/50 text-red-400 rounded-lg hover:border-red-500 hover:bg-gray-700/80 transition-colors font-semibold text-sm"
-                >
-                  + Add Row
-                </button>
-              </div>
+                                <div className="mb-4 bg-gray-900/50 border border-gray-700 rounded-lg p-4 h-64 overflow-y-auto">
+                                  {stockRows.length === 0 ? (
+                                    <p className="text-sm text-gray-400 text-center py-6">No stock entries yet. Click "Add Row" to start adding stock.</p>
+                                  ) : (
+                                    <div className="space-y-3">
+                                      {stockRows.map((row) => (
+                                        <div
+                                          key={row.id}
+                                          className="flex gap-2 items-end bg-gray-800/50 border border-gray-700 rounded-lg p-3 hover:border-red-600/50 transition-colors"
+                                        >
+                                          {/* Size Dropdown */}
+                                          <div className="flex-1 min-w-[120px]">
+                                            <label className="block text-xs text-gray-400 font-semibold mb-1">Size</label>
+                                            <select
+                                              value={row.size}
+                                              onChange={(e) => updateStockRow(row.id, "size", e.target.value)}
+                                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
+                                            >
+                                              <option value="">Select Size</option>
+                                              {getAllSizes().map((size) => (
+                                                <option key={size} value={size}>
+                                                  {size}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          </div>
+                
+                                          {/* Color Dropdown */}
+                                          <div className="flex-1 min-w-[120px]">
+                                            <label className="block text-xs text-gray-400 font-semibold mb-1">Color</label>
+                                            <select
+                                              value={row.color}
+                                              onChange={(e) => updateStockRow(row.id, "color", e.target.value)}
+                                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
+                                            >
+                                              <option value="">Select Color</option>
+                                              {getAllColors().map((color) => (
+                                                <option key={color} value={color}>
+                                                  {color}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          </div>
+                
+                                          {/* Quantity Input */}
+                                          <div className="flex-1 min-w-[100px]">
+                                            <label className="block text-xs text-gray-400 font-semibold mb-1">Qty</label>
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              step="1"
+                                              value={row.qty}
+                                              onChange={(e) => {
+                                                let value = e.target.value;
+                                                if (value.startsWith("0") && value.length > 1) {
+                                                  value = value.replace(/^0+/, "");
+                                                }
+                                                updateStockRow(row.id, "qty", parseInt(value) || 0);
+                                              }}
+                                              placeholder="0"
+                                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none text-center"
+                                            />
+                                          </div>
+                
+                                          {/* Delete Row Button */}
+                                          <button
+                                            onClick={() => removeStockRow(row.id)}
+                                            className="px-3 py-2 bg-red-900/30 border border-red-600/50 text-red-400 text-sm rounded-lg hover:bg-red-900/50 transition-colors font-semibold"
+                                            title="Delete this row"
+                                          >
+                                            Delete
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex gap-2">
+                                  {/* Add Size Button */}
+                                  <button
+                                    onClick={() => setShowAddSizeModal(true)}
+                                    className="px-3 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg hover:border-red-500 hover:text-red-400 transition-colors font-semibold"
+                                    title="Add custom size"
+                                  >
+                                    + Add Custom Size
+                                  </button>
+                
+                                  {/* Add Color Button */}
+                                  <button
+                                    onClick={() => setShowAddColorModal(true)}
+                                    className="px-3 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg hover:border-red-500 hover:text-red-400 transition-colors font-semibold"
+                                    title="Add custom color"
+                                  >
+                                    + Add Custom Color
+                                  </button>
+                                </div>
+                
+                                {/* Add Row Button */}
+                                <button
+                                  onClick={addStockRow}
+                                  className="w-full mt-4 px-4 py-2 bg-gray-700 border-2 border-dashed border-red-600/50 text-red-400 rounded-lg hover:border-red-500 hover:bg-gray-700/80 transition-colors font-semibold text-sm"
+                                >
+                                  + Add Row
+                                </button>
+                              </div>
 
               {/* Mini-Modal for Adding Custom Size */}
               {showAddSizeModal && (
@@ -1112,17 +1184,6 @@ const ProductsPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Error/Success Messages */}
-              {errorMessage && (
-                <div className="p-3 bg-red-900/30 border border-red-600/50 rounded-lg text-red-400 text-sm">
-                  {errorMessage}
-                </div>
-              )}
-              {successMessage && (
-                <div className="p-3 bg-green-900/30 border border-green-600/50 rounded-lg text-green-400 text-sm">
-                  {successMessage}
-                </div>
-              )}
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-700">
@@ -1131,7 +1192,11 @@ const ProductsPage: React.FC = () => {
                   disabled={isLoading}
                   className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? "Saving..." : isEditMode ? "Update Product" : "Add Product"}
+                  {isLoading
+                    ? "Saving..."
+                    : isEditMode
+                      ? "Update Product"
+                      : "Add Product"}
                 </button>
                 <button
                   onClick={handleCloseModal}

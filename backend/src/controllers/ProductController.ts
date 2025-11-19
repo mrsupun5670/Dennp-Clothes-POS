@@ -3,15 +3,15 @@
  * Handles requests related to products and sends responses to the frontend
  */
 
-import { Request, Response } from 'express';
-import ProductModel from '../models/Product';
-import { logger } from '../utils/logger';
+import { Request, Response } from "express";
+import ProductModel from "../models/Product";
+import { logger } from "../utils/logger";
 
 class ProductController {
   /**
    * GET /products - Get all products
    */
-  async getAllProducts(req: Request, res: Response): Promise<void> {
+  async getAllProducts(_req: Request, res: Response): Promise<void> {
     try {
       const products = await ProductModel.getAllProducts();
       res.json({
@@ -20,10 +20,10 @@ class ProductController {
         message: `Retrieved ${products.length} products`,
       });
     } catch (error: any) {
-      logger.error('Error in getAllProducts:', error);
+      logger.error("Error in getAllProducts:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch products',
+        error: "Failed to fetch products",
         details: error.message,
       });
     }
@@ -40,7 +40,7 @@ class ProductController {
       if (!product) {
         res.status(404).json({
           success: false,
-          error: 'Product not found',
+          error: "Product not found",
         });
         return;
       }
@@ -50,10 +50,10 @@ class ProductController {
         data: product,
       });
     } catch (error: any) {
-      logger.error('Error in getProductById:', error);
+      logger.error("Error in getProductById:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch product',
+        error: "Failed to fetch product",
         details: error.message,
       });
     }
@@ -70,7 +70,7 @@ class ProductController {
       if (!product) {
         res.status(404).json({
           success: false,
-          error: 'Product not found',
+          error: "Product not found",
         });
         return;
       }
@@ -80,10 +80,10 @@ class ProductController {
         data: product,
       });
     } catch (error: any) {
-      logger.error('Error in getProductBySku:', error);
+      logger.error("Error in getProductBySku:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch product',
+        error: "Failed to fetch product",
         details: error.message,
       });
     }
@@ -95,7 +95,9 @@ class ProductController {
   async getProductsByCategory(req: Request, res: Response): Promise<void> {
     try {
       const { categoryId } = req.params;
-      const products = await ProductModel.getProductsByCategory(Number(categoryId));
+      const products = await ProductModel.getProductsByCategory(
+        Number(categoryId)
+      );
 
       res.json({
         success: true,
@@ -103,10 +105,10 @@ class ProductController {
         message: `Retrieved ${products.length} products in category`,
       });
     } catch (error: any) {
-      logger.error('Error in getProductsByCategory:', error);
+      logger.error("Error in getProductsByCategory:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch products',
+        error: "Failed to fetch products",
         details: error.message,
       });
     }
@@ -117,13 +119,24 @@ class ProductController {
    */
   async createProduct(req: Request, res: Response): Promise<void> {
     try {
-      const { sku, product_name, category_id, description, cost_price, print_cost, retail_price, wholesale_price, product_status } = req.body;
+      const {
+        sku,
+        product_name,
+        category_id,
+        description,
+        product_cost,
+        print_cost,
+        retail_price,
+        wholesale_price,
+        product_status,
+      } = req.body;
 
       // Validation
       if (!sku || !product_name || !category_id || !retail_price) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: sku, product_name, category_id, retail_price',
+          error:
+            "Missing required fields: sku, product_name, category_id, retail_price",
         });
         return;
       }
@@ -133,23 +146,23 @@ class ProductController {
         product_name,
         category_id,
         description,
-        cost_price: cost_price || 0,
+        product_cost: product_cost || 0,
         print_cost: print_cost || 0,
         retail_price,
         wholesale_price,
-        product_status: product_status || 'active',
+        product_status: product_status || "active",
       });
 
       res.status(201).json({
         success: true,
         data: { product_id: productId },
-        message: 'Product created successfully',
+        message: "Product created successfully",
       });
     } catch (error: any) {
-      logger.error('Error in createProduct:', error);
+      logger.error("Error in createProduct:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to create product',
+        error: "Failed to create product",
         details: error.message,
       });
     }
@@ -168,20 +181,20 @@ class ProductController {
       if (!success) {
         res.status(404).json({
           success: false,
-          error: 'Product not found or no changes made',
+          error: "Product not found or no changes made",
         });
         return;
       }
 
       res.json({
         success: true,
-        message: 'Product updated successfully',
+        message: "Product updated successfully",
       });
     } catch (error: any) {
-      logger.error('Error in updateProduct:', error);
+      logger.error("Error in updateProduct:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to update product',
+        error: "Failed to update product",
         details: error.message,
       });
     }
@@ -199,20 +212,20 @@ class ProductController {
       if (!success) {
         res.status(404).json({
           success: false,
-          error: 'Product not found',
+          error: "Product not found",
         });
         return;
       }
 
       res.json({
         success: true,
-        message: 'Product deleted successfully',
+        message: "Product deleted successfully",
       });
     } catch (error: any) {
-      logger.error('Error in deleteProduct:', error);
+      logger.error("Error in deleteProduct:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to delete product',
+        error: "Failed to delete product",
         details: error.message,
       });
     }
@@ -226,7 +239,10 @@ class ProductController {
       const page = Number(req.query.page) || 1;
       const limit = Number(req.query.limit) || 10;
 
-      const { products, total } = await ProductModel.getActiveProducts(page, limit);
+      const { products, total } = await ProductModel.getActiveProducts(
+        page,
+        limit
+      );
 
       res.json({
         success: true,
@@ -239,10 +255,10 @@ class ProductController {
         },
       });
     } catch (error: any) {
-      logger.error('Error in getActiveProducts:', error);
+      logger.error("Error in getActiveProducts:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch products',
+        error: "Failed to fetch products",
         details: error.message,
       });
     }
@@ -255,10 +271,10 @@ class ProductController {
     try {
       const { q } = req.query;
 
-      if (!q || typeof q !== 'string') {
+      if (!q || typeof q !== "string") {
         res.status(400).json({
           success: false,
-          error: 'Search term (q) is required',
+          error: "Search term (q) is required",
         });
         return;
       }
@@ -271,10 +287,10 @@ class ProductController {
         message: `Found ${products.length} products`,
       });
     } catch (error: any) {
-      logger.error('Error in searchProducts:', error);
+      logger.error("Error in searchProducts:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to search products',
+        error: "Failed to search products",
         details: error.message,
       });
     }
@@ -291,7 +307,7 @@ class ProductController {
       if (!prices) {
         res.status(404).json({
           success: false,
-          error: 'Product not found',
+          error: "Product not found",
         });
         return;
       }
@@ -301,10 +317,10 @@ class ProductController {
         data: prices,
       });
     } catch (error: any) {
-      logger.error('Error in getProductPrices:', error);
+      logger.error("Error in getProductPrices:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch prices',
+        error: "Failed to fetch prices",
         details: error.message,
       });
     }
@@ -321,7 +337,7 @@ class ProductController {
       if (!product) {
         res.status(404).json({
           success: false,
-          error: 'Product not found',
+          error: "Product not found",
         });
         return;
       }
@@ -331,10 +347,10 @@ class ProductController {
         data: product,
       });
     } catch (error: any) {
-      logger.error('Error in getProductWithDetails:', error);
+      logger.error("Error in getProductWithDetails:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch product details',
+        error: "Failed to fetch product details",
         details: error.message,
       });
     }
@@ -354,10 +370,10 @@ class ProductController {
         message: `Retrieved ${colors.length} colors`,
       });
     } catch (error: any) {
-      logger.error('Error in getProductColors:', error);
+      logger.error("Error in getProductColors:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch colors',
+        error: "Failed to fetch colors",
         details: error.message,
       });
     }
@@ -374,23 +390,26 @@ class ProductController {
       if (!color_id) {
         res.status(400).json({
           success: false,
-          error: 'Missing required field: color_id',
+          error: "Missing required field: color_id",
         });
         return;
       }
 
-      const productColorId = await ProductModel.addProductColor(Number(id), color_id);
+      const productColorId = await ProductModel.addProductColor(
+        Number(id),
+        color_id
+      );
 
       res.status(201).json({
         success: true,
         data: { product_color_id: productColorId },
-        message: 'Color added to product',
+        message: "Color added to product",
       });
     } catch (error: any) {
-      logger.error('Error in addProductColor:', error);
+      logger.error("Error in addProductColor:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to add color',
+        error: "Failed to add color",
         details: error.message,
       });
     }
@@ -403,25 +422,28 @@ class ProductController {
     try {
       const { id, colorId } = req.params;
 
-      const success = await ProductModel.removeProductColor(Number(id), Number(colorId));
+      const success = await ProductModel.removeProductColor(
+        Number(id),
+        Number(colorId)
+      );
 
       if (!success) {
         res.status(404).json({
           success: false,
-          error: 'Product color not found',
+          error: "Product color not found",
         });
         return;
       }
 
       res.json({
         success: true,
-        message: 'Color removed from product',
+        message: "Color removed from product",
       });
     } catch (error: any) {
-      logger.error('Error in removeProductColor:', error);
+      logger.error("Error in removeProductColor:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to remove color',
+        error: "Failed to remove color",
         details: error.message,
       });
     }
@@ -441,10 +463,10 @@ class ProductController {
         message: `Retrieved ${sizes.length} sizes`,
       });
     } catch (error: any) {
-      logger.error('Error in getProductSizes:', error);
+      logger.error("Error in getProductSizes:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch sizes',
+        error: "Failed to fetch sizes",
         details: error.message,
       });
     }
@@ -461,23 +483,26 @@ class ProductController {
       if (!size_id) {
         res.status(400).json({
           success: false,
-          error: 'Missing required field: size_id',
+          error: "Missing required field: size_id",
         });
         return;
       }
 
-      const productSizeId = await ProductModel.addProductSize(Number(id), size_id);
+      const productSizeId = await ProductModel.addProductSize(
+        Number(id),
+        size_id
+      );
 
       res.status(201).json({
         success: true,
         data: { product_size_id: productSizeId },
-        message: 'Size added to product',
+        message: "Size added to product",
       });
     } catch (error: any) {
-      logger.error('Error in addProductSize:', error);
+      logger.error("Error in addProductSize:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to add size',
+        error: "Failed to add size",
         details: error.message,
       });
     }
@@ -490,25 +515,108 @@ class ProductController {
     try {
       const { id, sizeId } = req.params;
 
-      const success = await ProductModel.removeProductSize(Number(id), Number(sizeId));
+      const success = await ProductModel.removeProductSize(
+        Number(id),
+        Number(sizeId)
+      );
 
       if (!success) {
         res.status(404).json({
           success: false,
-          error: 'Product size not found',
+          error: "Product size not found",
         });
         return;
       }
 
       res.json({
         success: true,
-        message: 'Size removed from product',
+        message: "Size removed from product",
       });
     } catch (error: any) {
-      logger.error('Error in removeProductSize:', error);
+      logger.error("Error in removeProductSize:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to remove size',
+        error: "Failed to remove size",
+        details: error.message,
+      });
+    }
+  }
+
+  /**
+   * POST /products/stock - Update stock quantity for a product variant
+   */
+  async updateProductStock(req: Request, res: Response): Promise<void> {
+    try {
+      const { productId, sizeId, colorId, quantity } = req.body;
+
+      if (
+        productId === undefined ||
+        sizeId === undefined ||
+        colorId === undefined ||
+        quantity === undefined
+      ) {
+        res.status(400).json({
+          success: false,
+          error:
+            "Missing required fields: productId, sizeId, colorId, quantity",
+        });
+        return;
+      }
+
+      const success = await ProductModel.updateProductStock(
+        Number(productId),
+        Number(sizeId),
+        Number(colorId),
+        Number(quantity)
+      );
+
+      if (!success) {
+        res.status(500).json({
+          success: false,
+          error: "Failed to update product stock",
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        message: "Product stock updated successfully",
+      });
+    } catch (error: any) {
+      logger.error("Error in updateProductStock:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to update product stock",
+        details: error.message,
+      });
+    }
+  }
+
+  /**
+   * DELETE /products/:id/stock - Clear all stock for a product
+   */
+  async clearProductStock(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const success = await ProductModel.clearProductStock(Number(id));
+
+      if (!success) {
+        res.status(500).json({
+          success: false,
+          error: "Failed to clear product stock",
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        message: "Product stock cleared successfully",
+      });
+    } catch (error: any) {
+      logger.error("Error in clearProductStock:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to clear product stock",
         details: error.message,
       });
     }

@@ -26,6 +26,7 @@ router.get('/:id', ProductController.getProductById.bind(ProductController));
 
 // POST routes
 router.post('/', ProductController.createProduct.bind(ProductController));
+router.post('/stock', ProductController.updateProductStock.bind(ProductController));
 router.post('/:id/colors', ProductController.addProductColor.bind(ProductController));
 router.post('/:id/sizes', ProductController.addProductSize.bind(ProductController));
 
@@ -36,5 +37,6 @@ router.put('/:id', ProductController.updateProduct.bind(ProductController));
 router.delete('/:id', ProductController.deleteProduct.bind(ProductController));
 router.delete('/:id/colors/:colorId', ProductController.removeProductColor.bind(ProductController));
 router.delete('/:id/sizes/:sizeId', ProductController.removeProductSize.bind(ProductController));
+router.delete('/:id/stock', ProductController.clearProductStock.bind(ProductController));
 
 export default router;

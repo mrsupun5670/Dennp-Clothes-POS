@@ -11,7 +11,7 @@ class SizeController {
   /**
    * GET /sizes - Get all sizes
    */
-  async getAllSizes(req: Request, res: Response): Promise<void> {
+  async getAllSizes(_req: Request, res: Response): Promise<void> {
     try {
       const sizes = await SizeModel.getAllSizes();
 
@@ -182,7 +182,7 @@ class SizeController {
   /**
    * GET /sizes/types - Get all size types
    */
-  async getAllSizeTypes(req: Request, res: Response): Promise<void> {
+  async getAllSizeTypes(_req: Request, res: Response): Promise<void> {
     try {
       const sizeTypes = await SizeModel.getAllSizeTypes();
 
@@ -204,7 +204,7 @@ class SizeController {
   /**
    * GET /sizes/with-type - Get sizes with type details
    */
-  async getSizesWithType(req: Request, res: Response): Promise<void> {
+  async getSizesWithType(_req: Request, res: Response): Promise<void> {
     try {
       const sizes = await SizeModel.getSizesWithType();
 

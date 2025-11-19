@@ -7,60 +7,60 @@
 // ==================== ENUMS ====================
 
 export enum UserRole {
-  ADMIN = 'admin',
-  MANAGER = 'manager',
-  CASHIER = 'cashier',
-  STAFF = 'staff',
+  ADMIN = "admin",
+  MANAGER = "manager",
+  CASHIER = "cashier",
+  STAFF = "staff",
 }
 
 export enum UserStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  SUSPENDED = 'suspended',
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  SUSPENDED = "suspended",
 }
 
 export enum ShopStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  CLOSED = 'closed',
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  CLOSED = "closed",
 }
 
 export enum ProductStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  DISCONTINUED = 'discontinued',
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  DISCONTINUED = "discontinued",
 }
 
 export enum CustomerStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  BLOCKED = 'blocked',
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  BLOCKED = "blocked",
 }
 
 export enum OrderStatus {
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
-  REFUNDED = 'refunded',
+  COMPLETED = "completed",
+  CANCELLED = "cancelled",
+  REFUNDED = "refunded",
 }
 
 export enum PaymentMethod {
-  CASH = 'cash',
-  CARD = 'card',
-  ONLINE = 'online',
-  CHECK = 'check',
-  OTHER = 'other',
+  CASH = "cash",
+  CARD = "card",
+  ONLINE = "online",
+  CHECK = "check",
+  OTHER = "other",
 }
 
 export enum PaymentType {
-  ADVANCE = 'advance',
-  BALANCE = 'balance',
-  FULL = 'full',
+  ADVANCE = "advance",
+  BALANCE = "balance",
+  FULL = "full",
 }
 
 export enum PaymentStatus {
-  UNPAID = 'unpaid',
-  PARTIAL = 'partial',
-  FULLY_PAID = 'fully_paid',
+  UNPAID = "unpaid",
+  PARTIAL = "partial",
+  FULLY_PAID = "fully_paid",
 }
 
 // ==================== USER MODELS ====================
@@ -134,7 +134,7 @@ export interface Product {
   product_name: string;
   category_id: number;
   description?: string;
-  cost_price: number;
+  product_cost: number;
   print_cost: number;
   retail_price: number;
   wholesale_price?: number;
@@ -148,7 +148,7 @@ export interface CreateProductInput {
   product_name: string;
   category_id: number;
   description?: string;
-  cost_price: number;
+  product_cost: number;
   print_cost: number;
   retail_price: number;
   wholesale_price?: number;
@@ -159,7 +159,7 @@ export interface UpdateProductInput {
   product_name?: string;
   category_id?: number;
   description?: string;
-  cost_price?: number;
+  product_cost?: number;
   print_cost?: number;
   retail_price?: number;
   wholesale_price?: number;

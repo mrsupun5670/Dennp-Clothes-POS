@@ -11,7 +11,7 @@ class CustomerController {
   /**
    * GET /customers - Get all customers
    */
-  async getAllCustomers(req: Request, res: Response): Promise<void> {
+  async getAllCustomers(_req: Request, res: Response): Promise<void> {
     try {
       const customers = await CustomerModel.getAllCustomers();
 

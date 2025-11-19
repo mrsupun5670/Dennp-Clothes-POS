@@ -27,7 +27,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Request logging
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use((req: Request, _res: Response, next: NextFunction) => {
   logger.http(`${req.method} ${req.path}`);
   next();
 });
@@ -36,7 +36,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(`/api/${config.server.apiVersion}`, routes);
 
 // Health check
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'Server is running',
@@ -45,7 +45,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // 404 handler
-app.use((req: Request, res: Response) => {
+app.use((_req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     message: 'Route not found',

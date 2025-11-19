@@ -2,8 +2,10 @@ import { createClient } from 'redis';
 import { logger } from '../utils/logger';
 
 const client = createClient({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
+  socket: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+  },
 });
 
 client.on('connect', () => {

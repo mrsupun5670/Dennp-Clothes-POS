@@ -7,7 +7,7 @@ export interface IUser {
   first_name: string;
   last_name: string;
   phone?: string;
-  role: 'admin' | 'manager' | 'cashier' | 'staff';
+  role: "admin" | "manager" | "cashier" | "staff";
   shop_id: number;
   is_active: boolean;
   created_at: Date;
@@ -32,7 +32,7 @@ export interface IProduct {
   name: string;
   description?: string;
   price: number;
-  cost_price?: number;
+  product_cost?: number;
   shop_id?: number;
   is_active: boolean;
   created_at: Date;
@@ -59,8 +59,8 @@ export interface ISale {
   customer_id?: number;
   total_amount: number;
   discount_amount?: number;
-  payment_method: 'cash' | 'card' | 'check' | 'other';
-  status: 'completed' | 'refunded' | 'pending';
+  payment_method: "cash" | "card" | "check" | "other";
+  status: "completed" | "refunded" | "pending";
   notes?: string;
   created_at: Date;
   updated_at: Date;
@@ -94,7 +94,7 @@ export interface ISyncLog {
   shop_id: number;
   device_id: string;
   pending_operations: string; // JSON string
-  status: 'pending' | 'synced' | 'failed';
+  status: "pending" | "synced" | "failed";
   error_message?: string;
   created_at: Date;
   synced_at?: Date;
@@ -102,7 +102,7 @@ export interface ISyncLog {
 
 // Auth Response
 export interface IAuthResponse {
-  user: Omit<IUser, 'password_hash'>;
+  user: Omit<IUser, "password_hash">;
   shop: IShop;
   token: string;
 }

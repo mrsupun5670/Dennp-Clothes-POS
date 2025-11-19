@@ -231,6 +231,7 @@ class OrderController {
       // Create payment record in payments table
       const paymentId = await PaymentModel.createPayment({
         order_id: Number(id),
+        payment_date: new Date(),
         payment_type,
         amount_paid,
         payment_method: payment_method || 'cash',

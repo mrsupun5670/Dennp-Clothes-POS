@@ -3,6 +3,7 @@
 ## Overview
 
 The backend is built with:
+
 - **Framework:** Express.js + TypeScript
 - **Database:** MySQL (Hostinger)
 - **Architecture:** MVC (Models → Controllers → Routes)
@@ -50,13 +51,16 @@ backend/
 ## Quick Setup (5 Steps)
 
 ### Step 1: Install Dependencies
+
 ```bash
 cd backend
 npm install
 ```
 
 ### Step 2: Configure Database
+
 Edit `backend/.env` and ensure these values match your Hostinger MySQL:
+
 ```env
 DB_HOST=193.203.184.9
 DB_USER=u331468302_dennup_pos
@@ -65,9 +69,11 @@ DB_NAME=u331468302_dennup_pos
 ```
 
 ### Step 3: Run Database Migrations
+
 **IMPORTANT:** Run these migrations on your Hostinger MySQL BEFORE starting the server.
 
 Using MySQL CLI:
+
 ```bash
 cd backend/migrations
 mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < 001_add_cost_fields_to_products.sql
@@ -78,6 +84,7 @@ mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < 003_a
 When prompted, enter your password: `gM7LfqqUK;|`
 
 Or using phpMyAdmin (from Hostinger cPanel):
+
 1. Log in to Hostinger cPanel
 2. Open phpMyAdmin
 3. Select database `u331468302_dennup_pos`
@@ -85,6 +92,7 @@ Or using phpMyAdmin (from Hostinger cPanel):
 5. Upload and execute each migration file in order
 
 ### Step 4: Start the Server
+
 ```bash
 cd backend
 npm run dev    # Development mode (auto-reload)
@@ -94,6 +102,7 @@ npm start      # Production mode
 Server will run on: `http://localhost:3000`
 
 ### Step 5: Test the API
+
 ```bash
 # Health check
 curl http://localhost:3000/health
@@ -135,27 +144,30 @@ Frontend (React)
 ### 2. Example: Create a Product
 
 **Frontend (React):**
+
 ```typescript
-const response = await fetch('http://localhost:3000/api/v1/products', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+const response = await fetch("http://localhost:3000/api/v1/products", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    sku: 'SHIRT-001',
-    product_name: 'Blue T-Shirt',
+    sku: "SHIRT-001",
+    product_name: "Blue T-Shirt",
     category_id: 1,
-    cost_price: 500,
+    product_cost: 500,
     print_cost: 100,
-    retail_price: 1500
-  })
+    retail_price: 1500,
+  }),
 });
 ```
 
 **Route** (`src/routes/productRoutes.ts`):
+
 ```typescript
-router.post('/', ProductController.createProduct.bind(ProductController));
+router.post("/", ProductController.createProduct.bind(ProductController));
 ```
 
 **Controller** (`src/controllers/ProductController.ts`):
+
 ```typescript
 async createProduct(req: Request, res: Response) {
   const data = req.body;
@@ -168,6 +180,7 @@ async createProduct(req: Request, res: Response) {
 ```
 
 **Model** (`src/models/Product.ts`):
+
 ```typescript
 async createProduct(productData) {
   const results = await query(
@@ -183,80 +196,86 @@ async createProduct(productData) {
 ## Available Models & Methods
 
 ### ProductModel
+
 ```typescript
-getAllProducts()                    // Get all products
-getProductById(id)                 // Get by ID
-getProductBySku(sku)               // Get by SKU
-getProductsByCategory(categoryId)  // Get by category
-createProduct(data)                // Create new
-updateProduct(id, data)            // Update existing
-deleteProduct(id)                  // Delete (soft)
-searchProducts(term)               // Search by name/SKU
-getProductPrices(id)              // Get pricing info
+getAllProducts(); // Get all products
+getProductById(id); // Get by ID
+getProductBySku(sku); // Get by SKU
+getProductsByCategory(categoryId); // Get by category
+createProduct(data); // Create new
+updateProduct(id, data); // Update existing
+deleteProduct(id); // Delete (soft)
+searchProducts(term); // Search by name/SKU
+getProductPrices(id); // Get pricing info
 ```
 
 ### CustomerModel
+
 ```typescript
-getAllCustomers()                  // Get all
-getCustomerById(id)               // Get by ID
-getCustomerByMobile(mobile)       // Get by mobile
-createCustomer(data)              // Create new
-updateCustomer(id, data)          // Update existing
-searchCustomers(term)             // Search
-getActiveCustomers(page, limit)   // Paginated
-getTopCustomers(limit)            // Top spenders
-blockCustomer(id)                 // Block/soft delete
-updateCustomerStats(id)           // Update order count
+getAllCustomers(); // Get all
+getCustomerById(id); // Get by ID
+getCustomerByMobile(mobile); // Get by mobile
+createCustomer(data); // Create new
+updateCustomer(id, data); // Update existing
+searchCustomers(term); // Search
+getActiveCustomers(page, limit); // Paginated
+getTopCustomers(limit); // Top spenders
+blockCustomer(id); // Block/soft delete
+updateCustomerStats(id); // Update order count
 ```
 
 ### OrderModel
+
 ```typescript
-getAllOrders(shopId)              // Get all
-getOrderById(id)                  // Get by ID
-getOrdersByCustomer(customerId)   // Get by customer
-createOrder(data)                 // Create new
-updateOrder(id, data)             // Update existing
-recordPayment(id, amount, type)   // Record payment
-getPendingOrders(shopId)          // Unpaid orders
-getOrderSummary(shopId, dates)    // Statistics
+getAllOrders(shopId); // Get all
+getOrderById(id); // Get by ID
+getOrdersByCustomer(customerId); // Get by customer
+createOrder(data); // Create new
+updateOrder(id, data); // Update existing
+recordPayment(id, amount, type); // Record payment
+getPendingOrders(shopId); // Unpaid orders
+getOrderSummary(shopId, dates); // Statistics
 ```
 
 ### OrderItemModel
+
 ```typescript
-getOrderItems(orderId)            // Get items in order
-getOrderItemById(id)              // Get by ID
-createOrderItem(data)             // Create new
-createOrderItems(items)           // Create multiple
-updateOrderItem(id, data)         // Update
-deleteOrderItem(id)               // Delete
-getOrderItemsWithDetails(id)      // Get with product info
-deleteOrderItems(orderId)         // Delete all in order
+getOrderItems(orderId); // Get items in order
+getOrderItemById(id); // Get by ID
+createOrderItem(data); // Create new
+createOrderItems(items); // Create multiple
+updateOrderItem(id, data); // Update
+deleteOrderItem(id); // Delete
+getOrderItemsWithDetails(id); // Get with product info
+deleteOrderItems(orderId); // Delete all in order
 ```
 
 ### PaymentModel
+
 ```typescript
-getAllPayments()                  // Get all
-getPaymentById(id)                // Get by ID
-getPaymentsByOrder(orderId)       // Get by order
-createPayment(data)               // Create new
-updatePayment(id, data)           // Update
-deletePayment(id)                 // Delete
-getPaymentsByDateRange(dates)     // Get by date range
-getTotalPayments(dates)           // Sum by date range
-getPaymentsByMethod(method)       // Get by method
-getPaymentsByBank(bank)           // Get by bank
+getAllPayments(); // Get all
+getPaymentById(id); // Get by ID
+getPaymentsByOrder(orderId); // Get by order
+createPayment(data); // Create new
+updatePayment(id, data); // Update
+deletePayment(id); // Delete
+getPaymentsByDateRange(dates); // Get by date range
+getTotalPayments(dates); // Sum by date range
+getPaymentsByMethod(method); // Get by method
+getPaymentsByBank(bank); // Get by bank
 ```
 
 ### CategoryModel
+
 ```typescript
-getAllCategories()                // Get all
-getCategoryById(id)               // Get by ID
-getCategoryByName(name)           // Get by name
-createCategory(name, sizeTypeId)  // Create new
-updateCategory(id, name, type)    // Update
-deleteCategory(id)                // Delete
-getCategoryWithSizeType(id)       // Get with size type
-countProductsInCategory(id)       // Count products
+getAllCategories(); // Get all
+getCategoryById(id); // Get by ID
+getCategoryByName(name); // Get by name
+createCategory(name, sizeTypeId); // Create new
+updateCategory(id, name, type); // Update
+deleteCategory(id); // Delete
+getCategoryWithSizeType(id); // Get with size type
+countProductsInCategory(id); // Count products
 ```
 
 ---
@@ -266,12 +285,14 @@ countProductsInCategory(id)       // Count products
 **File:** `src/config/database.ts`
 
 This creates a connection pool that:
+
 - Manages 10 connections (development) or 20 (production)
 - Reuses connections for efficiency
 - Auto-reconnects on failure
 - Has 10-second timeout
 
 The pool is used by all models:
+
 ```typescript
 const results = await query(sql, values);
 ```
@@ -283,7 +304,9 @@ const results = await query(sql, values);
 ### Example: Add a "Stock Level Alert" feature
 
 #### 1. Add Model Method
+
 **File:** `src/models/Product.ts`
+
 ```typescript
 async getLowStockProducts(threshold: number = 10): Promise<Product[]> {
   const results = await query(
@@ -295,7 +318,9 @@ async getLowStockProducts(threshold: number = 10): Promise<Product[]> {
 ```
 
 #### 2. Add Controller Method
+
 **File:** `src/controllers/ProductController.ts`
+
 ```typescript
 async getLowStockProducts(req: Request, res: Response): Promise<void> {
   try {
@@ -309,15 +334,23 @@ async getLowStockProducts(req: Request, res: Response): Promise<void> {
 ```
 
 #### 3. Add Route
+
 **File:** `src/routes/productRoutes.ts`
+
 ```typescript
-router.get('/low-stock', ProductController.getLowStockProducts.bind(ProductController));
+router.get(
+  "/low-stock",
+  ProductController.getLowStockProducts.bind(ProductController)
+);
 ```
 
 #### 4. Call from Frontend
+
 ```typescript
 const getLowStock = async () => {
-  const response = await fetch('http://localhost:3000/api/v1/products/low-stock?threshold=5');
+  const response = await fetch(
+    "http://localhost:3000/api/v1/products/low-stock?threshold=5"
+  );
   const data = await response.json();
   return data.data;
 };
@@ -328,6 +361,7 @@ const getLowStock = async () => {
 ## API Response Examples
 
 ### Success Response
+
 ```json
 {
   "success": true,
@@ -337,6 +371,7 @@ const getLowStock = async () => {
 ```
 
 ### Error Response
+
 ```json
 {
   "success": false,
@@ -346,6 +381,7 @@ const getLowStock = async () => {
 ```
 
 ### Paginated Response
+
 ```json
 {
   "success": true,
@@ -364,28 +400,36 @@ const getLowStock = async () => {
 ## Troubleshooting
 
 ### Problem: "Cannot connect to database"
+
 **Solution:**
+
 1. Check `.env` file has correct credentials
 2. Verify Hostinger MySQL is running
 3. Test with: `mysql -h 193.203.184.9 -u u331468302_dennup_pos -p`
 4. Check if firewall allows connection
 
 ### Problem: "Tables not found"
+
 **Solution:**
+
 1. Ensure migrations have been run
 2. Check database exists: `u331468302_dennup_pos`
 3. Verify migrations were successful
 4. Check database in phpMyAdmin
 
 ### Problem: "API returns 404"
+
 **Solution:**
+
 1. Check route is registered in `src/routes/index.ts`
 2. Verify URL matches route definition
 3. Check HTTP method (GET/POST/PUT/DELETE)
 4. Ensure server is running on port 3000
 
 ### Problem: "TypeScript compilation errors"
+
 **Solution:**
+
 1. Run: `npm run build`
 2. Fix import paths
 3. Check type definitions match
@@ -396,25 +440,32 @@ const getLowStock = async () => {
 ## Development Workflow
 
 ### 1. Start the Server
+
 ```bash
 cd backend
 npm run dev
 ```
+
 This auto-reloads when you change files.
 
 ### 2. Test with cURL
+
 ```bash
 curl http://localhost:3000/api/v1/products
 ```
 
 ### 3. Check Logs
+
 Logs show:
+
 - Database connections
 - Request/response info
 - Errors and debug info
 
 ### 4. Debug Issues
+
 Edit log level in `.env`:
+
 ```env
 LOG_LEVEL=debug    # Shows all details
 LOG_LEVEL=info     # Shows important events
@@ -426,6 +477,7 @@ LOG_LEVEL=error    # Shows only errors
 ## Production Deployment
 
 ### Before Deploying:
+
 1. ✅ Run all migrations on production database
 2. ✅ Update `.env` with production credentials
 3. ✅ Set `NODE_ENV=production`
@@ -434,6 +486,7 @@ LOG_LEVEL=error    # Shows only errors
 6. ✅ Test all endpoints thoroughly
 
 ### Deployment Steps:
+
 1. Push code to server
 2. Install dependencies: `npm install --production`
 3. Build TypeScript: `npm run build`
@@ -445,6 +498,7 @@ LOG_LEVEL=error    # Shows only errors
 ## Support
 
 For issues or questions:
+
 1. Check API_DOCUMENTATION.md for endpoint details
 2. Review model methods for available queries
 3. Check error logs for detailed messages

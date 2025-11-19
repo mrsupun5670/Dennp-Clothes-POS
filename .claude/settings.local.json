@@ -8,7 +8,8 @@
       "Bash(ren categoryRoutes.ts categoryRoutes.js)",
       "Bash(ren:*)",
       "Bash(ren orderRoutes.ts orderRoutes.js)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

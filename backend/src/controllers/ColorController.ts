@@ -11,7 +11,7 @@ class ColorController {
   /**
    * GET /colors - Get all colors
    */
-  async getAllColors(req: Request, res: Response): Promise<void> {
+  async getAllColors(_req: Request, res: Response): Promise<void> {
     try {
       const colors = await ColorModel.getAllColors();
 

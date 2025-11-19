@@ -19,12 +19,15 @@ This backend uses a simple **MVC (Model-View-Controller)** architecture:
 ## Quick Start
 
 ### 1. Install Dependencies
+
 ```bash
 npm install
 ```
 
 ### 2. Configure Database
+
 Update `backend/.env` with your Hostinger MySQL credentials:
+
 ```env
 DB_HOST=193.203.184.9
 DB_USER=u331468302_dennup_pos
@@ -33,7 +36,9 @@ DB_NAME=u331468302_dennup_pos
 ```
 
 ### 3. Run Migrations
+
 Before starting the server, execute the SQL migrations to add missing fields:
+
 ```bash
 # Run migrations on your Hostinger MySQL database
 mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < migrations/001_add_cost_fields_to_products.sql
@@ -42,6 +47,7 @@ mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < migra
 ```
 
 ### 4. Start Server
+
 ```bash
 npm run dev    # Development mode with auto-reload
 npm start      # Production mode
@@ -56,12 +62,15 @@ Server runs on: `http://localhost:3000`
 ### Products API
 
 #### Get All Products
+
 ```
 GET /api/v1/products
 ```
+
 Returns all products in the system.
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -71,7 +80,7 @@ Returns all products in the system.
       "sku": "SHIRT-001",
       "product_name": "Blue T-Shirt",
       "category_id": 1,
-      "cost_price": 500,
+      "product_cost": 500,
       "print_cost": 100,
       "retail_price": 1500,
       "wholesale_price": 1200,
@@ -85,68 +94,85 @@ Returns all products in the system.
 ```
 
 #### Get Product by ID
+
 ```
 GET /api/v1/products/:id
 ```
+
 Get a specific product by ID.
 
 **Example:** `GET /api/v1/products/1`
 
 #### Get Product by SKU
+
 ```
 GET /api/v1/products/sku/:sku
 ```
+
 Get a product by its SKU code.
 
 **Example:** `GET /api/v1/products/sku/SHIRT-001`
 
 #### Get Products by Category
+
 ```
 GET /api/v1/products/category/:categoryId
 ```
+
 Get all products in a specific category.
 
 **Example:** `GET /api/v1/products/category/1`
 
 #### Get Active Products (Paginated)
+
 ```
 GET /api/v1/products/active?page=1&limit=10
 ```
+
 Get active products with pagination support.
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 10)
 
 #### Search Products
+
 ```
 GET /api/v1/products/search?q=shirt
 ```
+
 Search products by name or SKU.
 
 **Query Parameters:**
+
 - `q` (required): Search term
 
 #### Get Product Prices
+
 ```
 GET /api/v1/products/:id/prices
 ```
+
 Get cost, print, retail, and wholesale prices for a product.
 
 #### Create Product
+
 ```
 POST /api/v1/products
 ```
+
 Create a new product.
 
 **Request Body:**
+
 ```json
 {
   "sku": "SHIRT-002",
   "product_name": "Red T-Shirt",
   "category_id": 1,
   "description": "Premium quality t-shirt",
-  "cost_price": 500,
+  "product_cost": 500,
   "print_cost": 100,
   "retail_price": 1500,
   "wholesale_price": 1200,
@@ -155,12 +181,15 @@ Create a new product.
 ```
 
 #### Update Product
+
 ```
 PUT /api/v1/products/:id
 ```
+
 Update an existing product.
 
 **Request Body:** (all fields optional)
+
 ```json
 {
   "product_name": "Updated T-Shirt",
@@ -170,9 +199,11 @@ Update an existing product.
 ```
 
 #### Delete Product
+
 ```
 DELETE /api/v1/products/:id
 ```
+
 Soft delete a product (changes status to "discontinued").
 
 ---
@@ -180,55 +211,71 @@ Soft delete a product (changes status to "discontinued").
 ### Customers API
 
 #### Get All Customers
+
 ```
 GET /api/v1/customers
 ```
+
 Returns all customers in the system.
 
 #### Get Customer by ID
+
 ```
 GET /api/v1/customers/:id
 ```
+
 Get a specific customer by ID.
 
 **Example:** `GET /api/v1/customers/1000`
 
 #### Get Customer by Mobile
+
 ```
 GET /api/v1/customers/mobile/:mobile
 ```
+
 Get customer by mobile number.
 
 **Example:** `GET /api/v1/customers/mobile/0712345678`
 
 #### Get Active Customers (Paginated)
+
 ```
 GET /api/v1/customers/active?page=1&limit=10
 ```
+
 Get active customers with pagination.
 
 #### Get Top Customers
+
 ```
 GET /api/v1/customers/top?limit=10
 ```
+
 Get top customers by total spending.
 
 #### Search Customers
+
 ```
 GET /api/v1/customers/search?q=john
 ```
+
 Search customers by name or mobile number.
 
 **Query Parameters:**
+
 - `q` (required): Search term
 
 #### Create Customer
+
 ```
 POST /api/v1/customers
 ```
+
 Create a new customer.
 
 **Request Body:**
+
 ```json
 {
   "first_name": "John",
@@ -240,12 +287,15 @@ Create a new customer.
 ```
 
 #### Update Customer
+
 ```
 PUT /api/v1/customers/:id
 ```
+
 Update customer information.
 
 **Request Body:** (all fields optional)
+
 ```json
 {
   "email": "newemail@example.com",
@@ -254,9 +304,11 @@ Update customer information.
 ```
 
 #### Block Customer
+
 ```
 POST /api/v1/customers/:id/block
 ```
+
 Block a customer (soft delete).
 
 ---
@@ -264,57 +316,74 @@ Block a customer (soft delete).
 ### Orders API
 
 #### Get All Orders
+
 ```
 GET /api/v1/orders?shop_id=1
 ```
+
 Get all orders, optionally filtered by shop.
 
 **Query Parameters:**
+
 - `shop_id` (optional): Filter by shop ID
 
 #### Get Order by ID
+
 ```
 GET /api/v1/orders/:id
 ```
+
 Get a specific order with all its items.
 
 **Response Includes:**
+
 - Order details
 - Order items with product, color, and size information
 
 #### Get Orders by Customer
+
 ```
 GET /api/v1/orders/customer/:customerId
 ```
+
 Get all orders for a specific customer.
 
 #### Get Pending Orders
+
 ```
 GET /api/v1/orders/pending?shop_id=1
 ```
+
 Get orders that haven't been fully paid.
 
 **Query Parameters:**
+
 - `shop_id` (optional): Filter by shop ID
 
 #### Get Order Summary
+
 ```
 GET /api/v1/orders/summary?shop_id=1&start_date=2025-11-01&end_date=2025-11-30
 ```
+
 Get order statistics for a date range.
 
 **Query Parameters:**
+
 - `shop_id` (required): Shop ID
 - `start_date` (required): Start date (YYYY-MM-DD)
 - `end_date` (required): End date (YYYY-MM-DD)
 
 #### Create Order
+
 ```
 POST /api/v1/orders
 ```
+
 Create a new order with items.
 
 **Request Body:**
+
 ```json
 {
   "order_number": "ORD-20251119-001",
@@ -350,12 +419,15 @@ Create a new order with items.
 ```
 
 #### Update Order
+
 ```
 PUT /api/v1/orders/:id
 ```
+
 Update order information.
 
 **Request Body:** (all fields optional)
+
 ```json
 {
   "order_status": "completed",
@@ -364,12 +436,15 @@ Update order information.
 ```
 
 #### Record Payment
+
 ```
 POST /api/v1/orders/:id/payment
 ```
+
 Record a payment for an order.
 
 **Request Body:**
+
 ```json
 {
   "amount_paid": 1500,
@@ -382,14 +457,17 @@ Record a payment for an order.
 ```
 
 **Payment Types:**
+
 - `advance` - Partial/advance payment
 - `balance` - Final payment
 - `full` - Complete payment
 
 #### Get Order Payments
+
 ```
 GET /api/v1/orders/:id/payments
 ```
+
 Get all payments made for an order.
 
 ---
@@ -399,16 +477,18 @@ Get all payments made for an order.
 All API responses follow this format:
 
 ### Success Response (200, 201)
+
 ```json
 {
   "success": true,
   "data": {},
   "message": "Operation successful",
-  "pagination": {}  // Only for paginated endpoints
+  "pagination": {} // Only for paginated endpoints
 }
 ```
 
 ### Error Response (400, 404, 500)
+
 ```json
 {
   "success": false,
@@ -456,7 +536,9 @@ All API responses follow this format:
 ## How to Add New Endpoints
 
 ### Step 1: Create a Model Method
+
 Add method to `src/models/YourTable.ts`:
+
 ```typescript
 async getYourData(): Promise<YourInterface[]> {
   try {
@@ -470,7 +552,9 @@ async getYourData(): Promise<YourInterface[]> {
 ```
 
 ### Step 2: Create Controller Method
+
 Add method to `src/controllers/YourController.ts`:
+
 ```typescript
 async getYourData(req: Request, res: Response): Promise<void> {
   try {
@@ -483,15 +567,19 @@ async getYourData(req: Request, res: Response): Promise<void> {
 ```
 
 ### Step 3: Add Route
+
 Add to `src/routes/yourRoutes.ts`:
+
 ```typescript
-router.get('/', YourController.getYourData.bind(YourController));
+router.get("/", YourController.getYourData.bind(YourController));
 ```
 
 ### Step 4: Register Route
+
 Add to `src/routes/index.ts`:
+
 ```typescript
-router.use('/yourroute', yourRoutes);
+router.use("/yourroute", yourRoutes);
 ```
 
 ---
@@ -570,7 +658,7 @@ RATE_LIMIT=100
 Three migrations have been created to align the database with the frontend:
 
 1. **001_add_cost_fields_to_products.sql**
-   - Adds `cost_price` and `print_cost` columns to products table
+   - Adds `product_cost` and `print_cost` columns to products table
 
 2. **002_create_payments_table.sql**
    - Creates new `payments` table for detailed payment tracking
@@ -586,38 +674,44 @@ Three migrations have been created to align the database with the frontend:
 ## Frontend Integration
 
 ### Fetching Products from React
+
 ```typescript
 // In your React component
 const [products, setProducts] = useState([]);
 
 useEffect(() => {
-  fetch('http://localhost:3000/api/v1/products')
-    .then(res => res.json())
-    .then(data => setProducts(data.data))
-    .catch(err => console.error('Error:', err));
+  fetch("http://localhost:3000/api/v1/products")
+    .then((res) => res.json())
+    .then((data) => setProducts(data.data))
+    .catch((err) => console.error("Error:", err));
 }, []);
 ```
 
 ### Creating an Order from React
+
 ```typescript
 const createOrder = async (orderData) => {
-  const response = await fetch('http://localhost:3000/api/v1/orders', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(orderData)
+  const response = await fetch("http://localhost:3000/api/v1/orders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(orderData),
   });
   return response.json();
 };
 ```
 
 ### Recording a Payment from React
+
 ```typescript
 const recordPayment = async (orderId, paymentData) => {
-  const response = await fetch(`http://localhost:3000/api/v1/orders/${orderId}/payment`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(paymentData)
-  });
+  const response = await fetch(
+    `http://localhost:3000/api/v1/orders/${orderId}/payment`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(paymentData),
+    }
+  );
   return response.json();
 };
 ```
@@ -627,16 +721,19 @@ const recordPayment = async (orderId, paymentData) => {
 ## Troubleshooting
 
 ### Database Connection Error
+
 - Verify `.env` file has correct credentials
 - Check that Hostinger MySQL is accessible
 - Test connection using: `mysql -h [host] -u [user] -p [password]`
 
 ### Route Not Found (404)
+
 - Ensure route is registered in `src/routes/index.ts`
 - Check URL matches route definition
 - Verify HTTP method (GET/POST/PUT/DELETE)
 
 ### TypeScript Compilation Error
+
 - Run `npm run build` to see detailed errors
 - Check that all imports are correct
 - Ensure types match between controllers and models
@@ -646,16 +743,19 @@ const recordPayment = async (orderId, paymentData) => {
 ## Performance Tips
 
 1. **Use pagination for large datasets:**
+
    ```
    GET /api/v1/products/active?page=1&limit=50
    ```
 
 2. **Search instead of fetching all:**
+
    ```
    GET /api/v1/products/search?q=shirt
    ```
 
 3. **Filter by shop or date range:**
+
    ```
    GET /api/v1/orders?shop_id=1
    GET /api/v1/orders/summary?shop_id=1&start_date=2025-11-01&end_date=2025-11-30

@@ -7,7 +7,7 @@
 import mysql, { Pool, PoolConnection, RowDataPacket, OkPacket } from 'mysql2/promise';
 import config from '../config';
 import { databaseConfig } from '../config/database.config';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 class DatabaseService {
   private pool: Pool | null = null;
@@ -30,7 +30,7 @@ class DatabaseService {
 
       // Test the connection
       const connection = await this.pool.getConnection();
-      const result = await connection.query('SELECT 1');
+      await connection.query('SELECT 1');
       connection.release();
 
       logger.info('✅ Database connection pool initialized successfully');
@@ -131,7 +131,7 @@ class DatabaseService {
   /**
    * Get a single record (returns first row or null)
    */
-  async getOne<T extends RowDataPacket>(
+  async getOne<T extends object>(
     sql: string,
     values?: any[]
   ): Promise<T | null> {
@@ -248,7 +248,7 @@ class DatabaseService {
   async healthCheck(): Promise<boolean> {
     try {
       const connection = await this.getConnection();
-      const result = await connection.query('SELECT 1');
+      await connection.query('SELECT 1');
       connection.release();
       return true;
     } catch (error) {

@@ -1,23 +1,18 @@
-import mysql from 'mysql2/promise';
-import { logger } from '../utils/logger';
+import mysql from "mysql2/promise";
+import { logger } from "../utils/logger";
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '3306'),
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'pos_system',
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || "pos_system",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
 });
 
-pool.on('connection', () => {
-  logger.info('Database connection established');
-});
-
-pool.on('error', (err) => {
-  logger.error('Database pool error:', err);
+pool.on("connection", () => {
+  logger.info("Database connection established");
 });
 
 export const getConnection = async () => {
@@ -25,7 +20,7 @@ export const getConnection = async () => {
     const connection = await pool.getConnection();
     return connection;
   } catch (error) {
-    logger.error('Failed to get database connection:', error);
+    logger.error("Failed to get database connection:", error);
     throw error;
   }
 };

@@ -60,9 +60,9 @@ We'll create a migration runner script in the next phase that handles this autom
 
 ```sql
 DESCRIBE products;
--- Should show: cost_price, print_cost columns
+-- Should show: product_cost, print_cost columns
 
-SELECT product_id, product_name, cost_price, print_cost, retail_price
+SELECT product_id, product_name, product_cost, print_cost, retail_price
 FROM products LIMIT 3;
 ```
 
@@ -97,7 +97,8 @@ FROM orders LIMIT 3;
 **Tables affected:** `products`
 
 **Changes:**
-- `cost_price DOUBLE DEFAULT 0` - Track product acquisition cost
+
+- `product_cost DOUBLE DEFAULT 0` - Track product acquisition cost
 - `print_cost DOUBLE DEFAULT 0` - Track printing/manufacturing cost
 - Indexes on both columns for query performance
 
@@ -108,6 +109,7 @@ FROM orders LIMIT 3;
 **Tables created:** `payments`
 
 **Columns:**
+
 - `payment_id` - Primary key
 - `order_id` - Foreign key to orders table
 - `payment_type` - advance/balance/full payment
@@ -125,6 +127,7 @@ FROM orders LIMIT 3;
 **Tables affected:** `orders`
 
 **Changes:**
+
 - `advance_paid DOUBLE DEFAULT 0` - Advance/partial payment amount
 - `balance_paid DOUBLE DEFAULT 0` - Final payment amount
 - `total_paid DOUBLE DEFAULT 0` - Sum of advance + balance
@@ -150,12 +153,13 @@ DROP TABLE IF EXISTS payments;
 
 -- Rollback Migration 1
 ALTER TABLE products DROP COLUMN print_cost;
-ALTER TABLE products DROP COLUMN cost_price;
+ALTER TABLE products DROP COLUMN product_cost;
 ```
 
 ## Scheduling
 
 **Recommended timing:**
+
 1. Run migrations immediately on your Hostinger database
 2. Backend API development can proceed in parallel
 3. Frontend will automatically work with new fields once APIs are in place

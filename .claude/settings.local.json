@@ -4,7 +4,11 @@
       "Bash(npm run type-check:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(ren categoryRoutes.ts categoryRoutes.js)",
+      "Bash(ren:*)",
+      "Bash(ren orderRoutes.ts orderRoutes.js)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

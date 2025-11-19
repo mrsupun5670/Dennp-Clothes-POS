@@ -1,0 +1,54 @@
+CONVERSION INSTRUCTIONS FOR REMAINING FILES:
+
+For each remaining file, follow these steps:
+
+1. AnalyticsPage.tsx → AnalyticsPage.jsx
+   - Remove lines 3-17 (interface definitions)
+   - Remove line 76: React.FC type annotation → just ()
+   - Remove line 76: <"today" | "thisWeek" | "thisMonth"> generic
+
+2. BankAccountsPage.tsx → BankAccountsPage.jsx
+   - Remove lines 3-21 (interface definitions)
+   - Remove line 23: React.FC annotation
+   - Remove line 24-26: type annotations on useState
+
+3. CustomersPage.tsx → CustomersPage.jsx
+   - Remove lines 4-5 (helper function type annotations)
+   - Remove lines 59-86 (interface definitions)
+   - Remove line 88: React.FC annotation
+   - Remove all type annotations on function parameters (line 4: customers: any[])
+
+4. InventoryPage.tsx → InventoryPage.jsx
+   - Remove lines 4-5 (helper function annotations)
+   - Remove lines 63-69 (interface RawMaterial)
+   - Remove line 71: React.FC annotation
+
+5. OrdersPage.tsx → OrdersPage.jsx
+   - Remove lines 4-6, 66-68 (helper function annotations)
+   - Remove lines 147-203 (all interface definitions)
+   - Remove line 205: React.FC annotation
+   - Remove line 442-444: type annotations on useState
+
+6. PaymentsPage.tsx → PaymentsPage.jsx
+   - Remove lines 3-22 (interface Payment)
+   - Remove line 24: React.FC annotation
+
+7. ProductsPage.tsx → ProductsPage.jsx (LARGEST FILE - 1152 lines)
+   - Remove lines 4-5 (helper function annotations)
+   - Remove lines 64-70 (interface definitions)
+   - Remove line 72: React.FC annotation
+   - Remove all useState type annotations
+
+8. SalesPage.tsx → SalesPage.jsx (LARGEST FILE - 1366 lines)
+   - Remove lines 4-38 (all interface definitions)
+   - Remove lines 146-157 (interface definitions)
+   - Remove line 164: React.FC annotation
+   - Remove lines 176: type annotation on useEffect
+
+KEY PATTERN:
+- Find all `: TypeName` and remove them
+- Find all `<TypeName>` in generics and remove them  
+- Find all `interface Name { }` blocks and remove them
+- Find all `type Name = ` and remove them
+- Change React.FC<Props> to just regular function
+- Change .tsx import to .jsx in other files

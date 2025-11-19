@@ -1,0 +1,197 @@
+# Database Migration Guide
+
+This directory contains SQL migrations to enhance the Dennup Clothes POS database schema to fully support the frontend application.
+
+## Overview
+
+Three migrations are provided to align the database with the frontend model:
+
+1. **001_add_cost_fields_to_products.sql** - Adds cost tracking fields
+2. **002_create_payments_table.sql** - Creates payment transaction tracking
+3. **003_add_payment_fields_to_orders.sql** - Adds order-level payment status
+
+## Pre-Migration Checklist
+
+- ✅ Back up your database
+- ✅ Test migrations on development database first
+- ✅ Have database credentials ready
+- ✅ Close any active connections to the database
+- ✅ Ensure you have admin/root MySQL access
+
+## Migration Execution
+
+### Option 1: Using MySQL CLI
+
+```bash
+# Navigate to migrations directory
+cd backend/migrations
+
+# Execute migrations in order
+mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < 001_add_cost_fields_to_products.sql
+mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < 002_create_payments_table.sql
+mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < 003_add_payment_fields_to_orders.sql
+```
+
+When prompted, enter your database password: `gM7LfqqUK;|`
+
+### Option 2: Using MySQL Workbench
+
+1. Open MySQL Workbench
+2. Connect to your database (193.203.184.9)
+3. File → Open SQL Script
+4. Select and run each migration file in order
+5. Execute each script separately (⚡ Lightning bolt button)
+
+### Option 3: Using phpMyAdmin (Hostinger cPanel)
+
+1. Log in to your Hostinger cPanel
+2. Navigate to phpMyAdmin
+3. Select database `u331468302_dennup_pos`
+4. Click "Import" tab
+5. Upload and execute each migration file in order
+
+### Option 4: Using Node.js Script (Recommended)
+
+We'll create a migration runner script in the next phase that handles this automatically.
+
+## Post-Migration Verification
+
+### Verify Cost Fields Added
+
+```sql
+DESCRIBE products;
+-- Should show: cost_price, print_cost columns
+
+SELECT product_id, product_name, cost_price, print_cost, retail_price
+FROM products LIMIT 3;
+```
+
+### Verify Payments Table Created
+
+```sql
+DESCRIBE payments;
+-- Should show all payment columns
+
+SELECT * FROM payments LIMIT 1;
+```
+
+### Verify Order Payment Fields Added
+
+```sql
+SELECT
+  order_id,
+  order_number,
+  total_amount,
+  advance_paid,
+  balance_paid,
+  total_paid,
+  payment_status,
+  remaining_amount
+FROM orders LIMIT 3;
+```
+
+## Migration Details
+
+### Migration 1: Cost Fields
+
+**Tables affected:** `products`
+
+**Changes:**
+- `cost_price DOUBLE DEFAULT 0` - Track product acquisition cost
+- `print_cost DOUBLE DEFAULT 0` - Track printing/manufacturing cost
+- Indexes on both columns for query performance
+
+**Purpose:** Support cost tracking in ProductsPage for margin calculations
+
+### Migration 2: Payments Table
+
+**Tables created:** `payments`
+
+**Columns:**
+- `payment_id` - Primary key
+- `order_id` - Foreign key to orders table
+- `payment_type` - advance/balance/full payment
+- `amount_paid` - Amount in this transaction
+- `payment_method` - cash/card/online/check/other
+- `bank_name` - Bank name (BOC, Commercial Bank, etc.)
+- `branch_name` - Branch location
+- `is_online_transfer` - Flag for online bank transfers
+- `payment_date` - When payment was made
+
+**Purpose:** Detailed transaction logging for payment history and reconciliation
+
+### Migration 3: Order Payment Summary
+
+**Tables affected:** `orders`
+
+**Changes:**
+- `advance_paid DOUBLE DEFAULT 0` - Advance/partial payment amount
+- `balance_paid DOUBLE DEFAULT 0` - Final payment amount
+- `total_paid DOUBLE DEFAULT 0` - Sum of advance + balance
+- `payment_status ENUM` - unpaid/partial/fully_paid
+- `remaining_amount DOUBLE DEFAULT 0` - Amount still due
+
+**Purpose:** Quick access to payment status without joining to payments table
+
+## Rollback Instructions
+
+If you need to rollback (not recommended in production):
+
+```sql
+-- Rollback Migration 3
+ALTER TABLE orders DROP COLUMN remaining_amount;
+ALTER TABLE orders DROP COLUMN payment_status;
+ALTER TABLE orders DROP COLUMN total_paid;
+ALTER TABLE orders DROP COLUMN balance_paid;
+ALTER TABLE orders DROP COLUMN advance_paid;
+
+-- Rollback Migration 2
+DROP TABLE IF EXISTS payments;
+
+-- Rollback Migration 1
+ALTER TABLE products DROP COLUMN print_cost;
+ALTER TABLE products DROP COLUMN cost_price;
+```
+
+## Scheduling
+
+**Recommended timing:**
+1. Run migrations immediately on your Hostinger database
+2. Backend API development can proceed in parallel
+3. Frontend will automatically work with new fields once APIs are in place
+
+## FAQ
+
+**Q: Can I run all migrations at once?**
+A: Yes, they are independent. However, running in order is recommended for clear logging.
+
+**Q: What if migration fails?**
+A: Check error message, fix the issue, and re-run. Most are idempotent (safe to re-run).
+
+**Q: Can I modify migrations before running?**
+A: Not recommended. If changes needed, create a new migration instead.
+
+**Q: Will existing data be affected?**
+A: No. All new columns default to 0 or NULL, so existing records remain unchanged.
+
+**Q: Do I need to update my application code?**
+A: Not for these migrations. Your frontend code already expects these fields. Backend APIs will use them once created.
+
+## Next Steps
+
+After running migrations:
+
+1. ✅ Execute all three migrations
+2. ⏳ Create TypeScript models matching new schema
+3. ⏳ Build database service layer
+4. ⏳ Create REST API endpoints
+5. ⏳ Connect frontend to backend APIs
+
+## Support
+
+If migrations fail:
+
+1. Check your database connection
+2. Verify user has ALTER TABLE privileges
+3. Review MySQL error messages in detail
+4. Contact Hostinger support if permissions issue

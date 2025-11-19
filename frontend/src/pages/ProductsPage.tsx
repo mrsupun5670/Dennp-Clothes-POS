@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 
 // Helper function to generate PDF-like table (using print)
 const handlePrintProducts = (products: any[]) => {
@@ -93,6 +93,15 @@ const ProductsPage: React.FC = () => {
     retailPrice: "",
     wholesalePrice: "",
   });
+
+  // Backend state
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
+  const [dbColors, setDbColors] = useState<any[]>([]);
+  const [dbSizes, setDbSizes] = useState<any[]>([]);
+  const [dbProducts, setDbProducts] = useState<any[]>([]);
 
   // Size options by category
   const sizesByCategory: SizeOption = {
@@ -194,6 +203,246 @@ const ProductsPage: React.FC = () => {
 
   // Get all available colors (predefined + custom)
   const getAllColors = () => [...colorsByCategory[selectedCategory], ...customColors];
+
+  // ===================== BACKEND API FUNCTIONS =====================
+
+  /**
+   * Fetch all products from backend
+   */
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/api/v1/products");
+      const result = await response.json();
+      if (result.success) {
+        setDbProducts(result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
+  };
+
+  /**
+   * Fetch all categories from backend
+   */
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/api/v1/categories");
+      const result = await response.json();
+      if (result.success) {
+        setDbCategories(result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
+  /**
+   * Fetch all colors from backend
+   */
+  const fetchColors = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/api/v1/colors");
+      const result = await response.json();
+      if (result.success) {
+        setDbColors(result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching colors:", error);
+    }
+  };
+
+  /**
+   * Fetch all sizes from backend
+   */
+  const fetchSizes = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/api/v1/sizes");
+      const result = await response.json();
+      if (result.success) {
+        setDbSizes(result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching sizes:", error);
+    }
+  };
+
+  /**
+   * Create or update product in backend
+   */
+  const handleSaveProduct = async () => {
+    // Validation
+    if (!formData.code.trim()) {
+      setErrorMessage("Product Code is required");
+      return;
+    }
+    if (!formData.name.trim()) {
+      setErrorMessage("Product Name is required");
+      return;
+    }
+    if (!formData.costPrice || parseFloat(formData.costPrice) < 0) {
+      setErrorMessage("Valid Product Cost is required");
+      return;
+    }
+    if (!formData.printCost || parseFloat(formData.printCost) < 0) {
+      setErrorMessage("Valid Print Cost is required");
+      return;
+    }
+    if (!formData.retailPrice || parseFloat(formData.retailPrice) < 0) {
+      setErrorMessage("Valid Retail Price is required");
+      return;
+    }
+
+    // Check stock rows
+    if (stockRows.length === 0 || stockRows.some((row) => !row.size || !row.color)) {
+      setErrorMessage("Please fill all size/color combinations");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      // Create product first
+      const productPayload = {
+        sku: formData.code,
+        product_name: formData.name,
+        category_id: 1, // Default category - you should get this from the selected category
+        description: "",
+        cost_price: parseFloat(formData.costPrice),
+        print_cost: parseFloat(formData.printCost),
+        retail_price: parseFloat(formData.retailPrice),
+        wholesale_price: formData.wholesalePrice ? parseFloat(formData.wholesalePrice) : null,
+        product_status: "active",
+      };
+
+      let productId: number;
+
+      if (isEditMode && selectedProductId) {
+        // Update existing product
+        const updateResponse = await fetch(`http://localhost:3000/api/v1/products/${selectedProductId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(productPayload),
+        });
+
+        const updateResult = await updateResponse.json();
+        if (!updateResult.success) {
+          setErrorMessage(updateResult.error || "Failed to update product");
+          setIsLoading(false);
+          return;
+        }
+        productId = selectedProductId;
+      } else {
+        // Create new product
+        const createResponse = await fetch("http://localhost:3000/api/v1/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(productPayload),
+        });
+
+        const createResult = await createResponse.json();
+        if (!createResult.success) {
+          setErrorMessage(createResult.error || "Failed to create product");
+          setIsLoading(false);
+          return;
+        }
+        productId = createResult.data.product_id;
+      }
+
+      // Add colors and sizes to the product
+      const colors = stockRows.map((row) => row.color).filter((c, i, a) => a.indexOf(c) === i);
+      const sizes = stockRows.map((row) => row.size).filter((s, i, a) => a.indexOf(s) === i);
+
+      // Add colors
+      for (const colorName of colors) {
+        let colorId = dbColors.find((c) => c.color_name.toLowerCase() === colorName.toLowerCase())?.color_id;
+
+        if (!colorId) {
+          // Create new color if it doesn't exist
+          const colorResponse = await fetch("http://localhost:3000/api/v1/colors", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ color_name: colorName }),
+          });
+
+          const colorResult = await colorResponse.json();
+          if (colorResult.success) {
+            colorId = colorResult.data.color_id;
+          } else {
+            console.error("Failed to create color:", colorName);
+            continue;
+          }
+        }
+
+        // Check if color is already associated with product
+        const hasColor = dbProducts
+          .find((p) => p.product_id === productId)
+          ?.colors?.some((c: any) => c.color_id === colorId);
+
+        if (!hasColor) {
+          await fetch(`http://localhost:3000/api/v1/products/${productId}/colors`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ color_id: colorId }),
+          });
+        }
+      }
+
+      // Add sizes (similar logic)
+      for (const sizeName of sizes) {
+        let sizeId = dbSizes.find((s) => s.size_name === sizeName)?.size_id;
+
+        if (!sizeId) {
+          // Create new size if it doesn't exist
+          const sizeResponse = await fetch("http://localhost:3000/api/v1/sizes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ size_name: sizeName, size_type_id: 1 }), // Default size type
+          });
+
+          const sizeResult = await sizeResponse.json();
+          if (sizeResult.success) {
+            sizeId = sizeResult.data.size_id;
+          } else {
+            console.error("Failed to create size:", sizeName);
+            continue;
+          }
+        }
+
+        // Check if size is already associated with product
+        const hasSize = dbProducts
+          .find((p) => p.product_id === productId)
+          ?.sizes?.some((s: any) => s.size_id === sizeId);
+
+        if (!hasSize) {
+          await fetch(`http://localhost:3000/api/v1/products/${productId}/sizes`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ size_id: sizeId }),
+          });
+        }
+      }
+
+      setSuccessMessage(isEditMode ? "Product updated successfully!" : "Product created successfully!");
+      setTimeout(() => {
+        handleCloseModal();
+        fetchProducts(); // Refresh product list
+      }, 1500);
+    } catch (error: any) {
+      setErrorMessage(error.message || "An error occurred while saving the product");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load data from backend on component mount
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+    fetchColors();
+    fetchSizes();
+  }, []);
 
   // Add new stock row
   const addStockRow = () => {
@@ -299,7 +548,23 @@ const ProductsPage: React.FC = () => {
 
   // Filter and sort products based on all criteria
   const filteredAndSortedProducts = useMemo(() => {
-    let result = [...allProducts];
+    // Use backend products if available, otherwise use sample data
+    const productsToFilter = dbProducts.length > 0 ?
+      dbProducts.map((p: any) => ({
+        id: p.product_id,
+        code: p.sku,
+        name: p.product_name,
+        colors: p.colors?.map((c: any) => c.color_name).join(", ") || "N/A",
+        sizes: p.sizes?.map((s: any) => s.size_name).join(", ") || "N/A",
+        cost: p.cost_price || 0,
+        printCost: p.print_cost || 0,
+        qty: 0, // Backend doesn't track qty yet
+        retailPrice: p.retail_price,
+        wholesalePrice: p.wholesale_price || 0,
+      }))
+      : allProducts;
+
+    let result = [...productsToFilter];
 
     // Search filter - by code, name, or color
     if (searchQuery.trim()) {
@@ -847,10 +1112,26 @@ const ProductsPage: React.FC = () => {
                 </div>
               )}
 
+              {/* Error/Success Messages */}
+              {errorMessage && (
+                <div className="p-3 bg-red-900/30 border border-red-600/50 rounded-lg text-red-400 text-sm">
+                  {errorMessage}
+                </div>
+              )}
+              {successMessage && (
+                <div className="p-3 bg-green-900/30 border border-green-600/50 rounded-lg text-green-400 text-sm">
+                  {successMessage}
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-700">
-                <button className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors">
-                  {isEditMode ? "Update Product" : "Add Product"}
+                <button
+                  onClick={handleSaveProduct}
+                  disabled={isLoading}
+                  className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? "Saving..." : isEditMode ? "Update Product" : "Add Product"}
                 </button>
                 <button
                   onClick={handleCloseModal}

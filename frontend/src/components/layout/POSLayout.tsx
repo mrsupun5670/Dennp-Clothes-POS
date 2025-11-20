@@ -17,9 +17,10 @@ const POSLayout: React.FC<POSLayoutProps> = ({ currentPage, onPageChange, childr
     { id: "inventory", label: "Inventory", icon: "📦" },
     { id: "customers", label: "Customers", icon: "👥" },
     { id: "orders", label: "Orders", icon: "📋" },
+    { id: "reports", label: "Reports", icon: "📊" },
     { id: "payments", label: "Payments", icon: "💳" },
     { id: "bankaccounts", label: "Bank Accounts", icon: "🏦" },
-    { id: "analytics", label: "Analytics", icon: "📊" },
+    { id: "analytics", label: "Analytics", icon: "📈" },
   ];
 
   return (

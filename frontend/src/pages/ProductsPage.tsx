@@ -66,14 +66,6 @@ const handlePrintProducts = (products: any[]) => {
   }
 };
 
-interface SizeOption {
-  [key: string]: string[];
-}
-
-interface ColorOption {
-  [key: string]: string[];
-}
-
 const ProductsPage: React.FC = () => {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null

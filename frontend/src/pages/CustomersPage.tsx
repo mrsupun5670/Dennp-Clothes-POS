@@ -58,17 +58,6 @@ const handlePrintCustomers = (customers: any[]) => {
   }
 };
 
-interface Address {
-  province: string;
-  district: string;
-  city: string;
-  line1: string;
-  line2: string;
-  postalCode: string;
-  courierPhone1?: string;
-  courierPhone2?: string;
-}
-
 interface Customer {
   customer_id: number;
   first_name: string;
@@ -94,72 +83,12 @@ const CustomersPage: React.FC = () => {
     email: "",
     mobile: "",
   });
-  const [addressData, setAddressData] = useState<Address>({
-    province: "",
-    district: "",
-    city: "",
-    line1: "",
-    line2: "",
-    postalCode: "",
-    courierPhone1: "",
-    courierPhone2: "",
-  });
-
   // Backend state
   const [isLoading, setIsLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] = useState<"error" | "success" | "">("");
 
-  // Sri Lankan address hierarchy (sample data)
-  const addressHierarchy = {
-    provinces: [
-      "Western",
-      "Central",
-      "Southern",
-      "Northern",
-      "Eastern",
-      "North-Western",
-      "North-Central",
-      "Sabaragamuwa",
-      "Uva",
-    ],
-    districts: {
-      Western: ["Colombo", "Gampaha", "Kalutara"],
-      Central: ["Kandy", "Matara", "Nuwara Eliya"],
-      Southern: ["Galle", "Matara", "Hambantota"],
-      Northern: ["Jaffna", "Mullaitivu", "Vavuniya"],
-      Eastern: ["Batticaloa", "Trincomalee", "Ampara"],
-      "North-Western": ["Kurunegala", "Puttalam"],
-      "North-Central": ["Polonnaruwa", "Matale"],
-      Sabaragamuwa: ["Ratnapura", "Kegalle"],
-      Uva: ["Badulla", "Monaragala"],
-    },
-    cities: {
-      Colombo: ["Colombo City", "Colombo South", "Colombo North"],
-      Gampaha: ["Gampaha City", "Negombo"],
-      Kalutara: ["Kalutara City", "Panadura"],
-      Kandy: ["Kandy City", "Peradeniya"],
-      Matara: ["Matara City", "Weligama"],
-      "Nuwara Eliya": ["Nuwara Eliya City", "Hatton"],
-      Galle: ["Galle City", "Unawatuna"],
-      Hambantota: ["Hambantota City", "Mirissa"],
-      Jaffna: ["Jaffna City", "Jaffna North"],
-      Mullaitivu: ["Mullaitivu City", "Batticaloa"],
-      Vavuniya: ["Vavuniya City", "Vavuniya South"],
-      Batticaloa: ["Batticaloa City", "Kattankudi"],
-      Trincomalee: ["Trincomalee City", "China Bay"],
-      Ampara: ["Ampara City", "Akkaraipattu"],
-      Kurunegala: ["Kurunegala City", "Kuliyapitiya"],
-      Puttalam: ["Puttalam City", "Chilaw"],
-      Polonnaruwa: ["Polonnaruwa City", "Habarana"],
-      Matale: ["Matale City", "Dambulla"],
-      Ratnapura: ["Ratnapura City", "Eheliyagoda"],
-      Kegalle: ["Kegalle City", "Mawanella"],
-      Badulla: ["Badulla City", "Bandarawela"],
-      Monaragala: ["Monaragala City", "Bibile"],
-    },
-  };
 
   // ===================== BACKEND API FUNCTIONS =====================
 
@@ -326,16 +255,6 @@ const CustomersPage: React.FC = () => {
   const handleAddClick = () => {
     setIsEditMode(false);
     setFormData({ first_name: "", last_name: "", email: "", mobile: "" });
-    setAddressData({
-      province: "",
-      district: "",
-      city: "",
-      line1: "",
-      line2: "",
-      postalCode: "",
-      courierPhone1: "",
-      courierPhone2: "",
-    });
     setShowAddModal(true);
   };
 
@@ -351,31 +270,11 @@ const CustomersPage: React.FC = () => {
     setShowAddModal(true);
   };
 
-  const handleViewAddress = (customer: Customer) => {
-    setFormData({
-      first_name: customer.first_name,
-      last_name: customer.last_name,
-      email: customer.email || "",
-      mobile: customer.mobile,
-    });
-    setShowAddressModal(true);
-  };
-
   const handleCloseModal = () => {
     setShowAddModal(false);
     setIsEditMode(false);
     setSelectedCustomerId(null);
     setFormData({ first_name: "", last_name: "", email: "", mobile: "" });
-    setAddressData({
-      province: "",
-      district: "",
-      city: "",
-      line1: "",
-      line2: "",
-      postalCode: "",
-      courierPhone1: "",
-      courierPhone2: "",
-    });
   };
 
   const handleSaveCustomer = () => {

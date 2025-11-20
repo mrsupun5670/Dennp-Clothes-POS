@@ -928,9 +928,10 @@ const OrdersPage: React.FC = () => {
                         remainingAmount: selectedOrder.remainingAmount,
                         status: selectedOrder.status
                       }));
-                      // Trigger navigation to SalesPage (App.tsx will handle this)
+                      // Close modal first
+                      handleCloseModal();
+                      // Then trigger navigation to SalesPage (App.tsx will handle this)
                       sessionStorage.setItem('navigateToSales', 'true');
-                      // Don't close modal - App.tsx will switch pages
                     }}
                     className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
                     title="Edit this order in Sales tab"

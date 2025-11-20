@@ -16,14 +16,18 @@ type PageType = "sales" | "products" | "inventory" | "customers" | "orders" | "p
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>("sales");
 
-  // Listen for navigation requests from other pages
+  // Listen for navigation requests from other pages (only run on mount and when flag changes)
   useEffect(() => {
-    const navigateToSales = sessionStorage.getItem('navigateToSales');
-    if (navigateToSales === 'true') {
-      setCurrentPage('sales');
-      sessionStorage.removeItem('navigateToSales');
-    }
-  }, [currentPage]);
+    const checkNavigation = setInterval(() => {
+      const navigateToSales = sessionStorage.getItem('navigateToSales');
+      if (navigateToSales === 'true') {
+        setCurrentPage('sales');
+        sessionStorage.removeItem('navigateToSales');
+      }
+    }, 100);
+
+    return () => clearInterval(checkNavigation);
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {

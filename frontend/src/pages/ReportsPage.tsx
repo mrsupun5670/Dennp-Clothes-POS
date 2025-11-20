@@ -38,22 +38,77 @@ const ReportsPage: React.FC = () => {
   const [sortColor, setSortColor] = useState("");
 
   const allSoldItems: SoldItem[] = [
+    // 2024-11-20 (Today)
     { id: "SI001", productName: "Cotton Crew Neck T-Shirt", category: "tshirt", size: "M", color: "Black", quantity: 5, price: 1250, totalAmount: 6250, orderId: "ORD001", orderDate: "2024-11-20" },
     { id: "SI002", productName: "Cotton Crew Neck T-Shirt", category: "tshirt", size: "L", color: "White", quantity: 3, price: 1250, totalAmount: 3750, orderId: "ORD001", orderDate: "2024-11-20" },
     { id: "SI003", productName: "Jeans Premium", category: "trouser", size: "32", color: "Blue", quantity: 2, price: 2500, totalAmount: 5000, orderId: "ORD002", orderDate: "2024-11-20" },
-    { id: "SI004", productName: "Cotton Crew Neck T-Shirt", category: "tshirt", size: "M", color: "Blue", quantity: 4, price: 1250, totalAmount: 5000, orderId: "ORD003", orderDate: "2024-11-19" },
-    { id: "SI005", productName: "Formal Shirt", category: "shirt", size: "16", color: "White", quantity: 2, price: 1800, totalAmount: 3600, orderId: "ORD004", orderDate: "2024-11-18" },
-    { id: "SI006", productName: "Casual Dress", category: "dress", size: "S", color: "Red", quantity: 1, price: 3500, totalAmount: 3500, orderId: "ORD005", orderDate: "2024-11-17" },
-    { id: "SI007", productName: "Winter Jacket", category: "jacket", size: "L", color: "Navy", quantity: 2, price: 4500, totalAmount: 9000, orderId: "ORD006", orderDate: "2024-11-16" },
+    { id: "SI004", productName: "Jeans Premium", category: "trouser", size: "34", color: "Black", quantity: 3, price: 2500, totalAmount: 7500, orderId: "ORD002", orderDate: "2024-11-20" },
+    { id: "SI005", productName: "Cotton Polo Shirt", category: "shirt", size: "M", color: "Navy", quantity: 4, price: 1600, totalAmount: 6400, orderId: "ORD003", orderDate: "2024-11-20" },
+
+    // 2024-11-19
+    { id: "SI006", productName: "Cotton Crew Neck T-Shirt", category: "tshirt", size: "M", color: "Blue", quantity: 4, price: 1250, totalAmount: 5000, orderId: "ORD004", orderDate: "2024-11-19" },
+    { id: "SI007", productName: "Casual Dress", category: "dress", size: "S", color: "Red", quantity: 2, price: 3500, totalAmount: 7000, orderId: "ORD005", orderDate: "2024-11-19" },
+    { id: "SI008", productName: "Formal Shirt", category: "shirt", size: "16", color: "White", quantity: 2, price: 1800, totalAmount: 3600, orderId: "ORD006", orderDate: "2024-11-19" },
+
+    // 2024-11-18
+    { id: "SI009", productName: "Winter Jacket", category: "jacket", size: "L", color: "Navy", quantity: 2, price: 4500, totalAmount: 9000, orderId: "ORD007", orderDate: "2024-11-18" },
+    { id: "SI010", productName: "Cotton Polo Shirt", category: "shirt", size: "L", color: "Red", quantity: 3, price: 1600, totalAmount: 4800, orderId: "ORD008", orderDate: "2024-11-18" },
+
+    // 2024-11-17
+    { id: "SI011", productName: "Casual Dress", category: "dress", size: "M", color: "Green", quantity: 1, price: 3500, totalAmount: 3500, orderId: "ORD009", orderDate: "2024-11-17" },
+    { id: "SI012", productName: "Jeans Premium", category: "trouser", size: "30", color: "Dark Blue", quantity: 2, price: 2500, totalAmount: 5000, orderId: "ORD010", orderDate: "2024-11-17" },
+
+    // 2024-11-16
+    { id: "SI013", productName: "Cotton Crew Neck T-Shirt", category: "tshirt", size: "XL", color: "Gray", quantity: 6, price: 1250, totalAmount: 7500, orderId: "ORD011", orderDate: "2024-11-16" },
+    { id: "SI014", productName: "Formal Shirt", category: "shirt", size: "15", color: "Blue", quantity: 3, price: 1800, totalAmount: 5400, orderId: "ORD012", orderDate: "2024-11-16" },
+
+    // 2024-11-15
+    { id: "SI015", productName: "Summer Crop Top", category: "tshirt", size: "S", color: "Pink", quantity: 5, price: 950, totalAmount: 4750, orderId: "ORD013", orderDate: "2024-11-15" },
+    { id: "SI016", productName: "Cargo Pants", category: "trouser", size: "32", color: "Khaki", quantity: 2, price: 2200, totalAmount: 4400, orderId: "ORD014", orderDate: "2024-11-15" },
+
+    // 2024-11-14
+    { id: "SI017", productName: "Winter Jacket", category: "jacket", size: "M", color: "Black", quantity: 1, price: 4500, totalAmount: 4500, orderId: "ORD015", orderDate: "2024-11-14" },
+    { id: "SI018", productName: "Casual Dress", category: "dress", size: "L", color: "Purple", quantity: 2, price: 3500, totalAmount: 7000, orderId: "ORD016", orderDate: "2024-11-14" },
+
+    // 2024-11-13
+    { id: "SI019", productName: "Cotton Polo Shirt", category: "shirt", size: "XL", color: "White", quantity: 2, price: 1600, totalAmount: 3200, orderId: "ORD017", orderDate: "2024-11-13" },
+    { id: "SI020", productName: "Jeans Premium", category: "trouser", size: "36", color: "Light Blue", quantity: 1, price: 2500, totalAmount: 2500, orderId: "ORD018", orderDate: "2024-11-13" },
   ];
 
   const allOrderCosts: OrderCost[] = [
-    { orderId: "ORD001", orderDate: "2024-11-20", customerName: "John Doe", productCost: 12000, printCost: 2000, totalCost: 14000, totalItems: 8, totalSaleAmount: 10000 },
-    { orderId: "ORD002", orderDate: "2024-11-20", customerName: "Sarah Smith", productCost: 5000, printCost: 1500, totalCost: 6500, totalItems: 2, totalSaleAmount: 5000 },
-    { orderId: "ORD003", orderDate: "2024-11-19", customerName: "Ahmed Khan", productCost: 5000, printCost: 800, totalCost: 5800, totalItems: 4, totalSaleAmount: 5000 },
-    { orderId: "ORD004", orderDate: "2024-11-18", customerName: "Priya Jayasooriya", productCost: 3600, printCost: 500, totalCost: 4100, totalItems: 2, totalSaleAmount: 3600 },
-    { orderId: "ORD005", orderDate: "2024-11-17", customerName: "Lakshmi Fernando", productCost: 3500, printCost: 600, totalCost: 4100, totalItems: 1, totalSaleAmount: 3500 },
-    { orderId: "ORD006", orderDate: "2024-11-16", customerName: "Roshan Perera", productCost: 9000, printCost: 1200, totalCost: 10200, totalItems: 2, totalSaleAmount: 9000 },
+    // 2024-11-20
+    { orderId: "ORD001", orderDate: "2024-11-20", customerName: "John Doe", productCost: 8000, printCost: 1500, totalCost: 9500, totalItems: 8, totalSaleAmount: 10000 },
+    { orderId: "ORD002", orderDate: "2024-11-20", customerName: "Sarah Smith", productCost: 7500, printCost: 1200, totalCost: 8700, totalItems: 5, totalSaleAmount: 12500 },
+    { orderId: "ORD003", orderDate: "2024-11-20", customerName: "Ahmed Khan", productCost: 5600, printCost: 800, totalCost: 6400, totalItems: 4, totalSaleAmount: 6400 },
+
+    // 2024-11-19
+    { orderId: "ORD004", orderDate: "2024-11-19", customerName: "Priya Jayasooriya", productCost: 6000, printCost: 900, totalCost: 6900, totalItems: 4, totalSaleAmount: 5000 },
+    { orderId: "ORD005", orderDate: "2024-11-19", customerName: "Lakshmi Fernando", productCost: 5200, printCost: 1100, totalCost: 6300, totalItems: 2, totalSaleAmount: 7000 },
+    { orderId: "ORD006", orderDate: "2024-11-19", customerName: "Roshan Perera", productCost: 3200, printCost: 600, totalCost: 3800, totalItems: 2, totalSaleAmount: 3600 },
+
+    // 2024-11-18
+    { orderId: "ORD007", orderDate: "2024-11-18", customerName: "Michael Brown", productCost: 8000, printCost: 1500, totalCost: 9500, totalItems: 2, totalSaleAmount: 9000 },
+    { orderId: "ORD008", orderDate: "2024-11-18", customerName: "Jessica White", productCost: 5400, printCost: 900, totalCost: 6300, totalItems: 3, totalSaleAmount: 4800 },
+
+    // 2024-11-17
+    { orderId: "ORD009", orderDate: "2024-11-17", customerName: "David Lee", productCost: 4200, printCost: 700, totalCost: 4900, totalItems: 1, totalSaleAmount: 3500 },
+    { orderId: "ORD010", orderDate: "2024-11-17", customerName: "Emily Davis", productCost: 5500, printCost: 950, totalCost: 6450, totalItems: 2, totalSaleAmount: 5000 },
+
+    // 2024-11-16
+    { orderId: "ORD011", orderDate: "2024-11-16", customerName: "Christopher Wilson", productCost: 8100, printCost: 1350, totalCost: 9450, totalItems: 6, totalSaleAmount: 7500 },
+    { orderId: "ORD012", orderDate: "2024-11-16", customerName: "Michelle Taylor", productCost: 6000, printCost: 1000, totalCost: 7000, totalItems: 3, totalSaleAmount: 5400 },
+
+    // 2024-11-15
+    { orderId: "ORD013", orderDate: "2024-11-15", customerName: "Daniel Martinez", productCost: 5600, printCost: 1000, totalCost: 6600, totalItems: 5, totalSaleAmount: 4750 },
+    { orderId: "ORD014", orderDate: "2024-11-15", customerName: "Amanda Garcia", productCost: 4200, printCost: 800, totalCost: 5000, totalItems: 2, totalSaleAmount: 4400 },
+
+    // 2024-11-14
+    { orderId: "ORD015", orderDate: "2024-11-14", customerName: "Brandon Rodriguez", productCost: 6500, printCost: 1100, totalCost: 7600, totalItems: 1, totalSaleAmount: 4500 },
+    { orderId: "ORD016", orderDate: "2024-11-14", customerName: "Nicole Anderson", productCost: 7000, printCost: 1200, totalCost: 8200, totalItems: 2, totalSaleAmount: 7000 },
+
+    // 2024-11-13
+    { orderId: "ORD017", orderDate: "2024-11-13", customerName: "Kevin Thomas", productCost: 3800, printCost: 700, totalCost: 4500, totalItems: 2, totalSaleAmount: 3200 },
+    { orderId: "ORD018", orderDate: "2024-11-13", customerName: "Lisa Jackson", productCost: 3500, printCost: 600, totalCost: 4100, totalItems: 1, totalSaleAmount: 2500 },
   ];
 
   const getDateRange = (period: TimePeriod) => {

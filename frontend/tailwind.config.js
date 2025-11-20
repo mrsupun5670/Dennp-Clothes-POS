@@ -96,6 +96,25 @@ export default {
         xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
         '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
       },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideDown: {
+          '0%': { opacity: '0', transform: 'translateY(-10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        slideUp: {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        fadeIn: 'fadeIn 0.3s ease-in-out',
+        slideDown: 'slideDown 0.3s ease-in-out',
+        slideUp: 'slideUp 0.3s ease-in-out',
+      },
     },
   },
   plugins: [],

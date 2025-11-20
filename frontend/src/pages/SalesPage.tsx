@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from "react";
+import BankPaymentModal, { BankPaymentData } from "../components/BankPaymentModal";
+import PaymentMethodSelector from "../components/PaymentMethodSelector";
 
 // Interfaces
 interface Customer {
@@ -151,15 +153,6 @@ interface ColorOption {
   [key: string]: string[];
 }
 
-interface BankBranches {
-  [key: string]: string[];
-}
-
-// Bank branches data
-const bankBranches: BankBranches = {
-  boc: ["Colombo Main", "Colombo Fort", "Kandy Branch", "Galle Branch", "Matara Branch"],
-  commercial: ["Colombo Main", "Colombo Slave Island", "Kandy Branch", "Jaffna Branch", "Galle Branch"],
-};
 
 const SalesPage: React.FC = () => {
   // State Management
@@ -167,10 +160,12 @@ const SalesPage: React.FC = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [paidAmount, setPaidAmount] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
-  const [selectedBank, setSelectedBank] = useState("");
-  const [selectedBranch, setSelectedBranch] = useState("");
-  const [isOnlineTransfer, setIsOnlineTransfer] = useState(false);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+
+  // New payment system states
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
+  const [bankPaymentDetails, setBankPaymentDetails] = useState<BankPaymentData | null>(null);
+  const [showBankPaymentModal, setShowBankPaymentModal] = useState(false);
 
   // Load order from sessionStorage on component mount
   React.useEffect(() => {
@@ -362,9 +357,6 @@ const SalesPage: React.FC = () => {
   // Calculations
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const total = subtotal;
-  const paid = parseFloat(paidAmount) || 0;
-  const balance = total - paid;
-  const isAdvance = paid > 0 && paid < total;
 
   // Handlers
   const handleAddCustomer = () => {
@@ -419,6 +411,7 @@ const SalesPage: React.FC = () => {
   };
 
   const handleSaveOrder = () => {
+    // Validation
     if (!selectedCustomer) {
       alert("Please select a customer");
       return;
@@ -427,49 +420,74 @@ const SalesPage: React.FC = () => {
       alert("Please add items to cart");
       return;
     }
-    if (paidAmount && !isOnlineTransfer && !selectedBank) {
-      alert("Please select a bank for payment");
-      return;
+
+    // Validation based on payment method
+    if (paymentMethod === "cash") {
+      if (!paidAmount) {
+        alert("Please enter cash amount");
+        return;
+      }
+    } else if (paymentMethod === "bank") {
+      if (!bankPaymentDetails) {
+        alert("Please add bank payment details");
+        return;
+      }
     }
-    if (paidAmount && !isOnlineTransfer && selectedBank && !selectedBranch) {
-      alert("Please select a branch");
-      return;
+
+    // Calculate order details
+    const orderId = editingOrderId || `ORD-${Date.now()}`;
+    const paid = parseFloat(paidAmount) || 0;
+    const balance = total - paid;
+    const orderStatus = paid >= total ? "Paid" : paid > 0 ? "Advance" : "Pending";
+
+    // Build payment info object
+    let paymentInfo: any = {
+      method: paymentMethod,
+      amount: paid,
+    };
+
+    if (paymentMethod === "bank" && bankPaymentDetails) {
+      paymentInfo = {
+        ...paymentInfo,
+        bank: bankPaymentDetails.bank,
+        isOnlineTransfer: bankPaymentDetails.isOnlineTransfer,
+        branch: bankPaymentDetails.branch,
+        receiptNumber: bankPaymentDetails.receiptNumber,
+        paymentDateTime: bankPaymentDetails.paymentDateTime,
+      };
     }
 
-    const orderId = `ORD-${Date.now()}`;
-    const orderStatus = paid >= total ? "Paid" : isAdvance ? "Advance" : "Pending";
-
-    const paymentMethod = isOnlineTransfer ? "Online Transfer" : selectedBank ? `${selectedBank.toUpperCase()} - ${selectedBranch}` : "Not specified";
-
-    console.log({
+    // Log order data
+    const orderData = {
       orderId,
+      isEdit: !!editingOrderId,
       customer: selectedCustomer,
       items: cartItems,
       total,
       paidAmount: paid,
       balance,
       orderStatus,
-      paymentMethod,
-      isOnlineTransfer,
-      bank: selectedBank,
-      branch: selectedBranch,
+      payment: paymentInfo,
       notes: orderNotes,
       date: new Date().toISOString(),
-    });
+    };
 
+    console.log("Order Data:", orderData);
+
+    // Success message
     if (editingOrderId) {
-      alert(`Order ${editingOrderId} updated successfully!`);
+      alert(`Order ${editingOrderId} updated successfully!\n\nTotal: Rs. ${total.toFixed(2)}\nPaid: Rs. ${paid.toFixed(2)}\nBalance: Rs. ${Math.abs(balance).toFixed(2)}`);
     } else {
-      alert(`Order ${orderId} saved successfully!`);
+      alert(`Order ${orderId} created successfully!\n\nTotal: Rs. ${total.toFixed(2)}\nPaid: Rs. ${paid.toFixed(2)}\nBalance: Rs. ${Math.abs(balance).toFixed(2)}`);
     }
+
     // Reset form
     setCartItems([]);
     setPaidAmount("");
     setOrderNotes("");
     setSelectedCustomer(null);
-    setSelectedBank("");
-    setSelectedBranch("");
-    setIsOnlineTransfer(false);
+    setPaymentMethod("cash");
+    setBankPaymentDetails(null);
     setEditingOrderId(null);
   };
 
@@ -478,7 +496,150 @@ const SalesPage: React.FC = () => {
       alert("Please select customer and add items");
       return;
     }
-    alert("Bill print functionality will be implemented");
+
+    // Only allow printing if cash payment is complete
+    if (paymentMethod === "cash") {
+      if (!paidAmount) {
+        alert("Please enter cash amount to print bill");
+        return;
+      }
+    } else if (paymentMethod === "bank") {
+      alert("Bank payments cannot be printed immediately. Bill will be generated once payment is verified.");
+      return;
+    }
+
+    // Generate print window
+    const printWindow = window.open("", "", "width=900,height=1200");
+    if (!printWindow) {
+      alert("Please allow pop-ups to print bill");
+      return;
+    }
+
+    const paid = parseFloat(paidAmount) || 0;
+    const balance = total - paid;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Order Bill</title>
+        <style>
+          body { font-family: 'Courier New', monospace; padding: 20px; background: white; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; border: 2px solid #333; padding: 20px; }
+          h1 { text-align: center; font-size: 24px; margin-bottom: 5px; color: #d32f2f; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
+          .date { text-align: center; font-size: 12px; color: #666; }
+          .section { margin-bottom: 15px; }
+          .section-title { font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; }
+          th { background-color: #f5f5f5; padding: 8px; text-align: left; border-bottom: 1px solid #333; }
+          td { padding: 8px; border-bottom: 1px solid #ddd; }
+          .text-right { text-align: right; }
+          .totals { border-top: 2px solid #333; border-bottom: 2px solid #333; padding: 10px 0; margin: 10px 0; }
+          .total-row { display: flex; justify-content: space-between; padding: 5px 0; }
+          .total-amount { font-weight: bold; font-size: 16px; color: #d32f2f; }
+          .footer { text-align: center; font-size: 12px; margin-top: 20px; color: #666; }
+          .status-badge { font-weight: bold; padding: 5px 10px; border-radius: 3px; display: inline-block; }
+          .status-paid { background-color: #c8e6c9; color: #2e7d32; }
+          .status-balance { background-color: #ffccbc; color: #d84315; }
+          .info-line { display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>DENNP CLOTHES</h1>
+            <p>Order Bill</p>
+            <div class="date">${new Date().toLocaleString()}</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Customer Information</div>
+            <div class="info-line">
+              <span>Name:</span>
+              <span>${selectedCustomer.name}</span>
+            </div>
+            <div class="info-line">
+              <span>Mobile:</span>
+              <span>${selectedCustomer.mobile}</span>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Order Items</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Size</th>
+                  <th>Color</th>
+                  <th class="text-right">Qty</th>
+                  <th class="text-right">Price</th>
+                  <th class="text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${cartItems.map(item => `
+                  <tr>
+                    <td>${item.productName}</td>
+                    <td>${item.size}</td>
+                    <td>${item.color}</td>
+                    <td class="text-right">${item.quantity}</td>
+                    <td class="text-right">Rs. ${item.price.toFixed(2)}</td>
+                    <td class="text-right">Rs. ${(item.price * item.quantity).toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="totals">
+            <div class="total-row">
+              <span>Subtotal:</span>
+              <span>Rs. ${subtotal.toFixed(2)}</span>
+            </div>
+            <div class="total-row">
+              <span class="total-amount">Total:</span>
+              <span class="total-amount">Rs. ${total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Payment Details</div>
+            <div class="info-line">
+              <span>Amount Paid:</span>
+              <span class="total-amount">Rs. ${paid.toFixed(2)}</span>
+            </div>
+            ${balance > 0 ? `
+              <div class="info-line">
+                <span>Balance Due:</span>
+                <span class="status-badge status-balance">Rs. ${balance.toFixed(2)}</span>
+              </div>
+            ` : balance < 0 ? `
+              <div class="info-line">
+                <span>Change:</span>
+                <span>Rs. ${Math.abs(balance).toFixed(2)}</span>
+              </div>
+            ` : `
+              <div class="info-line">
+                <span>Status:</span>
+                <span class="status-badge status-paid">✓ Fully Paid</span>
+              </div>
+            `}
+          </div>
+
+          <div class="footer">
+            <p>Thank you for your purchase!</p>
+            <p style="font-size: 11px; margin-top: 20px;">This is a computer-generated bill</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 250);
   };
 
   const handleCancelOrder = () => {
@@ -486,9 +647,26 @@ const SalesPage: React.FC = () => {
     setPaidAmount("");
     setOrderNotes("");
     setSelectedCustomer(null);
-    setSelectedBank("");
-    setSelectedBranch("");
-    setIsOnlineTransfer(false);
+    setPaymentMethod("cash");
+    setBankPaymentDetails(null);
+  };
+
+  // New payment system handlers
+  const handlePaymentMethodChange = (method: "cash" | "bank") => {
+    setPaymentMethod(method);
+    if (method === "cash") {
+      // Clear bank details when switching to cash
+      setBankPaymentDetails(null);
+      setPaidAmount("");
+    } else {
+      // Clear paid amount when switching to bank
+      setPaidAmount("");
+    }
+  };
+
+  const handleSaveBankPayment = (paymentData: BankPaymentData) => {
+    setBankPaymentDetails(paymentData);
+    setPaidAmount(paymentData.paidAmount);
   };
 
   const sizeOptions = selectedProduct
@@ -740,10 +918,28 @@ const SalesPage: React.FC = () => {
         {/* Right Side - Cart & Billing */}
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 flex flex-col min-h-0">
           <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
-            <h2 className="text-xl font-bold text-red-500">Order Summary</h2>
-            <span className="text-sm bg-red-900/30 text-red-400 px-2 py-1 rounded">
-              {cartItems.length} items
-            </span>
+            <div>
+              <h2 className="text-xl font-bold text-red-500">Order Summary</h2>
+              <span className="text-sm bg-red-900/30 text-red-400 px-2 py-1 rounded inline-block mt-2">
+                {cartItems.length} items
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowNotesModal(true)}
+                className="px-3 py-2 border border-gray-600 text-gray-300 rounded-lg font-semibold hover:bg-gray-700/50 transition-colors text-sm"
+                title="Add order notes"
+              >
+                📝 Notes
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                className="px-3 py-2 border border-gray-600 text-gray-400 rounded-lg text-sm hover:bg-gray-700/50 transition-colors"
+                title={editingOrderId ? "Cancel editing and return to sales" : "Clear cart and reset"}
+              >
+                {editingOrderId ? "✕ Cancel" : "🔄 Clear"}
+              </button>
+            </div>
           </div>
 
           {/* Cart Items */}
@@ -795,131 +991,60 @@ const SalesPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Payment Input */}
-          <div className="space-y-2 mb-4 pb-4 border-b border-gray-700">
-            <label className="block text-xs font-semibold text-red-400">Paid Amount</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={paidAmount}
-              onChange={(e) => setPaidAmount(e.target.value)}
-              placeholder="Enter paid amount"
-              className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded focus:border-red-500 focus:outline-none text-sm"
+          {/* New Payment System */}
+          <div className="mb-4 pb-4 border-b border-gray-700">
+            <PaymentMethodSelector
+              paymentMethod={paymentMethod}
+              onPaymentMethodChange={handlePaymentMethodChange}
+              onBankPaymentClick={() => setShowBankPaymentModal(true)}
+              paidAmount={paymentMethod === "cash" ? paidAmount : ""}
+              totalAmount={total}
+              bankPaymentDetails={paymentMethod === "bank" ? bankPaymentDetails : null}
             />
 
-            {/* Balance Display */}
-            {paidAmount && (
-              <div
-                className={`text-sm font-semibold p-2 rounded text-center ${
-                  balance === 0
-                    ? "bg-green-900/40 text-green-400"
-                    : balance < 0
-                    ? "bg-blue-900/40 text-blue-400"
-                    : "bg-red-900/40 text-red-400"
-                }`}
-              >
-                {balance === 0
-                  ? "✓ Full Payment"
-                  : balance < 0
-                  ? `Excess: Rs. ${Math.abs(balance).toFixed(2)}`
-                  : `Balance Due: Rs. ${balance.toFixed(2)}`}
+            {/* Cash Amount Input - Only for Cash Payment */}
+            {paymentMethod === "cash" && (
+              <div className="space-y-2 mt-4">
+                <label className="block text-xs font-semibold text-green-400">Cash Amount (Rs.) <span className="text-red-500">*</span></label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value)}
+                  placeholder="Enter cash amount received"
+                  className="w-full px-3 py-2 bg-gray-700 border-2 border-green-600/30 text-white rounded focus:border-green-500 focus:outline-none text-sm"
+                />
               </div>
             )}
           </div>
 
-          {/* Payment Method Section - Show when paid amount is entered */}
-          {paidAmount && (
-            <div className="space-y-3 mb-4 pb-4 border-b border-gray-700">
-              <label className="block text-xs font-semibold text-red-400">Payment Method</label>
-
-              {/* Online Transfer Checkbox */}
-              <div className="flex items-center gap-2 bg-gray-700/50 p-2 rounded">
-                <input
-                  type="checkbox"
-                  id="onlineTransfer"
-                  checked={isOnlineTransfer}
-                  onChange={(e) => {
-                    setIsOnlineTransfer(e.target.checked);
-                    if (e.target.checked) {
-                      setSelectedBranch("");
-                    }
-                  }}
-                  className="w-4 h-4 accent-red-600 cursor-pointer"
-                />
-                <label htmlFor="onlineTransfer" className="text-sm text-gray-300 cursor-pointer flex-1">
-                  Online Transfer
-                </label>
-              </div>
-
-              {/* Bank Selection - Disabled if Online Transfer is selected */}
-              {!isOnlineTransfer && (
-                <div>
-                  <label className="block text-xs font-semibold text-red-400 mb-1">Select Bank</label>
-                  <select
-                    value={selectedBank}
-                    onChange={(e) => {
-                      setSelectedBank(e.target.value);
-                      setSelectedBranch("");
-                    }}
-                    className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                  >
-                    <option value="">-- Select Bank --</option>
-                    <option value="boc">Bank of Ceylon (BOC)</option>
-                    <option value="commercial">Commercial Bank</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Branch Selection - Show only if bank is selected and not online transfer */}
-              {selectedBank && !isOnlineTransfer && (
-                <div>
-                  <label className="block text-xs font-semibold text-red-400 mb-1">Select Branch</label>
-                  <select
-                    value={selectedBranch}
-                    onChange={(e) => setSelectedBranch(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                  >
-                    <option value="">-- Select Branch --</option>
-                    {bankBranches[selectedBank]?.map((branch) => (
-                      <option key={branch} value={branch}>
-                        {branch}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Bank Payment Modal */}
+          <BankPaymentModal
+            isOpen={showBankPaymentModal}
+            onClose={() => setShowBankPaymentModal(false)}
+            onSave={handleSaveBankPayment}
+            totalAmount={total}
+          />
 
           {/* Action Buttons */}
           <div className="space-y-2">
-            <button
-              onClick={handleSaveOrder}
-              disabled={!selectedCustomer || cartItems.length === 0}
-              className="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-            >
-              {editingOrderId ? "Update Order" : "Save Order"}
-            </button>
-            <button
-              onClick={handlePrintBill}
-              disabled={!selectedCustomer || cartItems.length === 0}
-              className="w-full border-2 border-red-600 text-red-400 py-2 rounded-lg font-semibold hover:bg-red-900/20 disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-            >
-              Print Bill
-            </button>
-            <button
-              onClick={() => setShowNotesModal(true)}
-              className="w-full border border-gray-600 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-700/50 transition-colors"
-            >
-              📝 Add Notes
-            </button>
-            <button
-              onClick={handleCancelOrder}
-              className="w-full border border-gray-600 text-gray-400 py-2 rounded-lg text-sm hover:bg-gray-700/50 transition-colors"
-            >
-              Clear Cart
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={handleSaveOrder}
+                disabled={!selectedCustomer || cartItems.length === 0}
+                className="bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+              >
+                {editingOrderId ? "📝 Update" : "✓ Save"}
+              </button>
+              <button
+                onClick={handlePrintBill}
+                disabled={!selectedCustomer || cartItems.length === 0}
+                className="border-2 border-red-600 text-red-400 py-2 rounded-lg font-semibold hover:bg-red-900/20 disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+              >
+                🖨️ Print
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -37,49 +37,60 @@ const ReportsPage: React.FC = () => {
   const [sortSize, setSortSize] = useState("");
   const [sortColor, setSortColor] = useState("");
 
+  // Generate today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayDate = getTodayDate();
+
   const allSoldItems: SoldItem[] = [
     // Sri Lankan Products - Today
-    { id: "SI001", productName: "Colombo Cotton T-Shirt", category: "tshirt", size: "M", color: "White", quantity: 8, price: 950, totalAmount: 7600, orderId: "ORD101", orderDate: "2024-11-20" },
-    { id: "SI002", productName: "Colombo Cotton T-Shirt", category: "tshirt", size: "L", color: "Blue", quantity: 6, price: 950, totalAmount: 5700, orderId: "ORD101", orderDate: "2024-11-20" },
-    { id: "SI003", productName: "Kandy Silk Saree", category: "saree", size: "Free", color: "Red", quantity: 3, price: 8500, totalAmount: 25500, orderId: "ORD102", orderDate: "2024-11-20" },
-    { id: "SI004", productName: "Kandy Silk Saree", category: "saree", size: "Free", color: "Gold", quantity: 2, price: 8500, totalAmount: 17000, orderId: "ORD102", orderDate: "2024-11-20" },
-    { id: "SI005", productName: "Galle Linen Shirt", category: "shirt", size: "M", color: "Cream", quantity: 5, price: 2200, totalAmount: 11000, orderId: "ORD103", orderDate: "2024-11-20" },
-    { id: "SI006", productName: "Negombo Beach Shorts", category: "shorts", size: "M", color: "Orange", quantity: 4, price: 1500, totalAmount: 6000, orderId: "ORD104", orderDate: "2024-11-20" },
-    { id: "SI007", productName: "Negombo Beach Shorts", category: "shorts", size: "L", color: "Turquoise", quantity: 3, price: 1500, totalAmount: 4500, orderId: "ORD104", orderDate: "2024-11-20" },
-    { id: "SI008", productName: "Trincomalee Cotton Dress", category: "dress", size: "S", color: "Purple", quantity: 2, price: 4000, totalAmount: 8000, orderId: "ORD105", orderDate: "2024-11-20" },
-    { id: "SI009", productName: "Colombo Formal Shirt", category: "shirt", size: "15.5", color: "White", quantity: 4, price: 2800, totalAmount: 11200, orderId: "ORD106", orderDate: "2024-11-20" },
-    { id: "SI010", productName: "Kandy Traditional Blouse", category: "blouse", size: "M", color: "Maroon", quantity: 3, price: 1800, totalAmount: 5400, orderId: "ORD107", orderDate: "2024-11-20" },
-    { id: "SI011", productName: "Jaffna Linen Pants", category: "trouser", size: "32", color: "Khaki", quantity: 2, price: 3200, totalAmount: 6400, orderId: "ORD108", orderDate: "2024-11-20" },
-    { id: "SI012", productName: "Matara Beach Dress", category: "dress", size: "M", color: "Emerald", quantity: 2, price: 4500, totalAmount: 9000, orderId: "ORD109", orderDate: "2024-11-20" },
-    { id: "SI013", productName: "Kandy Silk Scarf", category: "accessory", size: "One Size", color: "Purple", quantity: 10, price: 600, totalAmount: 6000, orderId: "ORD110", orderDate: "2024-11-20" },
-    { id: "SI014", productName: "Galle Designer Shawl", category: "accessory", size: "One Size", color: "Gold", quantity: 5, price: 2500, totalAmount: 12500, orderId: "ORD111", orderDate: "2024-11-20" },
-    { id: "SI015", productName: "Colombo Cotton T-Shirt", category: "tshirt", size: "XL", color: "Green", quantity: 4, price: 950, totalAmount: 3800, orderId: "ORD112", orderDate: "2024-11-20" },
-    { id: "SI016", productName: "Kandy Traditional Blouse", category: "blouse", size: "L", color: "Gold", quantity: 3, price: 1800, totalAmount: 5400, orderId: "ORD113", orderDate: "2024-11-20" },
-    { id: "SI017", productName: "Negombo Cotton Shirt", category: "shirt", size: "L", color: "Sky Blue", quantity: 2, price: 1600, totalAmount: 3200, orderId: "ORD114", orderDate: "2024-11-20" },
-    { id: "SI018", productName: "Trincomalee Linen Dress", category: "dress", size: "L", color: "Coral", quantity: 1, price: 5000, totalAmount: 5000, orderId: "ORD115", orderDate: "2024-11-20" },
-    { id: "SI019", productName: "Colombo Linen Shorts", category: "shorts", size: "S", color: "White", quantity: 6, price: 1200, totalAmount: 7200, orderId: "ORD116", orderDate: "2024-11-20" },
-    { id: "SI020", productName: "Kandy Silk Saree", category: "saree", size: "Free", color: "Sapphire", quantity: 1, price: 8500, totalAmount: 8500, orderId: "ORD117", orderDate: "2024-11-20" },
+    { id: "SI001", productName: "Colombo Cotton T-Shirt", category: "tshirt", size: "M", color: "White", quantity: 8, price: 950, totalAmount: 7600, orderId: "ORD101", orderDate: todayDate },
+    { id: "SI002", productName: "Colombo Cotton T-Shirt", category: "tshirt", size: "L", color: "Blue", quantity: 6, price: 950, totalAmount: 5700, orderId: "ORD101", orderDate: todayDate },
+    { id: "SI003", productName: "Kandy Silk Saree", category: "saree", size: "Free", color: "Red", quantity: 3, price: 8500, totalAmount: 25500, orderId: "ORD102", orderDate: todayDate },
+    { id: "SI004", productName: "Kandy Silk Saree", category: "saree", size: "Free", color: "Gold", quantity: 2, price: 8500, totalAmount: 17000, orderId: "ORD102", orderDate: todayDate },
+    { id: "SI005", productName: "Galle Linen Shirt", category: "shirt", size: "M", color: "Cream", quantity: 5, price: 2200, totalAmount: 11000, orderId: "ORD103", orderDate: todayDate },
+    { id: "SI006", productName: "Negombo Beach Shorts", category: "shorts", size: "M", color: "Orange", quantity: 4, price: 1500, totalAmount: 6000, orderId: "ORD104", orderDate: todayDate },
+    { id: "SI007", productName: "Negombo Beach Shorts", category: "shorts", size: "L", color: "Turquoise", quantity: 3, price: 1500, totalAmount: 4500, orderId: "ORD104", orderDate: todayDate },
+    { id: "SI008", productName: "Trincomalee Cotton Dress", category: "dress", size: "S", color: "Purple", quantity: 2, price: 4000, totalAmount: 8000, orderId: "ORD105", orderDate: todayDate },
+    { id: "SI009", productName: "Colombo Formal Shirt", category: "shirt", size: "15.5", color: "White", quantity: 4, price: 2800, totalAmount: 11200, orderId: "ORD106", orderDate: todayDate },
+    { id: "SI010", productName: "Kandy Traditional Blouse", category: "blouse", size: "M", color: "Maroon", quantity: 3, price: 1800, totalAmount: 5400, orderId: "ORD107", orderDate: todayDate },
+    { id: "SI011", productName: "Jaffna Linen Pants", category: "trouser", size: "32", color: "Khaki", quantity: 2, price: 3200, totalAmount: 6400, orderId: "ORD108", orderDate: todayDate },
+    { id: "SI012", productName: "Matara Beach Dress", category: "dress", size: "M", color: "Emerald", quantity: 2, price: 4500, totalAmount: 9000, orderId: "ORD109", orderDate: todayDate },
+    { id: "SI013", productName: "Kandy Silk Scarf", category: "accessory", size: "One Size", color: "Purple", quantity: 10, price: 600, totalAmount: 6000, orderId: "ORD110", orderDate: todayDate },
+    { id: "SI014", productName: "Galle Designer Shawl", category: "accessory", size: "One Size", color: "Gold", quantity: 5, price: 2500, totalAmount: 12500, orderId: "ORD111", orderDate: todayDate },
+    { id: "SI015", productName: "Colombo Cotton T-Shirt", category: "tshirt", size: "XL", color: "Green", quantity: 4, price: 950, totalAmount: 3800, orderId: "ORD112", orderDate: todayDate },
+    { id: "SI016", productName: "Kandy Traditional Blouse", category: "blouse", size: "L", color: "Gold", quantity: 3, price: 1800, totalAmount: 5400, orderId: "ORD113", orderDate: todayDate },
+    { id: "SI017", productName: "Negombo Cotton Shirt", category: "shirt", size: "L", color: "Sky Blue", quantity: 2, price: 1600, totalAmount: 3200, orderId: "ORD114", orderDate: todayDate },
+    { id: "SI018", productName: "Trincomalee Linen Dress", category: "dress", size: "L", color: "Coral", quantity: 1, price: 5000, totalAmount: 5000, orderId: "ORD115", orderDate: todayDate },
+    { id: "SI019", productName: "Colombo Linen Shorts", category: "shorts", size: "S", color: "White", quantity: 6, price: 1200, totalAmount: 7200, orderId: "ORD116", orderDate: todayDate },
+    { id: "SI020", productName: "Kandy Silk Saree", category: "saree", size: "Free", color: "Sapphire", quantity: 1, price: 8500, totalAmount: 8500, orderId: "ORD117", orderDate: todayDate },
   ];
 
   const allOrderCosts: OrderCost[] = [
-    // Sri Lankan Orders - 2024-11-20
-    { orderId: "ORD101", orderDate: "2024-11-20", customerName: "Roshan Perera", productCost: 5600, printCost: 1200, totalCost: 6800, totalItems: 14, totalSaleAmount: 13300 },
-    { orderId: "ORD102", orderDate: "2024-11-20", customerName: "Priya Jayasooriya", productCost: 18900, printCost: 2500, totalCost: 21400, totalItems: 5, totalSaleAmount: 42500 },
-    { orderId: "ORD103", orderDate: "2024-11-20", customerName: "Lakshmi Fernando", productCost: 7700, printCost: 1100, totalCost: 8800, totalItems: 5, totalSaleAmount: 11000 },
-    { orderId: "ORD104", orderDate: "2024-11-20", customerName: "Kamal Silva", productCost: 4200, printCost: 900, totalCost: 5100, totalItems: 7, totalSaleAmount: 10500 },
-    { orderId: "ORD105", orderDate: "2024-11-20", customerName: "Chandrika Weerasekera", productCost: 2800, printCost: 600, totalCost: 3400, totalItems: 2, totalSaleAmount: 8000 },
-    { orderId: "ORD106", orderDate: "2024-11-20", customerName: "Anura Wickramasinghe", productCost: 7200, printCost: 1400, totalCost: 8600, totalItems: 4, totalSaleAmount: 11200 },
-    { orderId: "ORD107", orderDate: "2024-11-20", customerName: "Divya Perera", productCost: 3600, printCost: 800, totalCost: 4400, totalItems: 3, totalSaleAmount: 5400 },
-    { orderId: "ORD108", orderDate: "2024-11-20", customerName: "Sanjay De Silva", productCost: 3400, printCost: 900, totalCost: 4300, totalItems: 2, totalSaleAmount: 6400 },
-    { orderId: "ORD109", orderDate: "2024-11-20", customerName: "Niranja Jayasuriya", productCost: 5000, printCost: 1200, totalCost: 6200, totalItems: 2, totalSaleAmount: 9000 },
-    { orderId: "ORD110", orderDate: "2024-11-20", customerName: "Malini Gunasekera", productCost: 2200, printCost: 500, totalCost: 2700, totalItems: 10, totalSaleAmount: 6000 },
-    { orderId: "ORD111", orderDate: "2024-11-20", customerName: "Ravi Kumarasiri", productCost: 8000, printCost: 1500, totalCost: 9500, totalItems: 5, totalSaleAmount: 12500 },
-    { orderId: "ORD112", orderDate: "2024-11-20", customerName: "Asha Malalasekera", productCost: 2300, printCost: 600, totalCost: 2900, totalItems: 4, totalSaleAmount: 3800 },
-    { orderId: "ORD113", orderDate: "2024-11-20", customerName: "Tharaka Wanasinghe", productCost: 3200, printCost: 800, totalCost: 4000, totalItems: 3, totalSaleAmount: 5400 },
-    { orderId: "ORD114", orderDate: "2024-11-20", customerName: "Geetha Narayana", productCost: 2000, printCost: 500, totalCost: 2500, totalItems: 2, totalSaleAmount: 3200 },
-    { orderId: "ORD115", orderDate: "2024-11-20", customerName: "Vikram Senanayake", productCost: 3500, printCost: 800, totalCost: 4300, totalItems: 1, totalSaleAmount: 5000 },
-    { orderId: "ORD116", orderDate: "2024-11-20", customerName: "Nalini Ratnayake", productCost: 2400, printCost: 600, totalCost: 3000, totalItems: 6, totalSaleAmount: 7200 },
-    { orderId: "ORD117", orderDate: "2024-11-20", customerName: "Suresh Wijesinghe", productCost: 6500, printCost: 1200, totalCost: 7700, totalItems: 1, totalSaleAmount: 8500 },
+    // Sri Lankan Orders - Today
+    { orderId: "ORD101", orderDate: todayDate, customerName: "Roshan Perera", productCost: 5600, printCost: 1200, totalCost: 6800, totalItems: 14, totalSaleAmount: 13300 },
+    { orderId: "ORD102", orderDate: todayDate, customerName: "Priya Jayasooriya", productCost: 18900, printCost: 2500, totalCost: 21400, totalItems: 5, totalSaleAmount: 42500 },
+    { orderId: "ORD103", orderDate: todayDate, customerName: "Lakshmi Fernando", productCost: 7700, printCost: 1100, totalCost: 8800, totalItems: 5, totalSaleAmount: 11000 },
+    { orderId: "ORD104", orderDate: todayDate, customerName: "Kamal Silva", productCost: 4200, printCost: 900, totalCost: 5100, totalItems: 7, totalSaleAmount: 10500 },
+    { orderId: "ORD105", orderDate: todayDate, customerName: "Chandrika Weerasekera", productCost: 2800, printCost: 600, totalCost: 3400, totalItems: 2, totalSaleAmount: 8000 },
+    { orderId: "ORD106", orderDate: todayDate, customerName: "Anura Wickramasinghe", productCost: 7200, printCost: 1400, totalCost: 8600, totalItems: 4, totalSaleAmount: 11200 },
+    { orderId: "ORD107", orderDate: todayDate, customerName: "Divya Perera", productCost: 3600, printCost: 800, totalCost: 4400, totalItems: 3, totalSaleAmount: 5400 },
+    { orderId: "ORD108", orderDate: todayDate, customerName: "Sanjay De Silva", productCost: 3400, printCost: 900, totalCost: 4300, totalItems: 2, totalSaleAmount: 6400 },
+    { orderId: "ORD109", orderDate: todayDate, customerName: "Niranja Jayasuriya", productCost: 5000, printCost: 1200, totalCost: 6200, totalItems: 2, totalSaleAmount: 9000 },
+    { orderId: "ORD110", orderDate: todayDate, customerName: "Malini Gunasekera", productCost: 2200, printCost: 500, totalCost: 2700, totalItems: 10, totalSaleAmount: 6000 },
+    { orderId: "ORD111", orderDate: todayDate, customerName: "Ravi Kumarasiri", productCost: 8000, printCost: 1500, totalCost: 9500, totalItems: 5, totalSaleAmount: 12500 },
+    { orderId: "ORD112", orderDate: todayDate, customerName: "Asha Malalasekera", productCost: 2300, printCost: 600, totalCost: 2900, totalItems: 4, totalSaleAmount: 3800 },
+    { orderId: "ORD113", orderDate: todayDate, customerName: "Tharaka Wanasinghe", productCost: 3200, printCost: 800, totalCost: 4000, totalItems: 3, totalSaleAmount: 5400 },
+    { orderId: "ORD114", orderDate: todayDate, customerName: "Geetha Narayana", productCost: 2000, printCost: 500, totalCost: 2500, totalItems: 2, totalSaleAmount: 3200 },
+    { orderId: "ORD115", orderDate: todayDate, customerName: "Vikram Senanayake", productCost: 3500, printCost: 800, totalCost: 4300, totalItems: 1, totalSaleAmount: 5000 },
+    { orderId: "ORD116", orderDate: todayDate, customerName: "Nalini Ratnayake", productCost: 2400, printCost: 600, totalCost: 3000, totalItems: 6, totalSaleAmount: 7200 },
+    { orderId: "ORD117", orderDate: todayDate, customerName: "Suresh Wijesinghe", productCost: 6500, printCost: 1200, totalCost: 7700, totalItems: 1, totalSaleAmount: 8500 },
   ];
 
   const getDateRange = (period: TimePeriod) => {

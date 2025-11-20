@@ -877,22 +877,24 @@ const OrdersPage: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Tracking Number Input */}
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Tracking Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., TRK123456789"
-                    value={editingTrackingNumber}
-                    onChange={(e) => setEditingTrackingNumber(e.target.value)}
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    Add a tracking number to keep the customer updated
-                  </p>
-                </div>
+                {/* Tracking Number Input - Only show when status is shipped */}
+                {editingStatus === "shipped" && (
+                  <div>
+                    <label className="block text-sm font-semibold text-red-400 mb-2">
+                      Tracking Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g., TRK123456789"
+                      value={editingTrackingNumber}
+                      onChange={(e) => setEditingTrackingNumber(e.target.value)}
+                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Add a tracking number to keep the customer updated
+                    </p>
+                  </div>
+                )}
 
                 {/* Current Status Badge */}
                 {selectedOrder.trackingNumber && (
@@ -909,36 +911,33 @@ const OrdersPage: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-700">
-                <button
-                  onClick={() => {
-                    // Store order data for SalesPage editing
-                    sessionStorage.setItem('orderToEdit', JSON.stringify({
-                      orderId: selectedOrder.id,
-                      customerId: selectedOrder.customerId,
-                      customerName: selectedOrder.customerName,
-                      customerMobile: selectedOrder.customerMobile,
-                      items: selectedOrder.items,
-                      totalAmount: selectedOrder.totalAmount
-                    }));
-                    // Store page navigation request
-                    sessionStorage.setItem('navigateToSales', 'true');
-                    // Close the modal
-                    handleCloseModal();
-                  }}
-                  disabled={selectedOrder.status !== "pending" && selectedOrder.status !== "processing"}
-                  className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${
-                    selectedOrder.status === "pending" || selectedOrder.status === "processing"
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"
-                  }`}
-                  title={
-                    selectedOrder.status === "pending" || selectedOrder.status === "processing"
-                      ? "Edit this order in Sales tab"
-                      : `Order cannot be edited. Current status: ${selectedOrder.status}`
-                  }
-                >
-                  Edit in Sales
-                </button>
+                {/* Edit in Sales - Only show for pending/processing, hide for shipped */}
+                {selectedOrder.status !== "shipped" && selectedOrder.status !== "delivered" && (
+                  <button
+                    onClick={() => {
+                      // Store complete order data for SalesPage editing
+                      sessionStorage.setItem('orderToEdit', JSON.stringify({
+                        orderId: selectedOrder.id,
+                        customerId: selectedOrder.customerId,
+                        customerName: selectedOrder.customerName,
+                        customerMobile: selectedOrder.customerMobile,
+                        items: selectedOrder.items,
+                        totalAmount: selectedOrder.totalAmount,
+                        advancePaid: selectedOrder.advancePaid,
+                        totalPaid: selectedOrder.totalPaid,
+                        remainingAmount: selectedOrder.remainingAmount,
+                        status: selectedOrder.status
+                      }));
+                      // Trigger navigation to SalesPage (App.tsx will handle this)
+                      sessionStorage.setItem('navigateToSales', 'true');
+                      // Don't close modal - App.tsx will switch pages
+                    }}
+                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                    title="Edit this order in Sales tab"
+                  >
+                    Edit in Sales
+                  </button>
+                )}
                 <button
                   onClick={handleUpdateOrder}
                   className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors"

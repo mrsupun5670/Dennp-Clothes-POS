@@ -6,6 +6,8 @@ interface PaymentMethodSelectorProps {
   onBankPaymentClick: () => void;
   paidAmount: string;
   totalAmount: number;
+  previouslyPaidAmount?: number;
+  isEditingOrder?: boolean;
   bankPaymentDetails?: {
     bank: string;
     isOnlineTransfer: boolean;
@@ -22,10 +24,17 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   onBankPaymentClick,
   paidAmount,
   totalAmount,
+  previouslyPaidAmount = 0,
+  isEditingOrder = false,
   bankPaymentDetails,
 }) => {
   const paidAmountNum = parseFloat(paidAmount) || 0;
-  const balance = totalAmount - paidAmountNum;
+
+  // For edit mode: calculate new balance payable based on total - previously paid - new payment
+  // For new order: calculate balance based on total - new payment
+  const balancePayable = isEditingOrder
+    ? Math.max(0, totalAmount - previouslyPaidAmount - paidAmountNum)
+    : totalAmount - paidAmountNum;
 
   const getBalanceDisplay = () => {
     if (paidAmountNum === 0) return null;
@@ -33,18 +42,18 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     return (
       <div
         className={`text-sm font-semibold p-2 rounded text-center ${
-          balance === 0
+          balancePayable === 0
             ? "bg-green-900/40 text-green-400"
-            : balance < 0
+            : balancePayable < 0
             ? "bg-blue-900/40 text-blue-400"
             : "bg-red-900/40 text-red-400"
         }`}
       >
-        {balance === 0
+        {balancePayable === 0
           ? "✓ Full Payment"
-          : balance < 0
-          ? `Excess: Rs. ${Math.abs(balance).toFixed(2)}`
-          : `Balance Due: Rs. ${balance.toFixed(2)}`}
+          : balancePayable < 0
+          ? `Excess: Rs. ${Math.abs(balancePayable).toFixed(2)}`
+          : `Balance Due: Rs. ${balancePayable.toFixed(2)}`}
       </div>
     );
   };
@@ -115,15 +124,34 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
       {/* Amount to Pay Display */}
       <div className="bg-gray-700/30 border border-gray-600 rounded-lg p-3 space-y-2">
+        {/* Show total order amount */}
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-400">Amount to Collect:</span>
+          <span className="text-sm text-gray-400">Order Total:</span>
           <span className="text-lg font-bold text-gray-200">Rs. {totalAmount.toFixed(2)}</span>
         </div>
 
+        {/* Show previously paid amount when editing */}
+        {isEditingOrder && previouslyPaidAmount > 0 && (
+          <div className="flex justify-between items-center border-t border-gray-600 pt-2">
+            <span className="text-sm text-gray-400">Previously Paid:</span>
+            <span className="text-lg font-semibold text-green-400">Rs. {previouslyPaidAmount.toFixed(2)}</span>
+          </div>
+        )}
+
+        {/* Show balance payable for edit mode or amount to pay for new orders */}
+        {isEditingOrder && (
+          <div className="flex justify-between items-center border-t border-gray-600 pt-2">
+            <span className="text-sm text-gray-400">Balance Payable:</span>
+            <span className={`text-lg font-bold ${balancePayable === 0 ? "text-green-400" : "text-red-400"}`}>
+              Rs. {Math.max(0, totalAmount - previouslyPaidAmount).toFixed(2)}
+            </span>
+          </div>
+        )}
+
         {paidAmountNum > 0 && (
           <>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-400">Amount Paid:</span>
+            <div className="flex justify-between items-center border-t border-gray-600 pt-2">
+              <span className="text-sm text-gray-400">Now Paying:</span>
               <span className="text-lg font-semibold text-gray-200">Rs. {paidAmountNum.toFixed(2)}</span>
             </div>
             {getBalanceDisplay()}

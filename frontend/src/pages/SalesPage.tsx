@@ -162,6 +162,9 @@ const SalesPage: React.FC = () => {
   const [orderNotes, setOrderNotes] = useState("");
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
 
+  // Track previously paid amount when editing order
+  const [previouslyPaidAmount, setPreviouslyPaidAmount] = useState(0);
+
   // New payment system states
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
   const [bankPaymentDetails, setBankPaymentDetails] = useState<BankPaymentData | null>(null);
@@ -174,6 +177,9 @@ const SalesPage: React.FC = () => {
       try {
         const order = JSON.parse(orderData);
         setEditingOrderId(order.orderId);
+
+        // Store the amount already paid (advance payment) for balance calculation
+        setPreviouslyPaidAmount(order.totalPaid || 0);
 
         // Set customer
         const customer: Customer = {
@@ -204,6 +210,11 @@ const SalesPage: React.FC = () => {
       } catch (error) {
         console.error('Error loading order data:', error);
       }
+    }
+
+    // Clear navigation flag
+    if (sessionStorage.getItem('navigateToSales') === 'true') {
+      sessionStorage.removeItem('navigateToSales');
     }
   }, []);
 
@@ -436,14 +447,31 @@ const SalesPage: React.FC = () => {
 
     // Calculate order details
     const orderId = editingOrderId || `ORD-${Date.now()}`;
-    const paid = parseFloat(paidAmount) || 0;
-    const balance = total - paid;
-    const orderStatus = paid >= total ? "Paid" : paid > 0 ? "Advance" : "Pending";
+    const newPayment = parseFloat(paidAmount) || 0;
+
+    // In edit mode: total paid = previously paid + new payment
+    // In new order mode: total paid = new payment
+    const totalPaidNow = editingOrderId
+      ? previouslyPaidAmount + newPayment
+      : newPayment;
+
+    const balance = total - totalPaidNow;
+
+    // Status determination:
+    // - If fully paid (balance = 0): "Paid"
+    // - If partially paid (balance > 0 && total paid > 0): "Advance" for new orders, "Partial" for edits
+    // - If no payment: "Pending"
+    const orderStatus = balance === 0
+      ? "Paid"
+      : totalPaidNow > 0
+        ? (editingOrderId ? "Partial" : "Advance")
+        : "Pending";
 
     // Build payment info object
     let paymentInfo: any = {
       method: paymentMethod,
-      amount: paid,
+      amount: newPayment,
+      totalPaid: totalPaidNow, // Track cumulative total paid
     };
 
     if (paymentMethod === "bank" && bankPaymentDetails) {
@@ -464,7 +492,9 @@ const SalesPage: React.FC = () => {
       customer: selectedCustomer,
       items: cartItems,
       total,
-      paidAmount: paid,
+      newPayment,
+      totalPaid: totalPaidNow,
+      previouslyPaid: previouslyPaidAmount,
       balance,
       orderStatus,
       payment: paymentInfo,
@@ -474,12 +504,12 @@ const SalesPage: React.FC = () => {
 
     console.log("Order Data:", orderData);
 
-    // Success message
-    if (editingOrderId) {
-      alert(`Order ${editingOrderId} updated successfully!\n\nTotal: Rs. ${total.toFixed(2)}\nPaid: Rs. ${paid.toFixed(2)}\nBalance: Rs. ${Math.abs(balance).toFixed(2)}`);
-    } else {
-      alert(`Order ${orderId} created successfully!\n\nTotal: Rs. ${total.toFixed(2)}\nPaid: Rs. ${paid.toFixed(2)}\nBalance: Rs. ${Math.abs(balance).toFixed(2)}`);
-    }
+    // Success message with correct amounts
+    const displayMessage = editingOrderId
+      ? `Order ${editingOrderId} updated successfully!\n\nOrder Total: Rs. ${total.toFixed(2)}\nPreviously Paid: Rs. ${previouslyPaidAmount.toFixed(2)}\nNow Paying: Rs. ${newPayment.toFixed(2)}\nTotal Paid: Rs. ${totalPaidNow.toFixed(2)}\nRemaining: Rs. ${Math.max(0, balance).toFixed(2)}`
+      : `Order ${orderId} created successfully!\n\nTotal: Rs. ${total.toFixed(2)}\nPaid: Rs. ${totalPaidNow.toFixed(2)}\nBalance: Rs. ${Math.max(0, balance).toFixed(2)}`;
+
+    alert(displayMessage);
 
     // Reset form
     setCartItems([]);
@@ -489,6 +519,7 @@ const SalesPage: React.FC = () => {
     setPaymentMethod("cash");
     setBankPaymentDetails(null);
     setEditingOrderId(null);
+    setPreviouslyPaidAmount(0);
   };
 
   const handlePrintBill = () => {
@@ -649,6 +680,8 @@ const SalesPage: React.FC = () => {
     setSelectedCustomer(null);
     setPaymentMethod("cash");
     setBankPaymentDetails(null);
+    setEditingOrderId(null);
+    setPreviouslyPaidAmount(0);
   };
 
   // New payment system handlers
@@ -997,9 +1030,11 @@ const SalesPage: React.FC = () => {
               paymentMethod={paymentMethod}
               onPaymentMethodChange={handlePaymentMethodChange}
               onBankPaymentClick={() => setShowBankPaymentModal(true)}
-              paidAmount={paymentMethod === "cash" ? paidAmount : ""}
+              paidAmount={paymentMethod === "cash" ? paidAmount : (bankPaymentDetails?.paidAmount || "")}
               totalAmount={total}
+              previouslyPaidAmount={previouslyPaidAmount}
               bankPaymentDetails={paymentMethod === "bank" ? bankPaymentDetails : null}
+              isEditingOrder={!!editingOrderId}
             />
 
             {/* Cash Amount Input - Only for Cash Payment */}

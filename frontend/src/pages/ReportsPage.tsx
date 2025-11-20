@@ -156,105 +156,125 @@ const ReportsPage: React.FC = () => {
   const uniqueColors = Array.from(new Set(allSoldItems.map((item) => item.color)));
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-red-500">Reports</h1>
-          <p className="text-gray-400 mt-2">View sales and cost analytics</p>
+    <div className="space-y-3 h-full flex flex-col">
+      {/* Header and Controls - Compact */}
+      <div className="space-y-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-red-500">Reports</h1>
+            <p className="text-xs text-gray-400 mt-1">View sales and cost analytics</p>
+          </div>
+        </div>
+
+        {/* View Buttons and Time Period - Horizontal Layout */}
+        <div className="flex gap-4 items-end">
+          <div className="flex gap-2">
+            <button onClick={() => setCurrentView("sold-items")} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${currentView === "sold-items" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}>
+              📊 Sold Items
+            </button>
+            <button onClick={() => setCurrentView("costs")} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${currentView === "costs" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}>
+              💰 Costs
+            </button>
+          </div>
+
+          <div className="flex items-end gap-2">
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-red-400">Time Period</label>
+              <select value={timePeriod} onChange={(e) => setTimePeriod(e.target.value as TimePeriod)} className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none">
+                <option value="today">Today</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month">Last Month</option>
+                <option value="3months">Last 3 Months</option>
+                <option value="12months">Last 12 Months</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex gap-3">
-        <button onClick={() => setCurrentView("sold-items")} className={`px-6 py-3 rounded-lg font-semibold transition-colors ${currentView === "sold-items" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}>
-          📊 Sold Items
-        </button>
-        <button onClick={() => setCurrentView("costs")} className={`px-6 py-3 rounded-lg font-semibold transition-colors ${currentView === "costs" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}>
-          💰 Costs
-        </button>
-      </div>
-
-      <div className="space-y-2">
-        <label className="block text-sm font-semibold text-red-400">Time Period</label>
-        <select value={timePeriod} onChange={(e) => setTimePeriod(e.target.value as TimePeriod)} className="px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none">
-          <option value="today">Today</option>
-          <option value="week">Last 7 Days</option>
-          <option value="month">Last Month</option>
-          <option value="3months">Last 3 Months</option>
-          <option value="12months">Last 12 Months</option>
-        </select>
-      </div>
-
       {currentView === "sold-items" && (
-        <div className="flex-1 flex flex-col min-h-0 space-y-4">
+        <div className="flex-1 flex flex-col min-h-0 space-y-2">
+          {/* Search and Filters - Compact Two Row Layout */}
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-red-400">Search Items</label>
-            <input type="text" placeholder="Search by product name or order ID..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none" />
+            {/* Search Bar */}
+            <input type="text" placeholder="🔍 Search by product name or order ID..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded text-sm focus:border-red-500 focus:outline-none" />
+
+            {/* Filters Grid - Compact */}
+            <div className="grid grid-cols-5 gap-2">
+              <div>
+                <label className="block text-xs font-semibold text-red-400 mb-1">Sort By</label>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} className="w-full px-2 py-1 bg-gray-700 border border-gray-600 text-white rounded text-xs focus:border-red-500 focus:outline-none">
+                  <option value="name">Name</option>
+                  <option value="category">Category</option>
+                  <option value="size">Size</option>
+                  <option value="color">Color</option>
+                  <option value="quantity">Qty ↓</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-red-400 mb-1">Category</label>
+                <select value={sortCategory} onChange={(e) => setSortCategory(e.target.value)} className="w-full px-2 py-1 bg-gray-700 border border-gray-600 text-white rounded text-xs focus:border-red-500 focus:outline-none">
+                  <option value="">All</option>
+                  {uniqueCategories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-red-400 mb-1">Size</label>
+                <select value={sortSize} onChange={(e) => setSortSize(e.target.value)} className="w-full px-2 py-1 bg-gray-700 border border-gray-600 text-white rounded text-xs focus:border-red-500 focus:outline-none">
+                  <option value="">All</option>
+                  {uniqueSizes.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-red-400 mb-1">Color</label>
+                <select value={sortColor} onChange={(e) => setSortColor(e.target.value)} className="w-full px-2 py-1 bg-gray-700 border border-gray-600 text-white rounded text-xs focus:border-red-500 focus:outline-none">
+                  <option value="">All</option>
+                  {uniqueColors.map((color) => (
+                    <option key={color} value={color}>
+                      {color}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Totals - Show inline with filters */}
+              <div className="flex gap-2 items-end">
+                <div className="bg-red-900/40 border border-red-600/50 rounded px-2 py-1 text-center flex-1">
+                  <p className="text-xs text-red-300 font-semibold">{soldItemsTotals.totalQuantity}</p>
+                  <p className="text-xs text-red-400 font-semibold">Qty Sold</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-3">
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-red-400">Sort By</label>
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded text-sm focus:border-red-500 focus:outline-none">
-                <option value="name">Name</option>
-                <option value="category">Category</option>
-                <option value="size">Size</option>
-                <option value="color">Color</option>
-                <option value="quantity">Quantity (High to Low)</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-red-400">Category</label>
-              <select value={sortCategory} onChange={(e) => setSortCategory(e.target.value)} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded text-sm focus:border-red-500 focus:outline-none">
-                <option value="">All Categories</option>
-                {uniqueCategories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-red-400">Size</label>
-              <select value={sortSize} onChange={(e) => setSortSize(e.target.value)} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded text-sm focus:border-red-500 focus:outline-none">
-                <option value="">All Sizes</option>
-                {uniqueSizes.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-red-400">Color</label>
-              <select value={sortColor} onChange={(e) => setSortColor(e.target.value)} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded text-sm focus:border-red-500 focus:outline-none">
-                <option value="">All Colors</option>
-                {uniqueColors.map((color) => (
-                  <option key={color} value={color}>
-                    {color}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
-              <p className="text-xs text-gray-400 font-semibold">Total Quantity Sold</p>
-              <p className="text-2xl font-bold text-red-400 mt-1">{soldItemsTotals.totalQuantity}</p>
-            </div>
-            <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
+          {/* Summary Metrics - Inline */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-gray-700/50 border border-gray-600 rounded p-2">
               <p className="text-xs text-gray-400 font-semibold">Total Amount</p>
-              <p className="text-2xl font-bold text-green-400 mt-1">Rs. {soldItemsTotals.totalAmount.toFixed(2)}</p>
+              <p className="text-lg font-bold text-green-400">Rs. {soldItemsTotals.totalAmount.toFixed(2)}</p>
             </div>
-            <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
+            <div className="bg-gray-700/50 border border-gray-600 rounded p-2">
               <p className="text-xs text-gray-400 font-semibold">Unique Products</p>
-              <p className="text-2xl font-bold text-blue-400 mt-1">{soldItemsTotals.totalItems}</p>
+              <p className="text-lg font-bold text-blue-400">{soldItemsTotals.totalItems}</p>
+            </div>
+            <div className="bg-gray-700/50 border border-gray-600 rounded p-2">
+              <p className="text-xs text-gray-400 font-semibold">Items Found</p>
+              <p className="text-lg font-bold text-gray-300">{filteredSoldItems.length}</p>
             </div>
           </div>
 
+          {/* Data Table - Takes remaining space */}
           <div className="flex-1 overflow-hidden flex flex-col bg-gray-800/50 border border-gray-700 rounded-lg">
             <div className="overflow-x-auto overflow-y-auto flex-1">
               <table className="w-full text-sm">
@@ -299,43 +319,44 @@ const ReportsPage: React.FC = () => {
       )}
 
       {currentView === "costs" && (
-        <div className="flex-1 flex flex-col min-h-0 space-y-4">
-          <div className="grid grid-cols-4 gap-3">
-            <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
-              <p className="text-xs text-gray-400 font-semibold">Total Product Cost</p>
-              <p className="text-2xl font-bold text-orange-400 mt-1">Rs. {costsTotals.totalProductCost.toFixed(2)}</p>
+        <div className="flex-1 flex flex-col min-h-0 space-y-2">
+          {/* Metrics Grid - Compact */}
+          <div className="grid grid-cols-7 gap-2">
+            <div className="bg-orange-900/40 border border-orange-600/50 rounded p-2">
+              <p className="text-xs text-orange-300 font-semibold">Product Cost</p>
+              <p className="text-sm font-bold text-orange-400">Rs. {(costsTotals.totalProductCost / 1000).toFixed(1)}K</p>
             </div>
-            <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
-              <p className="text-xs text-gray-400 font-semibold">Total Print Cost</p>
-              <p className="text-2xl font-bold text-purple-400 mt-1">Rs. {costsTotals.totalPrintCost.toFixed(2)}</p>
+            <div className="bg-purple-900/40 border border-purple-600/50 rounded p-2">
+              <p className="text-xs text-purple-300 font-semibold">Print Cost</p>
+              <p className="text-sm font-bold text-purple-400">Rs. {(costsTotals.totalPrintCost / 1000).toFixed(1)}K</p>
             </div>
-            <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
-              <p className="text-xs text-gray-400 font-semibold">Total Cost</p>
-              <p className="text-2xl font-bold text-red-400 mt-1">Rs. {costsTotals.totalCost.toFixed(2)}</p>
+            <div className="bg-red-900/40 border border-red-600/50 rounded p-2">
+              <p className="text-xs text-red-300 font-semibold">Total Cost</p>
+              <p className="text-sm font-bold text-red-400">Rs. {(costsTotals.totalCost / 1000).toFixed(1)}K</p>
             </div>
-            <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
-              <p className="text-xs text-gray-400 font-semibold">Total Sales</p>
-              <p className="text-2xl font-bold text-green-400 mt-1">Rs. {costsTotals.totalSales.toFixed(2)}</p>
+            <div className="bg-green-900/40 border border-green-600/50 rounded p-2">
+              <p className="text-xs text-green-300 font-semibold">Total Sales</p>
+              <p className="text-sm font-bold text-green-400">Rs. {(costsTotals.totalSales / 1000).toFixed(1)}K</p>
+            </div>
+            <div className="bg-blue-900/40 border border-blue-600/50 rounded p-2">
+              <p className="text-xs text-blue-300 font-semibold">Profit</p>
+              <p className={`text-sm font-bold ${(costsTotals.totalSales - costsTotals.totalCost) >= 0 ? "text-blue-400" : "text-red-400"}`}>
+                Rs. {((costsTotals.totalSales - costsTotals.totalCost) / 1000).toFixed(1)}K
+              </p>
+            </div>
+            <div className="bg-indigo-900/40 border border-indigo-600/50 rounded p-2">
+              <p className="text-xs text-indigo-300 font-semibold">Margin</p>
+              <p className="text-sm font-bold text-indigo-400">
+                {costsTotals.totalSales > 0 ? (((costsTotals.totalSales - costsTotals.totalCost) / costsTotals.totalSales) * 100).toFixed(1) : "0"}%
+              </p>
+            </div>
+            <div className="bg-cyan-900/40 border border-cyan-600/50 rounded p-2">
+              <p className="text-xs text-cyan-300 font-semibold">Orders</p>
+              <p className="text-sm font-bold text-cyan-400">{costsTotals.totalOrders}</p>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-blue-900/30 to-blue-800/30 border border-blue-600/30 rounded-lg p-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm text-blue-300 font-semibold">Total Profit</p>
-                <p className="text-3xl font-bold text-blue-400 mt-1">Rs. {(costsTotals.totalSales - costsTotals.totalCost).toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-blue-300 font-semibold">Profit Margin</p>
-                <p className="text-3xl font-bold text-blue-400 mt-1">{costsTotals.totalSales > 0 ? (((costsTotals.totalSales - costsTotals.totalCost) / costsTotals.totalSales) * 100).toFixed(2) : "0"}%</p>
-              </div>
-              <div>
-                <p className="text-sm text-blue-300 font-semibold">Orders</p>
-                <p className="text-3xl font-bold text-blue-400 mt-1">{costsTotals.totalOrders}</p>
-              </div>
-            </div>
-          </div>
-
+          {/* Data Table - Takes remaining space */}
           <div className="flex-1 overflow-hidden flex flex-col bg-gray-800/50 border border-gray-700 rounded-lg">
             <div className="overflow-x-auto overflow-y-auto flex-1">
               <table className="w-full text-sm">

@@ -14,8 +14,9 @@ import BankAccountsPage from "./pages/BankAccountsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import StockPage from "./pages/StockPage";
 import ReportsPage from "./pages/ReportsPage";
+import SettingsPage from "./pages/SettingsPage";
 
-type PageType = "sales" | "products" | "inventory" | "customers" | "orders" | "payments" | "bankaccounts" | "analytics" | "stock" | "reports";
+type PageType = "sales" | "products" | "inventory" | "customers" | "orders" | "payments" | "bankaccounts" | "analytics" | "stock" | "reports" | "settings";
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>("sales");
@@ -55,6 +56,8 @@ function App() {
         return <StockPage />;
       case "reports":
         return <ReportsPage />;
+      case "settings":
+        return <SettingsPage />;
       default:
         return <SalesPage />;
     }
@@ -62,7 +65,7 @@ function App() {
 
   return (
     <ShopProvider>
-      <ShopSelector isInitialSetup={true} />
+      <ShopSelector />
       <POSLayout currentPage={currentPage} onPageChange={setCurrentPage}>
         {renderPage()}
       </POSLayout>

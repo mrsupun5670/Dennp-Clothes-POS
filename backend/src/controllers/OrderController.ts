@@ -403,7 +403,17 @@ class OrderController {
   async getOrderReceipt(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const order = await OrderModel.getOrderById(Number(id));
+      const shopId = req.query.shop_id ? Number(req.query.shop_id) : undefined;
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'Shop ID is required',
+        });
+        return;
+      }
+
+      const order = await OrderModel.getOrderById(Number(id), shopId);
 
       if (!order) {
         res.status(404).json({

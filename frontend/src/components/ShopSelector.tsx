@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useShop, Shop } from "../context/ShopContext";
+import { API_URL } from "../config/api";
 
 interface ShopSelectorProps {
   onShopSelected?: () => void;
@@ -10,7 +11,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({
   onShopSelected,
   isInitialSetup = false,
 }) => {
-  const { shopId, setShopData } = useShop();
+  const { shopId, isInitialized, setShopData } = useShop();
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({
   useEffect(() => {
     const fetchShops = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/v1/shops");
+        const response = await fetch(`${API_URL}/shops`);
         const result = await response.json();
         if (result.success) {
           setShops(result.data);
@@ -59,34 +60,21 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({
     );
   }
 
-  // If already selected and not initial setup, don't show
-  if (shopId && !isInitialSetup) {
+  // Only show on first install (not initialized yet)
+  // Once shop is selected, never show again unless app is reinstalled
+  if (isInitialized) {
     return null;
   }
 
   return (
-    <div
-      className={`${
-        isInitialSetup
-          ? "fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center"
-          : "p-4"
-      }`}
-    >
-      <div
-        className={`${
-          isInitialSetup
-            ? "bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-md"
-            : "bg-gray-800/50 border border-gray-700 rounded-lg"
-        } p-6`}
-      >
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-md p-6">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-red-500 mb-2">
-            {isInitialSetup ? "Select Your Shop" : "Switch Shop"}
+            Select Your Shop
           </h2>
           <p className="text-gray-400 text-sm">
-            {isInitialSetup
-              ? "Please select the shop you want to work with"
-              : "Choose a shop to manage"}
+            Please select the shop you want to work with. This selection cannot be changed later.
           </p>
         </div>
 
@@ -119,9 +107,9 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({
           )}
         </div>
 
-        {isInitialSetup && shops.length > 0 && (
-          <p className="text-xs text-gray-500 text-center mt-6">
-            You can change shops anytime from the shop selector
+        {shops.length > 0 && (
+          <p className="text-xs text-yellow-500/70 text-center mt-6">
+            ⚠️ This choice is permanent and cannot be changed without reinstalling
           </p>
         )}
       </div>

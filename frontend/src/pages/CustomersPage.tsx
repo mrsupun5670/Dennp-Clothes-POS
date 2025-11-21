@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
+import { API_URL } from "../config/api";
 
 // Helper function to print customers
 const handlePrintCustomers = (customers: any[]) => {
@@ -110,7 +111,7 @@ const CustomersPage: React.FC = () => {
     if (!shopId) {
       throw new Error("Shop ID is required");
     }
-    const response = await fetch(`http://localhost:3000/api/v1/customers?shop_id=${shopId}`);
+    const response = await fetch(`${API_URL}/customers?shop_id=${shopId}`);
     const result = await response.json();
     if (result.success) {
       return result.data;
@@ -142,7 +143,7 @@ const CustomersPage: React.FC = () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:3000/api/v1/customers/search?q=${encodeURIComponent(query)}`
+        `${API_URL}/customers/search?q=${encodeURIComponent(query)}`
       );
       const result = await response.json();
       if (result.success) {
@@ -167,7 +168,7 @@ const CustomersPage: React.FC = () => {
   const createCustomer = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:3000/api/v1/customers", {
+      const response = await fetch(`${API_URL}/customers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -205,7 +206,7 @@ const CustomersPage: React.FC = () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:3000/api/v1/customers/${selectedCustomerId}`,
+        `${API_URL}/customers/${selectedCustomerId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

@@ -5,6 +5,7 @@ import {
 } from "../services/productService";
 import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
+import { API_URL } from "../config/api";
 
 /**
  * Global utility function for printing product reports.
@@ -123,7 +124,7 @@ const ProductsPage: React.FC = () => {
       if (!shopId) {
         throw new Error("Shop ID is required");
       }
-      const response = await fetch(`http://localhost:3000/api/v1/products?shop_id=${shopId}`);
+      const response = await fetch(`${API_URL}/products?shop_id=${shopId}`);
       const result = await response.json();
       if (result.success) {
         return result.data;
@@ -140,7 +141,7 @@ const ProductsPage: React.FC = () => {
       if (!shopId) {
         throw new Error("Shop ID is required");
       }
-      const response = await fetch(`http://localhost:3000/api/v1/categories?shop_id=${shopId}`);
+      const response = await fetch(`${API_URL}/categories?shop_id=${shopId}`);
       const result = await response.json();
       if (result.success) {
         return result.data;
@@ -157,7 +158,7 @@ const ProductsPage: React.FC = () => {
       if (!shopId) {
         throw new Error("Shop ID is required");
       }
-      const response = await fetch(`http://localhost:3000/api/v1/colors?shop_id=${shopId}`);
+      const response = await fetch(`${API_URL}/colors?shop_id=${shopId}`);
       const result = await response.json();
       if (result.success) {
         return result.data;
@@ -174,7 +175,7 @@ const ProductsPage: React.FC = () => {
       if (!shopId) {
         throw new Error("Shop ID is required");
       }
-      const response = await fetch(`http://localhost:3000/api/v1/sizes?shop_id=${shopId}`);
+      const response = await fetch(`${API_URL}/sizes?shop_id=${shopId}`);
       const result = await response.json();
       if (result.success) {
         return result.data;
@@ -413,7 +414,7 @@ const ProductsPage: React.FC = () => {
       if (isEditMode && selectedProductId) {
         // Update existing product
         const updateResponse = await fetch(
-          `http://localhost:3000/api/v1/products/${selectedProductId}`,
+          `${API_URL}/products/${selectedProductId}`,
           {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -428,7 +429,7 @@ const ProductsPage: React.FC = () => {
       } else {
         // Create new product
         const createResponse = await fetch(
-          "http://localhost:3000/api/v1/products",
+          "${API_URL}/products",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -460,7 +461,7 @@ const ProductsPage: React.FC = () => {
         let colorId = colorIdMap.get(colorName);
         if (!colorId) {
           const colorResponse = await fetch(
-            "http://localhost:3000/api/v1/colors",
+            "${API_URL}/colors",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -475,7 +476,7 @@ const ProductsPage: React.FC = () => {
         }
         if (colorId) {
           await fetch(
-            `http://localhost:3000/api/v1/products/${productId}/colors`,
+            `${API_URL}/products/${productId}/colors`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -489,7 +490,7 @@ const ProductsPage: React.FC = () => {
         let sizeId = sizeIdMap.get(sizeName);
         if (!sizeId) {
           const sizeResponse = await fetch(
-            "http://localhost:3000/api/v1/sizes",
+            "${API_URL}/sizes",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -504,7 +505,7 @@ const ProductsPage: React.FC = () => {
         }
         if (sizeId) {
           await fetch(
-            `http://localhost:3000/api/v1/products/${productId}/sizes`,
+            `${API_URL}/products/${productId}/sizes`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "../hooks/useQuery";
+import { API_URL } from "../config/api";
 
 interface OrderItem {
   product_id: number;
@@ -155,7 +156,7 @@ const OrdersPage: React.FC = () => {
     refetch: refetchOrders,
   } = useQuery<Order[]>(["orders", selectedStatus], async () => {
     const response = await fetch(
-      `http://localhost:3000/api/v1/orders?status=${selectedStatus}`
+      `${API_URL}/orders?status=${selectedStatus}`
     );
     const result = await response.json();
     if (result.success) {
@@ -199,7 +200,7 @@ const OrdersPage: React.FC = () => {
       const fetchReceipt = async () => {
         try {
           const response = await fetch(
-            `http://localhost:3000/api/v1/orders/${selectedOrderId}/receipt`
+            `${API_URL}/orders/${selectedOrderId}/receipt`
           );
           const result = await response.json();
           if (result.success) {
@@ -242,7 +243,7 @@ const OrdersPage: React.FC = () => {
     setIsUpdatingOrder(true);
     try {
       const response = await fetch(
-        `http://localhost:3000/api/v1/orders/${selectedOrderId}`,
+        `${API_URL}/orders/${selectedOrderId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -293,7 +294,7 @@ const OrdersPage: React.FC = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/api/v1/orders/${selectedOrderId}/payment`,
+        `${API_URL}/orders/${selectedOrderId}/payment`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

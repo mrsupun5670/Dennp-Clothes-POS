@@ -50,12 +50,22 @@ class OrderController {
   }
 
   /**
-   * GET /orders/:id - Get order by ID
+   * GET /orders/:id?shop_id=1 - Get order by ID
    */
   async getOrderById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const order = await OrderModel.getOrderById(Number(id));
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const order = await OrderModel.getOrderById(Number(id), shopId);
 
       if (!order) {
         res.status(404).json({
@@ -83,12 +93,22 @@ class OrderController {
   }
 
   /**
-   * GET /orders/customer/:customerId - Get orders by customer
+   * GET /orders/customer/:customerId?shop_id=1 - Get orders by customer
    */
   async getOrdersByCustomer(req: Request, res: Response): Promise<void> {
     try {
       const { customerId } = req.params;
-      const orders = await OrderModel.getOrdersByCustomer(Number(customerId));
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const orders = await OrderModel.getOrdersByCustomer(Number(customerId), shopId);
 
       res.json({
         success: true,
@@ -185,14 +205,22 @@ class OrderController {
   }
 
   /**
-   * PUT /orders/:id - Update order
+   * PUT /orders/:id (body: { shop_id, ...updateData }) - Update order
    */
   async updateOrder(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const updateData = req.body;
+      const { shop_id, ...updateData } = req.body;
 
-      const success = await OrderModel.updateOrder(Number(id), updateData);
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: shop_id',
+        });
+        return;
+      }
+
+      const success = await OrderModel.updateOrder(Number(id), shop_id, updateData);
 
       if (!success) {
         res.status(404).json({
@@ -217,14 +245,22 @@ class OrderController {
   }
 
   /**
-   * POST /orders/:id/payment - Record payment for order
+   * POST /orders/:id/payment (body: { shop_id, amount_paid, payment_type, ... }) - Record payment for order
    */
   async recordPayment(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { amount_paid, payment_type, payment_method, bank_name, branch_name, is_online_transfer } = req.body;
+      const { shop_id, amount_paid, payment_type, payment_method, bank_name, branch_name, is_online_transfer } = req.body;
 
       // Validation
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: shop_id',
+        });
+        return;
+      }
+
       if (!amount_paid || !payment_type) {
         res.status(400).json({
           success: false,
@@ -234,7 +270,7 @@ class OrderController {
       }
 
       // Record payment in orders table
-      const paymentSuccess = await OrderModel.recordPayment(Number(id), amount_paid, payment_type);
+      const paymentSuccess = await OrderModel.recordPayment(Number(id), shop_id, amount_paid, payment_type);
 
       if (!paymentSuccess) {
         res.status(404).json({
@@ -272,11 +308,20 @@ class OrderController {
   }
 
   /**
-   * GET /orders/pending - Get pending orders
+   * GET /orders/pending?shop_id=1 - Get pending orders
    */
   async getPendingOrders(req: Request, res: Response): Promise<void> {
     try {
-      const shopId = req.query.shop_id ? Number(req.query.shop_id) : undefined;
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
       const orders = await OrderModel.getPendingOrders(shopId);
 
       res.json({

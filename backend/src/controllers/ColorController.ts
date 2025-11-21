@@ -9,11 +9,20 @@ import { logger } from '../utils/logger';
 
 class ColorController {
   /**
-   * GET /colors - Get all colors
+   * GET /colors?shop_id=1 - Get all colors
    */
-  async getAllColors(_req: Request, res: Response): Promise<void> {
+  async getAllColors(req: Request, res: Response): Promise<void> {
     try {
-      const colors = await ColorModel.getAllColors();
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const colors = await ColorModel.getAllColors(shopId);
 
       res.json({
         success: true,
@@ -31,12 +40,21 @@ class ColorController {
   }
 
   /**
-   * GET /colors/:id - Get color by ID
+   * GET /colors/:id?shop_id=1 - Get color by ID
    */
   async getColorById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const color = await ColorModel.getColorById(Number(id));
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const color = await ColorModel.getColorById(Number(id), shopId);
 
       if (!color) {
         res.status(404).json({
@@ -61,13 +79,21 @@ class ColorController {
   }
 
   /**
-   * POST /colors - Create new color
+   * POST /colors (body: { shop_id, color_name, hex_code }) - Create new color
    */
   async createColor(req: Request, res: Response): Promise<void> {
     try {
-      const { color_name, hex_code } = req.body;
+      const { shop_id, color_name, hex_code } = req.body;
 
       // Validation
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: shop_id',
+        });
+        return;
+      }
+
       if (!color_name) {
         res.status(400).json({
           success: false,
@@ -76,7 +102,7 @@ class ColorController {
         return;
       }
 
-      const colorId = await ColorModel.createColor(color_name, hex_code);
+      const colorId = await ColorModel.createColor(shop_id, color_name, hex_code);
 
       res.status(201).json({
         success: true,
@@ -94,14 +120,22 @@ class ColorController {
   }
 
   /**
-   * PUT /colors/:id - Update color
+   * PUT /colors/:id (body: { shop_id, color_name, hex_code }) - Update color
    */
   async updateColor(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { color_name, hex_code } = req.body;
+      const { shop_id, color_name, hex_code } = req.body;
 
-      const success = await ColorModel.updateColor(Number(id), color_name, hex_code);
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: shop_id',
+        });
+        return;
+      }
+
+      const success = await ColorModel.updateColor(Number(id), shop_id, color_name, hex_code);
 
       if (!success) {
         res.status(404).json({
@@ -126,13 +160,22 @@ class ColorController {
   }
 
   /**
-   * DELETE /colors/:id - Delete color
+   * DELETE /colors/:id?shop_id=1 - Delete color
    */
   async deleteColor(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const shopId = Number(req.query.shop_id);
 
-      const success = await ColorModel.deleteColor(Number(id));
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const success = await ColorModel.deleteColor(Number(id), shopId);
 
       if (!success) {
         res.status(404).json({
@@ -157,11 +200,20 @@ class ColorController {
   }
 
   /**
-   * GET /colors/search - Search colors
+   * GET /colors/search?shop_id=1&q=term - Search colors
    */
   async searchColors(req: Request, res: Response): Promise<void> {
     try {
+      const shopId = Number(req.query.shop_id);
       const { q } = req.query;
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
 
       if (!q || typeof q !== 'string') {
         res.status(400).json({
@@ -171,7 +223,7 @@ class ColorController {
         return;
       }
 
-      const colors = await ColorModel.searchColors(q);
+      const colors = await ColorModel.searchColors(shopId, q);
 
       res.json({
         success: true,

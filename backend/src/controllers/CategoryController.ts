@@ -9,11 +9,20 @@ import { logger } from '../utils/logger';
 
 class CategoryController {
   /**
-   * GET /categories - Get all categories
+   * GET /categories?shop_id=1 - Get all categories
    */
-  async getAllCategories(_req: Request, res: Response): Promise<void> {
+  async getAllCategories(req: Request, res: Response): Promise<void> {
     try {
-      const categories = await CategoryModel.getAllCategories();
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const categories = await CategoryModel.getAllCategories(shopId);
 
       res.json({
         success: true,
@@ -31,12 +40,21 @@ class CategoryController {
   }
 
   /**
-   * GET /categories/:id - Get category by ID
+   * GET /categories/:id?shop_id=1 - Get category by ID
    */
   async getCategoryById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const category = await CategoryModel.getCategoryById(Number(id));
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const category = await CategoryModel.getCategoryById(Number(id), shopId);
 
       if (!category) {
         res.status(404).json({
@@ -61,13 +79,21 @@ class CategoryController {
   }
 
   /**
-   * POST /categories - Create new category
+   * POST /categories (body: { shop_id, category_name, size_type_id }) - Create new category
    */
   async createCategory(req: Request, res: Response): Promise<void> {
     try {
-      const { category_name, size_type_id } = req.body;
+      const { shop_id, category_name, size_type_id } = req.body;
 
       // Validation
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: shop_id',
+        });
+        return;
+      }
+
       if (!category_name || !size_type_id) {
         res.status(400).json({
           success: false,
@@ -76,7 +102,7 @@ class CategoryController {
         return;
       }
 
-      const categoryId = await CategoryModel.createCategory(category_name, size_type_id);
+      const categoryId = await CategoryModel.createCategory(shop_id, category_name, size_type_id);
 
       res.status(201).json({
         success: true,
@@ -94,14 +120,22 @@ class CategoryController {
   }
 
   /**
-   * PUT /categories/:id - Update category
+   * PUT /categories/:id (body: { shop_id, category_name, size_type_id }) - Update category
    */
   async updateCategory(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { category_name, size_type_id } = req.body;
+      const { shop_id, category_name, size_type_id } = req.body;
 
-      const success = await CategoryModel.updateCategory(Number(id), category_name, size_type_id);
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: shop_id',
+        });
+        return;
+      }
+
+      const success = await CategoryModel.updateCategory(Number(id), shop_id, category_name, size_type_id);
 
       if (!success) {
         res.status(404).json({
@@ -126,13 +160,22 @@ class CategoryController {
   }
 
   /**
-   * DELETE /categories/:id - Delete category
+   * DELETE /categories/:id?shop_id=1 - Delete category
    */
   async deleteCategory(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const shopId = Number(req.query.shop_id);
 
-      const success = await CategoryModel.deleteCategory(Number(id));
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const success = await CategoryModel.deleteCategory(Number(id), shopId);
 
       if (!success) {
         res.status(404).json({
@@ -157,12 +200,22 @@ class CategoryController {
   }
 
   /**
-   * GET /categories/:id/with-size-type - Get category with size type
+   * GET /categories/:id/with-size-type?shop_id=1 - Get category with size type
    */
   async getCategoryWithSizeType(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const category = await CategoryModel.getCategoryWithSizeType(Number(id));
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const category = await CategoryModel.getCategoryWithSizeType(Number(id), shopId);
 
       if (!category) {
         res.status(404).json({
@@ -187,12 +240,22 @@ class CategoryController {
   }
 
   /**
-   * GET /categories/:id/product-count - Get product count in category
+   * GET /categories/:id/product-count?shop_id=1 - Get product count in category
    */
   async getProductCount(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const count = await CategoryModel.countProductsInCategory(Number(id));
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const count = await CategoryModel.countProductsInCategory(Number(id), shopId);
 
       res.json({
         success: true,

@@ -9,11 +9,20 @@ import { logger } from '../utils/logger';
 
 class CustomerController {
   /**
-   * GET /customers - Get all customers
+   * GET /customers?shop_id=1 - Get all customers
    */
-  async getAllCustomers(_req: Request, res: Response): Promise<void> {
+  async getAllCustomers(req: Request, res: Response): Promise<void> {
     try {
-      const customers = await CustomerModel.getAllCustomers();
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const customers = await CustomerModel.getAllCustomers(shopId);
 
       res.json({
         success: true,
@@ -31,12 +40,21 @@ class CustomerController {
   }
 
   /**
-   * GET /customers/:id - Get customer by ID
+   * GET /customers/:id?shop_id=1 - Get customer by ID
    */
   async getCustomerById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const customer = await CustomerModel.getCustomerById(Number(id));
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const customer = await CustomerModel.getCustomerById(Number(id), shopId);
 
       if (!customer) {
         res.status(404).json({
@@ -61,12 +79,21 @@ class CustomerController {
   }
 
   /**
-   * GET /customers/mobile/:mobile - Get customer by mobile
+   * GET /customers/mobile/:mobile?shop_id=1 - Get customer by mobile
    */
   async getCustomerByMobile(req: Request, res: Response): Promise<void> {
     try {
       const { mobile } = req.params;
-      const customer = await CustomerModel.getCustomerByMobile(mobile);
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const customer = await CustomerModel.getCustomerByMobile(mobile, shopId);
 
       if (!customer) {
         res.status(404).json({
@@ -91,13 +118,21 @@ class CustomerController {
   }
 
   /**
-   * POST /customers - Create new customer
+   * POST /customers (body: { shop_id, first_name, last_name, mobile, email, customer_status }) - Create new customer
    */
   async createCustomer(req: Request, res: Response): Promise<void> {
     try {
-      const { first_name, last_name, mobile, email, customer_status } = req.body;
+      const { shop_id, first_name, last_name, mobile, email, customer_status } = req.body;
 
       // Validation
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: shop_id',
+        });
+        return;
+      }
+
       if (!first_name || !last_name || !mobile) {
         res.status(400).json({
           success: false,
@@ -106,7 +141,7 @@ class CustomerController {
         return;
       }
 
-      const customerId = await CustomerModel.createCustomer({
+      const customerId = await CustomerModel.createCustomer(shop_id, {
         first_name,
         last_name,
         mobile,
@@ -130,14 +165,22 @@ class CustomerController {
   }
 
   /**
-   * PUT /customers/:id - Update customer
+   * PUT /customers/:id (body: { shop_id, ...updateData }) - Update customer
    */
   async updateCustomer(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const updateData = req.body;
+      const { shop_id, ...updateData } = req.body;
 
-      const success = await CustomerModel.updateCustomer(Number(id), updateData);
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: shop_id',
+        });
+        return;
+      }
+
+      const success = await CustomerModel.updateCustomer(Number(id), shop_id, updateData);
 
       if (!success) {
         res.status(404).json({
@@ -162,11 +205,20 @@ class CustomerController {
   }
 
   /**
-   * GET /customers/search - Search customers
+   * GET /customers/search?shop_id=1&q=term - Search customers
    */
   async searchCustomers(req: Request, res: Response): Promise<void> {
     try {
+      const shopId = Number(req.query.shop_id);
       const { q } = req.query;
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
 
       if (!q || typeof q !== 'string') {
         res.status(400).json({
@@ -176,7 +228,7 @@ class CustomerController {
         return;
       }
 
-      const customers = await CustomerModel.searchCustomers(q);
+      const customers = await CustomerModel.searchCustomers(shopId, q);
 
       res.json({
         success: true,
@@ -194,14 +246,23 @@ class CustomerController {
   }
 
   /**
-   * GET /customers/active - Get active customers with pagination
+   * GET /customers/active?shop_id=1&page=1&limit=10 - Get active customers with pagination
    */
   async getActiveCustomers(req: Request, res: Response): Promise<void> {
     try {
+      const shopId = Number(req.query.shop_id);
       const page = Number(req.query.page) || 1;
       const limit = Number(req.query.limit) || 10;
 
-      const { customers, total } = await CustomerModel.getActiveCustomers(page, limit);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const { customers, total } = await CustomerModel.getActiveCustomers(shopId, page, limit);
 
       res.json({
         success: true,
@@ -224,12 +285,22 @@ class CustomerController {
   }
 
   /**
-   * GET /customers/top - Get top customers by spending
+   * GET /customers/top?shop_id=1&limit=10 - Get top customers by spending
    */
   async getTopCustomers(req: Request, res: Response): Promise<void> {
     try {
+      const shopId = Number(req.query.shop_id);
       const limit = Number(req.query.limit) || 10;
-      const customers = await CustomerModel.getTopCustomers(limit);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const customers = await CustomerModel.getTopCustomers(shopId, limit);
 
       res.json({
         success: true,
@@ -247,13 +318,22 @@ class CustomerController {
   }
 
   /**
-   * POST /customers/:id/block - Block customer
+   * POST /customers/:id/block?shop_id=1 - Block customer
    */
   async blockCustomer(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const shopId = Number(req.query.shop_id);
 
-      const success = await CustomerModel.blockCustomer(Number(id));
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const success = await CustomerModel.blockCustomer(Number(id), shopId);
 
       if (!success) {
         res.status(404).json({

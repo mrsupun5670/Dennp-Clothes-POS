@@ -9,11 +9,20 @@ import { logger } from '../utils/logger';
 
 class SizeController {
   /**
-   * GET /sizes - Get all sizes
+   * GET /sizes?shop_id=1 - Get all sizes
    */
-  async getAllSizes(_req: Request, res: Response): Promise<void> {
+  async getAllSizes(req: Request, res: Response): Promise<void> {
     try {
-      const sizes = await SizeModel.getAllSizes();
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const sizes = await SizeModel.getAllSizes(shopId);
 
       res.json({
         success: true,
@@ -31,12 +40,21 @@ class SizeController {
   }
 
   /**
-   * GET /sizes/:id - Get size by ID
+   * GET /sizes/:id?shop_id=1 - Get size by ID
    */
   async getSizeById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const size = await SizeModel.getSizeById(Number(id));
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const size = await SizeModel.getSizeById(Number(id), shopId);
 
       if (!size) {
         res.status(404).json({
@@ -61,12 +79,21 @@ class SizeController {
   }
 
   /**
-   * GET /sizes/type/:sizeTypeId - Get sizes by type
+   * GET /sizes/type/:sizeTypeId?shop_id=1 - Get sizes by type
    */
   async getSizesByType(req: Request, res: Response): Promise<void> {
     try {
       const { sizeTypeId } = req.params;
-      const sizes = await SizeModel.getSizesByType(Number(sizeTypeId));
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const sizes = await SizeModel.getSizesByType(Number(sizeTypeId), shopId);
 
       res.json({
         success: true,
@@ -84,13 +111,21 @@ class SizeController {
   }
 
   /**
-   * POST /sizes - Create new size
+   * POST /sizes (body: { shop_id, size_name, size_type_id }) - Create new size
    */
   async createSize(req: Request, res: Response): Promise<void> {
     try {
-      const { size_name, size_type_id } = req.body;
+      const { shop_id, size_name, size_type_id } = req.body;
 
       // Validation
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: shop_id',
+        });
+        return;
+      }
+
       if (!size_name || !size_type_id) {
         res.status(400).json({
           success: false,
@@ -99,7 +134,7 @@ class SizeController {
         return;
       }
 
-      const sizeId = await SizeModel.createSize(size_name, size_type_id);
+      const sizeId = await SizeModel.createSize(shop_id, size_name, size_type_id);
 
       res.status(201).json({
         success: true,
@@ -117,14 +152,22 @@ class SizeController {
   }
 
   /**
-   * PUT /sizes/:id - Update size
+   * PUT /sizes/:id (body: { shop_id, size_name, size_type_id }) - Update size
    */
   async updateSize(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { size_name, size_type_id } = req.body;
+      const { shop_id, size_name, size_type_id } = req.body;
 
-      const success = await SizeModel.updateSize(Number(id), size_name, size_type_id);
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: shop_id',
+        });
+        return;
+      }
+
+      const success = await SizeModel.updateSize(Number(id), shop_id, size_name, size_type_id);
 
       if (!success) {
         res.status(404).json({
@@ -149,13 +192,22 @@ class SizeController {
   }
 
   /**
-   * DELETE /sizes/:id - Delete size
+   * DELETE /sizes/:id?shop_id=1 - Delete size
    */
   async deleteSize(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const shopId = Number(req.query.shop_id);
 
-      const success = await SizeModel.deleteSize(Number(id));
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const success = await SizeModel.deleteSize(Number(id), shopId);
 
       if (!success) {
         res.status(404).json({
@@ -202,11 +254,20 @@ class SizeController {
   }
 
   /**
-   * GET /sizes/with-type - Get sizes with type details
+   * GET /sizes/with-type?shop_id=1 - Get sizes with type details
    */
-  async getSizesWithType(_req: Request, res: Response): Promise<void> {
+  async getSizesWithType(req: Request, res: Response): Promise<void> {
     try {
-      const sizes = await SizeModel.getSizesWithType();
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const sizes = await SizeModel.getSizesWithType(shopId);
 
       res.json({
         success: true,

@@ -118,7 +118,7 @@ const CustomersPage: React.FC = () => {
     } else {
       throw new Error(result.error || "Failed to fetch customers");
     }
-  }, shopId !== null);
+  }, { enabled: shopId !== null });
 
   // ===================== BACKEND API FUNCTIONS =====================
 

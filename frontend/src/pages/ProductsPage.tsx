@@ -132,7 +132,7 @@ const ProductsPage: React.FC = () => {
         throw new Error(result.error || "Failed to fetch products");
       }
     },
-    shopId !== null
+    { enabled: shopId !== null }
   );
 
   const { data: dbCategories, refetch: refetchCategories } = useQuery<any[]>(
@@ -149,7 +149,7 @@ const ProductsPage: React.FC = () => {
         throw new Error(result.error || "Failed to fetch categories");
       }
     },
-    shopId !== null
+    { enabled: shopId !== null }
   );
 
   const { data: dbColors, refetch: refetchColors } = useQuery<any[]>(
@@ -166,7 +166,7 @@ const ProductsPage: React.FC = () => {
         throw new Error(result.error || "Failed to fetch colors");
       }
     },
-    shopId !== null
+    { enabled: shopId !== null }
   );
 
   const { data: dbSizes, refetch: refetchSizes } = useQuery<any[]>(
@@ -183,7 +183,7 @@ const ProductsPage: React.FC = () => {
         throw new Error(result.error || "Failed to fetch sizes");
       }
     },
-    shopId !== null
+    { enabled: shopId !== null }
   );
 
   // --- SIDE EFFECTS (useEffect) ---

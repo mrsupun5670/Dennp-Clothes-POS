@@ -20,7 +20,8 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(powershell -Command \"Stop-Process -Id 13420 -Force\")",
-      "Bash(powershell -Command \"Get-Process node | Stop-Process -Force; Start-Sleep -Seconds 2; cd backend; npm run dev\")"
+      "Bash(powershell -Command \"Get-Process node | Stop-Process -Force; Start-Sleep -Seconds 2; cd backend; npm run dev\")",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

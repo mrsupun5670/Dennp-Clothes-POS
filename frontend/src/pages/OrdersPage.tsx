@@ -160,16 +160,26 @@ const OrdersPage: React.FC = () => {
     if (!shopId) {
       throw new Error("Shop ID is required");
     }
-    const response = await fetch(
-      `${API_URL}/orders?shop_id=${shopId}&status=${selectedStatus}`
-    );
+    const url = `${API_URL}/orders?shop_id=${shopId}&status=${selectedStatus}`;
+    console.log("Fetching orders from:", url);
+    const response = await fetch(url);
     const result = await response.json();
+    console.log("Orders API Response:", result);
     if (result.success) {
+      console.log("Orders received:", result.data.length, "orders");
       return result.data;
     } else {
       throw new Error(result.error || "Failed to fetch orders");
     }
   }, { enabled: shopId !== null });
+
+  // Log when orders change
+  useEffect(() => {
+    console.log("Orders state updated:", orders);
+    console.log("isLoadingOrders:", isLoadingOrders);
+    console.log("shopId:", shopId);
+    console.log("selectedStatus:", selectedStatus);
+  }, [orders, isLoadingOrders, shopId, selectedStatus]);
 
   // Filter and search orders
   const filteredOrders = useMemo(() => {
@@ -384,14 +394,25 @@ const OrdersPage: React.FC = () => {
 
   if (isLoadingOrders) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full flex-col gap-4">
         <p className="text-gray-400 text-lg">Loading orders...</p>
+        <p className="text-gray-500 text-sm">Shop ID: {shopId} | Status: {selectedStatus}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6 h-full flex flex-col">
+      {/* Debug Panel */}
+      <div className="bg-gray-900/50 border border-gray-700 rounded p-3 text-xs">
+        <p className="text-gray-400">
+          <span className="text-yellow-400">shopId:</span> {shopId || "NULL"} |
+          <span className="text-yellow-400"> status:</span> {selectedStatus} |
+          <span className="text-yellow-400"> orders:</span> {orders?.length || 0} |
+          <span className="text-yellow-400"> loading:</span> {isLoadingOrders ? "true" : "false"}
+        </p>
+      </div>
+
       {/* Header Section */}
       <div className="flex justify-between items-center">
         <div>

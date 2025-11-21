@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "../hooks/useQuery";
+import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
 
 interface OrderItem {
@@ -124,6 +125,7 @@ const exportReceiptAsImage = async (
 };
 
 const OrdersPage: React.FC = () => {
+  const { shopId } = useShop();
   const [selectedStatus, setSelectedStatus] = useState<string>("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
@@ -154,9 +156,12 @@ const OrdersPage: React.FC = () => {
     data: orders,
     isLoading: isLoadingOrders,
     refetch: refetchOrders,
-  } = useQuery<Order[]>(["orders", selectedStatus], async () => {
+  } = useQuery<Order[]>(["orders", selectedStatus, shopId], async () => {
+    if (!shopId) {
+      throw new Error("Shop ID is required");
+    }
     const response = await fetch(
-      `${API_URL}/orders?status=${selectedStatus}`
+      `${API_URL}/orders?shop_id=${shopId}&status=${selectedStatus}`
     );
     const result = await response.json();
     if (result.success) {
@@ -164,7 +169,7 @@ const OrdersPage: React.FC = () => {
     } else {
       throw new Error(result.error || "Failed to fetch orders");
     }
-  });
+  }, { enabled: shopId !== null });
 
   // Filter and search orders
   const filteredOrders = useMemo(() => {

@@ -471,9 +471,6 @@ const CustomersPage: React.FC = () => {
                     Customer ID
                   </th>
                   <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
                     Mobile
                   </th>
                   <th className="px-6 py-3 text-left font-semibold text-red-400">
@@ -484,9 +481,6 @@ const CustomersPage: React.FC = () => {
                   </th>
                   <th className="px-6 py-3 text-right font-semibold text-red-400">
                     Total Spent (Rs.)
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Status
                   </th>
                 </tr>
               </thead>
@@ -508,9 +502,6 @@ const CustomersPage: React.FC = () => {
                     <td className="px-6 py-4 text-gray-200 font-medium font-mono">
                       C{String(customer.customer_id).padStart(3, "0")}
                     </td>
-                    <td className="px-6 py-4 text-gray-100 font-medium">
-                      {customer.first_name} {customer.last_name}
-                    </td>
                     <td className="px-6 py-4 text-gray-400">
                       {customer.mobile}
                     </td>
@@ -525,15 +516,6 @@ const CustomersPage: React.FC = () => {
                       {customer.total_spent
                         ? parseFloat(customer.total_spent.toString()).toFixed(2)
                         : "0.00"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(
-                          customer.customer_status
-                        )}`}
-                      >
-                        {getStatusLabel(customer.customer_status)}
-                      </span>
                     </td>
                   </tr>
                 ))}

@@ -8,6 +8,7 @@ import { logger } from "../utils/logger";
 
 export interface Product {
   product_id: number;
+  shop_id: number;
   sku: string;
   product_name: string;
   category_id: number;
@@ -23,18 +24,20 @@ export interface Product {
 
 class ProductModel {
   /**
-   * Get all products
+   * Get all products for specific shop
    */
-  async getAllProducts(): Promise<Product[]> {
+  async getAllProducts(shopId: number): Promise<Product[]> {
     try {
       const results = await query(
-        "SELECT * FROM products ORDER BY created_at DESC"
+        "SELECT * FROM products WHERE shop_id = ? ORDER BY created_at DESC",
+        [shopId]
       );
       // TODO: This is inefficient (N+1 problem). Refactor to use a single query with JOINs.
       const products = await Promise.all(
-        (results as any[]).map((p) => this.getProductWithDetails(p.product_id))
+        (results as any[]).map((p) => this.getProductWithDetails(p.product_id, shopId))
       );
-      logger.info("Retrieved all products", {
+      logger.info("Retrieved all products for shop", {
+        shopId,
         count: products.length,
       });
       return products as Product[];
@@ -45,16 +48,16 @@ class ProductModel {
   }
 
   /**
-   * Get product by ID
+   * Get product by ID (with shop validation)
    */
-  async getProductById(productId: number): Promise<Product | null> {
+  async getProductById(productId: number, shopId: number): Promise<Product | null> {
     try {
       const results = await query(
-        "SELECT * FROM products WHERE product_id = ?",
-        [productId]
+        "SELECT * FROM products WHERE product_id = ? AND shop_id = ?",
+        [productId, shopId]
       );
       const product = (results as Product[])[0] || null;
-      logger.debug("Retrieved product by ID", { productId });
+      logger.debug("Retrieved product by ID", { productId, shopId });
       return product;
     } catch (error) {
       logger.error("Error fetching product by ID:", error);
@@ -63,15 +66,16 @@ class ProductModel {
   }
 
   /**
-   * Get product by SKU
+   * Get product by SKU (per shop)
    */
-  async getProductBySku(sku: string): Promise<Product | null> {
+  async getProductBySku(sku: string, shopId: number): Promise<Product | null> {
     try {
-      const results = await query("SELECT * FROM products WHERE sku = ?", [
+      const results = await query("SELECT * FROM products WHERE sku = ? AND shop_id = ?", [
         sku,
+        shopId
       ]);
       const product = (results as Product[])[0] || null;
-      logger.debug("Retrieved product by SKU", { sku });
+      logger.debug("Retrieved product by SKU", { sku, shopId });
       return product;
     } catch (error) {
       logger.error("Error fetching product by SKU:", error);
@@ -80,16 +84,17 @@ class ProductModel {
   }
 
   /**
-   * Get products by category
+   * Get products by category (for specific shop)
    */
-  async getProductsByCategory(categoryId: number): Promise<Product[]> {
+  async getProductsByCategory(categoryId: number, shopId: number): Promise<Product[]> {
     try {
       const results = await query(
-        'SELECT * FROM products WHERE category_id = ? AND product_status = "active"',
-        [categoryId]
+        'SELECT * FROM products WHERE category_id = ? AND shop_id = ? AND product_status = "active"',
+        [categoryId, shopId]
       );
       logger.debug("Retrieved products by category", {
         categoryId,
+        shopId,
         count: (results as any[]).length,
       });
       return results as Product[];
@@ -103,7 +108,8 @@ class ProductModel {
    * Create new product
    */
   async createProduct(
-    productData: Omit<Product, "product_id" | "created_at" | "updated_at">
+    shopId: number,
+    productData: Omit<Product, "product_id" | "created_at" | "updated_at" | "shop_id">
   ): Promise<number> {
     try {
       const {
@@ -119,9 +125,10 @@ class ProductModel {
       } = productData;
 
       const results = await query(
-        `INSERT INTO products (sku, product_name, category_id, description, product_cost, print_cost, retail_price, wholesale_price, product_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO products (shop_id, sku, product_name, category_id, description, product_cost, print_cost, retail_price, wholesale_price, product_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
+          shopId,
           sku,
           product_name,
           category_id,
@@ -137,6 +144,7 @@ class ProductModel {
       const productId = (results as any).insertId;
       logger.info("Product created successfully", {
         productId,
+        shopId,
         sku,
         product_name,
       });
@@ -152,17 +160,28 @@ class ProductModel {
    */
   async updateProduct(
     productId: number,
+    shopId: number,
     productData: Partial<
-      Omit<Product, "product_id" | "created_at" | "updated_at">
+      Omit<Product, "product_id" | "created_at" | "updated_at" | "shop_id">
     >
   ): Promise<boolean> {
     try {
+      // Verify ownership first
+      const ownership = await query(
+        "SELECT product_id FROM products WHERE product_id = ? AND shop_id = ?",
+        [productId, shopId]
+      );
+      if ((ownership as any[]).length === 0) {
+        logger.warn("Product not found or does not belong to shop", { productId, shopId });
+        return false;
+      }
+
       const fields: string[] = [];
       const values: any[] = [];
 
       const updateableFields: (keyof Omit<
         Product,
-        "product_id" | "created_at" | "updated_at"
+        "product_id" | "created_at" | "updated_at" | "shop_id"
       >)[] = [
         "sku",
         "product_name",
@@ -186,14 +205,15 @@ class ProductModel {
 
       fields.push("updated_at = NOW()");
       values.push(productId);
+      values.push(shopId);
 
       const results = await query(
-        `UPDATE products SET ${fields.join(", ")} WHERE product_id = ?`,
+        `UPDATE products SET ${fields.join(", ")} WHERE product_id = ? AND shop_id = ?`,
         values
       );
       const affectedRows = (results as any).affectedRows;
 
-      logger.info("Product updated successfully", { productId, affectedRows });
+      logger.info("Product updated successfully", { productId, shopId, affectedRows });
       return affectedRows > 0;
     } catch (error) {
       logger.error("Error updating product:", error);
@@ -204,15 +224,15 @@ class ProductModel {
   /**
    * Delete product (soft delete by changing status)
    */
-  async deleteProduct(productId: number): Promise<boolean> {
+  async deleteProduct(productId: number, shopId: number): Promise<boolean> {
     try {
       const results = await query(
-        'UPDATE products SET product_status = "discontinued", updated_at = NOW() WHERE product_id = ?',
-        [productId]
+        'UPDATE products SET product_status = "discontinued", updated_at = NOW() WHERE product_id = ? AND shop_id = ?',
+        [productId, shopId]
       );
       const affectedRows = (results as any).affectedRows;
 
-      logger.info("Product deleted (soft delete)", { productId });
+      logger.info("Product deleted (soft delete)", { productId, shopId });
       return affectedRows > 0;
     } catch (error) {
       logger.error("Error deleting product:", error);
@@ -224,6 +244,7 @@ class ProductModel {
    * Get active products with pagination
    */
   async getActiveProducts(
+    shopId: number,
     page: number = 1,
     limit: number = 10
   ): Promise<{ products: Product[]; total: number }> {
@@ -231,16 +252,18 @@ class ProductModel {
       const offset = (page - 1) * limit;
 
       const products = await query(
-        'SELECT * FROM products WHERE product_status = "active" ORDER BY created_at DESC LIMIT ?, ?',
-        [offset, limit]
+        'SELECT * FROM products WHERE shop_id = ? AND product_status = "active" ORDER BY created_at DESC LIMIT ?, ?',
+        [shopId, offset, limit]
       );
 
       const countResults = await query(
-        'SELECT COUNT(*) as total FROM products WHERE product_status = "active"'
+        'SELECT COUNT(*) as total FROM products WHERE shop_id = ? AND product_status = "active"',
+        [shopId]
       );
       const total = (countResults as any)[0].total;
 
       logger.debug("Retrieved active products", {
+        shopId,
         page,
         limit,
         count: (products as any[]).length,
@@ -256,15 +279,16 @@ class ProductModel {
   /**
    * Search products by name or SKU
    */
-  async searchProducts(searchTerm: string): Promise<Product[]> {
+  async searchProducts(shopId: number, searchTerm: string): Promise<Product[]> {
     try {
       const searchPattern = `%${searchTerm}%`;
       const results = await query(
-        'SELECT * FROM products WHERE (product_name LIKE ? OR sku LIKE ?) AND product_status = "active" ORDER BY product_name ASC',
-        [searchPattern, searchPattern]
+        'SELECT * FROM products WHERE shop_id = ? AND (product_name LIKE ? OR sku LIKE ?) AND product_status = "active" ORDER BY product_name ASC',
+        [shopId, searchPattern, searchPattern]
       );
 
       logger.debug("Searched products", {
+        shopId,
         searchTerm,
         count: (results as any[]).length,
       });
@@ -279,7 +303,8 @@ class ProductModel {
    * Get product prices for pricing
    */
   async getProductPrices(
-    productId: number
+    productId: number,
+    shopId: number
   ): Promise<{
     product_cost: number;
     print_cost: number;
@@ -288,12 +313,12 @@ class ProductModel {
   } | null> {
     try {
       const results = await query(
-        "SELECT product_cost, print_cost, retail_price, wholesale_price FROM products WHERE product_id = ?",
-        [productId]
+        "SELECT product_cost, print_cost, retail_price, wholesale_price FROM products WHERE product_id = ? AND shop_id = ?",
+        [productId, shopId]
       );
 
       const prices = (results as any[])[0] || null;
-      logger.debug("Retrieved product prices", { productId });
+      logger.debug("Retrieved product prices", { productId, shopId });
       return prices;
     } catch (error) {
       logger.error("Error fetching product prices:", error);
@@ -304,8 +329,17 @@ class ProductModel {
   /**
    * Add color to product
    */
-  async addProductColor(productId: number, colorId: number): Promise<number> {
+  async addProductColor(productId: number, colorId: number, shopId: number): Promise<number> {
     try {
+      // Verify product belongs to shop
+      const product = await query(
+        "SELECT product_id FROM products WHERE product_id = ? AND shop_id = ?",
+        [productId, shopId]
+      );
+      if ((product as any[]).length === 0) {
+        throw new Error("Product not found or does not belong to shop");
+      }
+
       const results = await query(
         "INSERT INTO product_colors (product_id, color_id) VALUES (?, ?)",
         [productId, colorId]
@@ -315,6 +349,7 @@ class ProductModel {
       logger.debug("Color added to product", {
         productId,
         colorId,
+        shopId,
         productColorId,
       });
       return productColorId;
@@ -329,16 +364,26 @@ class ProductModel {
    */
   async removeProductColor(
     productId: number,
-    colorId: number
+    colorId: number,
+    shopId: number
   ): Promise<boolean> {
     try {
+      // Verify product belongs to shop
+      const product = await query(
+        "SELECT product_id FROM products WHERE product_id = ? AND shop_id = ?",
+        [productId, shopId]
+      );
+      if ((product as any[]).length === 0) {
+        throw new Error("Product not found or does not belong to shop");
+      }
+
       const results = await query(
         "DELETE FROM product_colors WHERE product_id = ? AND color_id = ?",
         [productId, colorId]
       );
       const affectedRows = (results as any).affectedRows;
 
-      logger.debug("Color removed from product", { productId, colorId });
+      logger.debug("Color removed from product", { productId, colorId, shopId });
       return affectedRows > 0;
     } catch (error) {
       logger.error("Error removing color from product:", error);
@@ -349,19 +394,21 @@ class ProductModel {
   /**
    * Get all colors for a product
    */
-  async getProductColors(productId: number): Promise<any[]> {
+  async getProductColors(productId: number, shopId: number): Promise<any[]> {
     try {
       const results = await query(
         `SELECT c.color_id, c.color_name, c.hex_code
          FROM product_colors pc
          JOIN colors c ON pc.color_id = c.color_id
-         WHERE pc.product_id = ?
+         JOIN products p ON pc.product_id = p.product_id
+         WHERE pc.product_id = ? AND p.shop_id = ?
          ORDER BY c.color_name ASC`,
-        [productId]
+        [productId, shopId]
       );
 
       logger.debug("Retrieved product colors", {
         productId,
+        shopId,
         count: (results as any[]).length,
       });
       return results as any[];
@@ -374,8 +421,17 @@ class ProductModel {
   /**
    * Add size to product
    */
-  async addProductSize(productId: number, sizeId: number): Promise<number> {
+  async addProductSize(productId: number, sizeId: number, shopId: number): Promise<number> {
     try {
+      // Verify product belongs to shop
+      const product = await query(
+        "SELECT product_id FROM products WHERE product_id = ? AND shop_id = ?",
+        [productId, shopId]
+      );
+      if ((product as any[]).length === 0) {
+        throw new Error("Product not found or does not belong to shop");
+      }
+
       const results = await query(
         "INSERT INTO product_sizes (product_id, size_id) VALUES (?, ?)",
         [productId, sizeId]
@@ -385,6 +441,7 @@ class ProductModel {
       logger.debug("Size added to product", {
         productId,
         sizeId,
+        shopId,
         productSizeId,
       });
       return productSizeId;
@@ -397,15 +454,24 @@ class ProductModel {
   /**
    * Remove size from product
    */
-  async removeProductSize(productId: number, sizeId: number): Promise<boolean> {
+  async removeProductSize(productId: number, sizeId: number, shopId: number): Promise<boolean> {
     try {
+      // Verify product belongs to shop
+      const product = await query(
+        "SELECT product_id FROM products WHERE product_id = ? AND shop_id = ?",
+        [productId, shopId]
+      );
+      if ((product as any[]).length === 0) {
+        throw new Error("Product not found or does not belong to shop");
+      }
+
       const results = await query(
         "DELETE FROM product_sizes WHERE product_id = ? AND size_id = ?",
         [productId, sizeId]
       );
       const affectedRows = (results as any).affectedRows;
 
-      logger.debug("Size removed from product", { productId, sizeId });
+      logger.debug("Size removed from product", { productId, sizeId, shopId });
       return affectedRows > 0;
     } catch (error) {
       logger.error("Error removing size from product:", error);
@@ -416,20 +482,22 @@ class ProductModel {
   /**
    * Get all sizes for a product
    */
-  async getProductSizes(productId: number): Promise<any[]> {
+  async getProductSizes(productId: number, shopId: number): Promise<any[]> {
     try {
       const results = await query(
         `SELECT s.size_id, s.size_name, st.Size_type_name as size_type
          FROM product_sizes ps
          JOIN sizes s ON ps.size_id = s.size_id
          JOIN size_type st ON s.size_type_id = st.size_type_id
-         WHERE ps.product_id = ?
+         JOIN products p ON ps.product_id = p.product_id
+         WHERE ps.product_id = ? AND p.shop_id = ?
          ORDER BY s.size_name ASC`,
-        [productId]
+        [productId, shopId]
       );
 
       logger.debug("Retrieved product sizes", {
         productId,
+        shopId,
         count: (results as any[]).length,
       });
       return results as any[];
@@ -442,14 +510,14 @@ class ProductModel {
   /**
    * Get total stock quantity for a product
    */
-  async getProductStock(productId: number): Promise<number> {
+  async getProductStock(productId: number, shopId: number): Promise<number> {
     try {
       const results = await query(
-        "SELECT SUM(stock_qty) as total_stock FROM shop_product_stock WHERE product_id = ?",
-        [productId]
+        "SELECT SUM(stock_qty) as total_stock FROM shop_product_stock WHERE product_id = ? AND shop_id = ?",
+        [productId, shopId]
       );
       const totalStock = (results as any)[0].total_stock || 0;
-      logger.debug("Retrieved product stock", { productId, totalStock });
+      logger.debug("Retrieved product stock", { productId, shopId, totalStock });
       return totalStock;
     } catch (error) {
       logger.error("Error fetching product stock:", error);
@@ -464,12 +532,10 @@ class ProductModel {
     productId: number,
     sizeId: number,
     colorId: number,
-    quantity: number
+    quantity: number,
+    shopId: number
   ): Promise<boolean> {
     try {
-      // For now, we assume a single shop with ID 1
-      const shopId = 1;
-
       const results = await query(
         `INSERT INTO shop_product_stock (shop_id, product_id, size_id, color_id, stock_qty, created_at)
          VALUES (?, ?, ?, ?, ?, NOW())
@@ -483,6 +549,7 @@ class ProductModel {
         sizeId,
         colorId,
         quantity,
+        shopId,
         affectedRows,
       });
       return affectedRows > 0;
@@ -495,16 +562,17 @@ class ProductModel {
   /**
    * Clear all stock entries for a product
    */
-  async clearProductStock(productId: number): Promise<boolean> {
+  async clearProductStock(productId: number, shopId: number): Promise<boolean> {
     try {
       const results = await query(
-        "DELETE FROM shop_product_stock WHERE product_id = ?",
-        [productId]
+        "DELETE FROM shop_product_stock WHERE product_id = ? AND shop_id = ?",
+        [productId, shopId]
       );
 
       const affectedRows = (results as any).affectedRows;
       logger.debug("Product stock cleared", {
         productId,
+        shopId,
         affectedRows,
       });
       return true;
@@ -517,16 +585,16 @@ class ProductModel {
   /**
    * Get product with all details (colors, sizes, category)
    */
-  async getProductWithDetails(productId: number): Promise<any> {
+  async getProductWithDetails(productId: number, shopId: number): Promise<any> {
     try {
-      const product = await this.getProductById(productId);
+      const product = await this.getProductById(productId, shopId);
       if (!product) return null;
 
-      const colors = await this.getProductColors(productId);
-      const sizes = await this.getProductSizes(productId);
-      const stock = await this.getProductStock(productId);
+      const colors = await this.getProductColors(productId, shopId);
+      const sizes = await this.getProductSizes(productId, shopId);
+      const stock = await this.getProductStock(productId, shopId);
 
-      logger.debug("Retrieved product with details", { productId });
+      logger.debug("Retrieved product with details", { productId, shopId });
       return { ...product, colors, sizes, stock };
     } catch (error) {
       logger.error("Error fetching product with details:", error);

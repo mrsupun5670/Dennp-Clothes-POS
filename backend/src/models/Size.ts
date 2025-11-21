@@ -8,6 +8,7 @@ import { logger } from '../utils/logger';
 
 export interface Size {
   size_id: number;
+  shop_id: number;
   size_name: string;
   size_type_id: number;
 }
@@ -19,12 +20,12 @@ export interface SizeType {
 
 class SizeModel {
   /**
-   * Get all sizes
+   * Get all sizes for a shop
    */
-  async getAllSizes(): Promise<Size[]> {
+  async getAllSizes(shopId: number): Promise<Size[]> {
     try {
-      const results = await query('SELECT * FROM sizes ORDER BY size_name ASC');
-      logger.info('Retrieved all sizes', { count: (results as any[]).length });
+      const results = await query('SELECT * FROM sizes WHERE shop_id = ? ORDER BY size_name ASC', [shopId]);
+      logger.info('Retrieved all sizes', { shopId, count: (results as any[]).length });
       return results as Size[];
     } catch (error) {
       logger.error('Error fetching all sizes:', error);
@@ -35,11 +36,11 @@ class SizeModel {
   /**
    * Get size by ID
    */
-  async getSizeById(sizeId: number): Promise<Size | null> {
+  async getSizeById(sizeId: number, shopId: number): Promise<Size | null> {
     try {
-      const results = await query('SELECT * FROM sizes WHERE size_id = ?', [sizeId]);
+      const results = await query('SELECT * FROM sizes WHERE size_id = ? AND shop_id = ?', [sizeId, shopId]);
       const size = (results as Size[])[0] || null;
-      logger.debug('Retrieved size by ID', { sizeId });
+      logger.debug('Retrieved size by ID', { sizeId, shopId });
       return size;
     } catch (error) {
       logger.error('Error fetching size by ID:', error);
@@ -50,10 +51,10 @@ class SizeModel {
   /**
    * Get sizes by size type
    */
-  async getSizesByType(sizeTypeId: number): Promise<Size[]> {
+  async getSizesByType(sizeTypeId: number, shopId: number): Promise<Size[]> {
     try {
-      const results = await query('SELECT * FROM sizes WHERE size_type_id = ? ORDER BY size_name ASC', [sizeTypeId]);
-      logger.debug('Retrieved sizes by type', { sizeTypeId, count: (results as any[]).length });
+      const results = await query('SELECT * FROM sizes WHERE size_type_id = ? AND shop_id = ? ORDER BY size_name ASC', [sizeTypeId, shopId]);
+      logger.debug('Retrieved sizes by type', { sizeTypeId, shopId, count: (results as any[]).length });
       return results as Size[];
     } catch (error) {
       logger.error('Error fetching sizes by type:', error);
@@ -64,12 +65,12 @@ class SizeModel {
   /**
    * Create new size
    */
-  async createSize(sizeName: string, sizeTypeId: number): Promise<number> {
+  async createSize(shopId: number, sizeName: string, sizeTypeId: number): Promise<number> {
     try {
-      const results = await query('INSERT INTO sizes (size_name, size_type_id) VALUES (?, ?)', [sizeName, sizeTypeId]);
+      const results = await query('INSERT INTO sizes (shop_id, size_name, size_type_id) VALUES (?, ?, ?)', [shopId, sizeName, sizeTypeId]);
 
       const sizeId = (results as any).insertId;
-      logger.info('Size created successfully', { sizeId, sizeName });
+      logger.info('Size created successfully', { sizeId, shopId, sizeName });
       return sizeId;
     } catch (error) {
       logger.error('Error creating size:', error);
@@ -80,8 +81,18 @@ class SizeModel {
   /**
    * Update size
    */
-  async updateSize(sizeId: number, sizeName?: string, sizeTypeId?: number): Promise<boolean> {
+  async updateSize(sizeId: number, shopId: number, sizeName?: string, sizeTypeId?: number): Promise<boolean> {
     try {
+      // Verify ownership first
+      const ownership = await query(
+        'SELECT size_id FROM sizes WHERE size_id = ? AND shop_id = ?',
+        [sizeId, shopId]
+      );
+      if ((ownership as any[]).length === 0) {
+        logger.warn('Size not found or does not belong to shop', { sizeId, shopId });
+        return false;
+      }
+
       const fields: string[] = [];
       const values: any[] = [];
 
@@ -98,11 +109,12 @@ class SizeModel {
       if (fields.length === 0) return false;
 
       values.push(sizeId);
+      values.push(shopId);
 
-      const results = await query(`UPDATE sizes SET ${fields.join(', ')} WHERE size_id = ?`, values);
+      const results = await query(`UPDATE sizes SET ${fields.join(', ')} WHERE size_id = ? AND shop_id = ?`, values);
       const affectedRows = (results as any).affectedRows;
 
-      logger.info('Size updated successfully', { sizeId, affectedRows });
+      logger.info('Size updated successfully', { sizeId, shopId, affectedRows });
       return affectedRows > 0;
     } catch (error) {
       logger.error('Error updating size:', error);
@@ -113,12 +125,12 @@ class SizeModel {
   /**
    * Delete size
    */
-  async deleteSize(sizeId: number): Promise<boolean> {
+  async deleteSize(sizeId: number, shopId: number): Promise<boolean> {
     try {
-      const results = await query('DELETE FROM sizes WHERE size_id = ?', [sizeId]);
+      const results = await query('DELETE FROM sizes WHERE size_id = ? AND shop_id = ?', [sizeId, shopId]);
       const affectedRows = (results as any).affectedRows;
 
-      logger.info('Size deleted', { sizeId });
+      logger.info('Size deleted', { sizeId, shopId });
       return affectedRows > 0;
     } catch (error) {
       logger.error('Error deleting size:', error);
@@ -158,16 +170,18 @@ class SizeModel {
   /**
    * Get sizes with size type details
    */
-  async getSizesWithType(): Promise<any[]> {
+  async getSizesWithType(shopId: number): Promise<any[]> {
     try {
       const results = await query(
-        `SELECT s.size_id, s.size_name, s.size_type_id, st.Size_type_name
+        `SELECT s.size_id, s.shop_id, s.size_name, s.size_type_id, st.Size_type_name
          FROM sizes s
          JOIN size_type st ON s.size_type_id = st.size_type_id
-         ORDER BY st.Size_type_name ASC, s.size_name ASC`
+         WHERE s.shop_id = ?
+         ORDER BY st.Size_type_name ASC, s.size_name ASC`,
+        [shopId]
       );
 
-      logger.debug('Retrieved sizes with type', { count: (results as any[]).length });
+      logger.debug('Retrieved sizes with type', { shopId, count: (results as any[]).length });
       return results as any[];
     } catch (error) {
       logger.error('Error fetching sizes with type:', error);

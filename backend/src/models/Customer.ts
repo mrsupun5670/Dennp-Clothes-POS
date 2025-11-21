@@ -8,6 +8,7 @@ import { logger } from '../utils/logger';
 
 export interface Customer {
   customer_id: number;
+  shop_id: number;
   first_name: string;
   last_name: string;
   mobile: string;
@@ -20,12 +21,12 @@ export interface Customer {
 
 class CustomerModel {
   /**
-   * Get all customers
+   * Get all customers for a shop
    */
-  async getAllCustomers(): Promise<Customer[]> {
+  async getAllCustomers(shopId: number): Promise<Customer[]> {
     try {
-      const results = await query('SELECT * FROM customers ORDER BY created_at DESC');
-      logger.info('Retrieved all customers', { count: (results as any[]).length });
+      const results = await query('SELECT * FROM customers WHERE shop_id = ? ORDER BY created_at DESC', [shopId]);
+      logger.info('Retrieved all customers', { shopId, count: (results as any[]).length });
       return results as Customer[];
     } catch (error) {
       logger.error('Error fetching all customers:', error);
@@ -36,11 +37,11 @@ class CustomerModel {
   /**
    * Get customer by ID
    */
-  async getCustomerById(customerId: number): Promise<Customer | null> {
+  async getCustomerById(customerId: number, shopId: number): Promise<Customer | null> {
     try {
-      const results = await query('SELECT * FROM customers WHERE customer_id = ?', [customerId]);
+      const results = await query('SELECT * FROM customers WHERE customer_id = ? AND shop_id = ?', [customerId, shopId]);
       const customer = (results as Customer[])[0] || null;
-      logger.debug('Retrieved customer by ID', { customerId });
+      logger.debug('Retrieved customer by ID', { customerId, shopId });
       return customer;
     } catch (error) {
       logger.error('Error fetching customer by ID:', error);
@@ -51,11 +52,11 @@ class CustomerModel {
   /**
    * Get customer by mobile number
    */
-  async getCustomerByMobile(mobile: string): Promise<Customer | null> {
+  async getCustomerByMobile(mobile: string, shopId: number): Promise<Customer | null> {
     try {
-      const results = await query('SELECT * FROM customers WHERE mobile = ?', [mobile]);
+      const results = await query('SELECT * FROM customers WHERE mobile = ? AND shop_id = ?', [mobile, shopId]);
       const customer = (results as Customer[])[0] || null;
-      logger.debug('Retrieved customer by mobile', { mobile });
+      logger.debug('Retrieved customer by mobile', { mobile, shopId });
       return customer;
     } catch (error) {
       logger.error('Error fetching customer by mobile:', error);
@@ -66,18 +67,18 @@ class CustomerModel {
   /**
    * Create new customer
    */
-  async createCustomer(customerData: Omit<Customer, 'customer_id' | 'created_at' | 'orders_count' | 'total_spent'>): Promise<number> {
+  async createCustomer(shopId: number, customerData: Omit<Customer, 'customer_id' | 'created_at' | 'orders_count' | 'total_spent' | 'shop_id'>): Promise<number> {
     try {
       const { first_name, last_name, mobile, email, customer_status } = customerData;
 
       const results = await query(
-        `INSERT INTO customers (first_name, last_name, mobile, email, customer_status, orders_count, total_spent)
-         VALUES (?, ?, ?, ?, ?, 0, 0)`,
-        [first_name, last_name, mobile, email || null, customer_status]
+        `INSERT INTO customers (shop_id, first_name, last_name, mobile, email, customer_status, orders_count, total_spent)
+         VALUES (?, ?, ?, ?, ?, ?, 0, 0)`,
+        [shopId, first_name, last_name, mobile, email || null, customer_status]
       );
 
       const customerId = (results as any).insertId;
-      logger.info('Customer created successfully', { customerId, mobile });
+      logger.info('Customer created successfully', { customerId, shopId, mobile });
       return customerId;
     } catch (error) {
       logger.error('Error creating customer:', error);
@@ -88,12 +89,22 @@ class CustomerModel {
   /**
    * Update customer
    */
-  async updateCustomer(customerId: number, customerData: Partial<Omit<Customer, 'customer_id' | 'created_at' | 'orders_count' | 'total_spent'>>): Promise<boolean> {
+  async updateCustomer(customerId: number, shopId: number, customerData: Partial<Omit<Customer, 'customer_id' | 'created_at' | 'orders_count' | 'total_spent' | 'shop_id'>>): Promise<boolean> {
     try {
+      // Verify ownership first
+      const ownership = await query(
+        'SELECT customer_id FROM customers WHERE customer_id = ? AND shop_id = ?',
+        [customerId, shopId]
+      );
+      if ((ownership as any[]).length === 0) {
+        logger.warn('Customer not found or does not belong to shop', { customerId, shopId });
+        return false;
+      }
+
       const fields: string[] = [];
       const values: any[] = [];
 
-      const updateableFields: (keyof Omit<Customer, 'customer_id' | 'created_at' | 'orders_count' | 'total_spent'>)[] = [
+      const updateableFields: (keyof Omit<Customer, 'customer_id' | 'created_at' | 'orders_count' | 'total_spent' | 'shop_id'>)[] = [
         'first_name',
         'last_name',
         'mobile',
@@ -111,11 +122,12 @@ class CustomerModel {
       if (fields.length === 0) return false;
 
       values.push(customerId);
+      values.push(shopId);
 
-      const results = await query(`UPDATE customers SET ${fields.join(', ')} WHERE customer_id = ?`, values);
+      const results = await query(`UPDATE customers SET ${fields.join(', ')} WHERE customer_id = ? AND shop_id = ?`, values);
       const affectedRows = (results as any).affectedRows;
 
-      logger.info('Customer updated successfully', { customerId, affectedRows });
+      logger.info('Customer updated successfully', { customerId, shopId, affectedRows });
       return affectedRows > 0;
     } catch (error) {
       logger.error('Error updating customer:', error);
@@ -127,17 +139,17 @@ class CustomerModel {
    * Update customer order count and total spent
    * Called after each order is created/updated
    */
-  async updateCustomerStats(customerId: number): Promise<boolean> {
+  async updateCustomerStats(customerId: number, shopId: number): Promise<boolean> {
     try {
       const results = await query(
         `UPDATE customers
-         SET orders_count = (SELECT COUNT(*) FROM orders WHERE customer_id = ?),
-             total_spent = (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE customer_id = ? AND order_status = 'completed')
-         WHERE customer_id = ?`,
-        [customerId, customerId, customerId]
+         SET orders_count = (SELECT COUNT(*) FROM orders WHERE customer_id = ? AND shop_id = ?),
+             total_spent = (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE customer_id = ? AND shop_id = ? AND order_status = 'completed')
+         WHERE customer_id = ? AND shop_id = ?`,
+        [customerId, shopId, customerId, shopId, customerId, shopId]
       );
 
-      logger.debug('Customer stats updated', { customerId });
+      logger.debug('Customer stats updated', { customerId, shopId });
       return (results as any).affectedRows > 0;
     } catch (error) {
       logger.error('Error updating customer stats:', error);
@@ -148,15 +160,15 @@ class CustomerModel {
   /**
    * Search customers by name or mobile
    */
-  async searchCustomers(searchTerm: string): Promise<Customer[]> {
+  async searchCustomers(shopId: number, searchTerm: string): Promise<Customer[]> {
     try {
       const searchPattern = `%${searchTerm}%`;
       const results = await query(
-        'SELECT * FROM customers WHERE (first_name LIKE ? OR last_name LIKE ? OR mobile LIKE ?) AND customer_status = "active" ORDER BY first_name ASC',
-        [searchPattern, searchPattern, searchPattern]
+        'SELECT * FROM customers WHERE shop_id = ? AND (first_name LIKE ? OR last_name LIKE ? OR mobile LIKE ?) AND customer_status = "active" ORDER BY first_name ASC',
+        [shopId, searchPattern, searchPattern, searchPattern]
       );
 
-      logger.debug('Searched customers', { searchTerm, count: (results as any[]).length });
+      logger.debug('Searched customers', { shopId, searchTerm, count: (results as any[]).length });
       return results as Customer[];
     } catch (error) {
       logger.error('Error searching customers:', error);
@@ -167,19 +179,19 @@ class CustomerModel {
   /**
    * Get active customers with pagination
    */
-  async getActiveCustomers(page: number = 1, limit: number = 10): Promise<{ customers: Customer[]; total: number }> {
+  async getActiveCustomers(shopId: number, page: number = 1, limit: number = 10): Promise<{ customers: Customer[]; total: number }> {
     try {
       const offset = (page - 1) * limit;
 
       const customers = await query(
-        'SELECT * FROM customers WHERE customer_status = "active" ORDER BY created_at DESC LIMIT ?, ?',
-        [offset, limit]
+        'SELECT * FROM customers WHERE shop_id = ? AND customer_status = "active" ORDER BY created_at DESC LIMIT ?, ?',
+        [shopId, offset, limit]
       );
 
-      const countResults = await query('SELECT COUNT(*) as total FROM customers WHERE customer_status = "active"');
+      const countResults = await query('SELECT COUNT(*) as total FROM customers WHERE shop_id = ? AND customer_status = "active"', [shopId]);
       const total = (countResults as any)[0].total;
 
-      logger.debug('Retrieved active customers', { page, limit, count: (customers as any[]).length, total });
+      logger.debug('Retrieved active customers', { shopId, page, limit, count: (customers as any[]).length, total });
       return { customers: customers as Customer[], total };
     } catch (error) {
       logger.error('Error fetching active customers:', error);
@@ -190,10 +202,10 @@ class CustomerModel {
   /**
    * Get top customers by spending
    */
-  async getTopCustomers(limit: number = 10): Promise<Customer[]> {
+  async getTopCustomers(shopId: number, limit: number = 10): Promise<Customer[]> {
     try {
-      const results = await query('SELECT * FROM customers ORDER BY total_spent DESC LIMIT ?', [limit]);
-      logger.debug('Retrieved top customers by spending', { limit, count: (results as any[]).length });
+      const results = await query('SELECT * FROM customers WHERE shop_id = ? ORDER BY total_spent DESC LIMIT ?', [shopId, limit]);
+      logger.debug('Retrieved top customers by spending', { shopId, limit, count: (results as any[]).length });
       return results as Customer[];
     } catch (error) {
       logger.error('Error fetching top customers:', error);
@@ -204,10 +216,10 @@ class CustomerModel {
   /**
    * Block customer (soft delete)
    */
-  async blockCustomer(customerId: number): Promise<boolean> {
+  async blockCustomer(customerId: number, shopId: number): Promise<boolean> {
     try {
-      const results = await query('UPDATE customers SET customer_status = "blocked" WHERE customer_id = ?', [customerId]);
-      logger.info('Customer blocked', { customerId });
+      const results = await query('UPDATE customers SET customer_status = "blocked" WHERE customer_id = ? AND shop_id = ?', [customerId, shopId]);
+      logger.info('Customer blocked', { customerId, shopId });
       return (results as any).affectedRows > 0;
     } catch (error) {
       logger.error('Error blocking customer:', error);

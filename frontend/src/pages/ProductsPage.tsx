@@ -1,7 +1,13 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { updateProductStock, clearProductStock } from "../services/productService";
+import {
+  updateProductStock,
+  clearProductStock,
+} from "../services/productService";
+import { useQuery } from "../hooks/useQuery";
 
-// Helper function to generate PDF-like table (using print)
+/**
+ * Global utility function for printing product reports.
+ */
 const handlePrintProducts = (products: any[]) => {
   const printWindow = window.open("", "", "width=1000,height=600");
   if (printWindow) {
@@ -66,7 +72,11 @@ const handlePrintProducts = (products: any[]) => {
   }
 };
 
+/**
+ * The main Products Page component.
+ */
 const ProductsPage: React.FC = () => {
+  // --- STATE DECLARATIONS ---
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null
   );
@@ -74,7 +84,8 @@ const ProductsPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>("name");
   const [stockFilter, setStockFilter] = useState<string>("all");
   const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>("tshirt");
+  // Default to a placeholder category ID (1)
+  const [selectedCategory, setSelectedCategory] = useState<string>("1");
   const [stockRows, setStockRows] = useState<
     { id: number; size: string; color: string; qty: number }[]
   >([]);
@@ -95,14 +106,80 @@ const ProductsPage: React.FC = () => {
     wholesalePrice: "",
   });
 
-  // Backend state
-  const [isLoading, setIsLoading] = useState(false);
-  const [dbCategories, setDbCategories] = useState<any[]>([]);
-  const [dbColors, setDbColors] = useState<any[]>([]);
-  const [dbSizes, setDbSizes] = useState<any[]>([]);
-  const [dbProducts, setDbProducts] = useState<any[]>([]);
+  // Backend state / Notifications
+  const [isSaving, setIsSaving] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
-  const [notificationType, setNotificationType] = useState<"error" | "success" | "">("");
+  const [notificationType, setNotificationType] = useState<
+    "error" | "success" | ""
+  >("");
+
+  // --- DATA FETCHING (useQuery Hooks) ---
+  const { data: dbProducts, refetch: refetchProducts } = useQuery<any[]>(
+    "products",
+    async () => {
+      const response = await fetch("http://localhost:3000/api/v1/products");
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "Failed to fetch products");
+      }
+    }
+  );
+
+  const { data: dbCategories, refetch: refetchCategories } = useQuery<any[]>(
+    "categories",
+    async () => {
+      const response = await fetch("http://localhost:3000/api/v1/categories");
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "Failed to fetch categories");
+      }
+    }
+  );
+
+  const { data: dbColors, refetch: refetchColors } = useQuery<any[]>(
+    "colors",
+    async () => {
+      const response = await fetch("http://localhost:3000/api/v1/colors");
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "Failed to fetch colors");
+      }
+    }
+  );
+
+  const { data: dbSizes, refetch: refetchSizes } = useQuery<any[]>(
+    "sizes",
+    async () => {
+      const response = await fetch("http://localhost:3000/api/v1/sizes");
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "Failed to fetch sizes");
+      }
+    }
+  );
+
+  // --- SIDE EFFECTS (useEffect) ---
+  useEffect(() => {
+    if (dbCategories && dbCategories.length > 0) {
+      setSelectedCategory(dbCategories[0].category_id.toString());
+    }
+  }, [dbCategories]);
+
+  // --- HELPER FUNCTIONS ---
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setSortBy("name");
+    setStockFilter("all");
+  };
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
@@ -110,16 +187,14 @@ const ProductsPage: React.FC = () => {
 
   const handleAddProductClick = () => {
     setShowAddProductModal(true);
-    setSelectedCategory("tshirt");
+    // Use the first category ID or default to '1'
+    setSelectedCategory(dbCategories?.[0]?.category_id.toString() || "1");
     setStockRows([{ id: 1, size: "", color: "", qty: 0 }]);
     setNextRowId(2);
     setCustomSizes([]);
     setCustomColors([]);
-  };
-
-  const handleCloseModal = () => {
-    setShowAddProductModal(false);
     setIsEditMode(false);
+    setSelectedProductId(null); // Clear selected ID for "Add"
     setFormData({
       code: "",
       name: "",
@@ -130,28 +205,59 @@ const ProductsPage: React.FC = () => {
     });
   };
 
+  const handleCloseModal = () => {
+    setShowAddProductModal(false);
+    setIsEditMode(false);
+    setSelectedProductId(null); // Clear selected ID on close
+    setFormData({
+      code: "",
+      name: "",
+      costPrice: "",
+      printCost: "",
+      retailPrice: "",
+      wholesalePrice: "",
+    });
+    setStockRows([]);
+    setCustomSizes([]);
+    setCustomColors([]);
+    setNotificationMessage("");
+    setNotificationType("");
+    setIsSaving(false);
+  };
+
+  /**
+   * FIX: Now sets selectedProductId correctly and uses the category ID from the product.
+   * NOTE: The stock logic remains heuristic as the full variant data is not provided
+   * in the original `dbProducts` map structure (it only sums the total qty).
+   */
   const handleEditProduct = (product: any) => {
     setIsEditMode(true);
+    setSelectedProductId(product.id); // FIX: Set the selected ID here
     setShowAddProductModal(true);
-    setSelectedCategory("tshirt");
+    setSelectedCategory(
+      product.category_id
+        ? product.category_id.toString()
+        : dbCategories?.[0]?.category_id.toString() || "1"
+    );
     setFormData({
       code: product.code,
       name: product.name,
       costPrice: product.cost.toString(),
       printCost: product.printCost ? product.printCost.toString() : "",
       retailPrice: product.retailPrice.toString(),
-      wholesalePrice: product.wholesalePrice.toString(),
+      wholesalePrice: product.wholesalePrice
+        ? product.wholesalePrice.toString()
+        : "",
     });
 
-    // Parse sizes and colors
-    const sizes = product.sizes.split(",").map((s: string) => s.trim());
-    const colors = product.colors.split(",").map((c: string) => c.trim());
-
-    // Create stock rows for each size/color combination with proportional qty distribution
-    const totalVariants = sizes.length * colors.length;
-    const qtyPerVariant =
-      totalVariants > 0 ? Math.floor(product.qty / totalVariants) : 0;
-    const remainder = totalVariants > 0 ? product.qty % totalVariants : 0;
+    const sizes = (product.sizes || "")
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter((s) => s);
+    const colors = (product.colors || "")
+      .split(",")
+      .map((c: string) => c.trim())
+      .filter((c) => c);
 
     const newStockRows: {
       id: number;
@@ -160,22 +266,31 @@ const ProductsPage: React.FC = () => {
       qty: number;
     }[] = [];
     let rowId = 1;
-    let qtyAdded = 0;
+
+    // Distribute total quantity (product.qty) proportionally across all existing variants
+    const totalVariants = sizes.length * colors.length;
+    const qtyPerVariant =
+      totalVariants > 0 ? Math.floor(product.qty / totalVariants) : 0;
+    let remainder = totalVariants > 0 ? product.qty % totalVariants : 0;
 
     colors.forEach((color: string) => {
       sizes.forEach((size: string) => {
-        // Distribute remainder qty to first few rows
-        const extraQty = qtyAdded < remainder ? 1 : 0;
+        const extraQty = remainder > 0 ? 1 : 0;
         newStockRows.push({
           id: rowId,
           size: size,
           color: color,
           qty: qtyPerVariant + extraQty,
         });
-        qtyAdded++;
+        if (remainder > 0) remainder--;
         rowId++;
       });
     });
+
+    if (newStockRows.length === 0) {
+      newStockRows.push({ id: 1, size: "", color: "", qty: 0 });
+      rowId = 2;
+    }
 
     setStockRows(newStockRows);
     setNextRowId(rowId);
@@ -185,81 +300,16 @@ const ProductsPage: React.FC = () => {
 
   // Get all available sizes (predefined + custom)
   const getAllSizes = () => [
-    ...dbSizes.map((s) => s.size_name),
+    ...(dbSizes?.map((s) => s.size_name) || []),
     ...customSizes,
   ];
 
   // Get all available colors (predefined + custom)
   const getAllColors = () => [
-    ...dbColors.map((c) => c.color_name),
+    ...(dbColors?.map((c) => c.color_name) || []),
     ...customColors,
   ];
 
-  // ===================== BACKEND API FUNCTIONS =====================
-
-  /**
-   * Fetch all products from backend
-   */
-  const fetchProducts = async () => {
-    try {
-      const response = await fetch("http://localhost:3000/api/v1/products");
-      const result = await response.json();
-      if (result.success) {
-        setDbProducts(result.data);
-      }
-    } catch (error) {
-      console.error("Error fetching products:", error);
-    }
-  };
-
-  /**
-   * Fetch all categories from backend
-   */
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch("http://localhost:3000/api/v1/categories");
-      const result = await response.json();
-      if (result.success) {
-        setDbCategories(result.data);
-      }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    }
-  };
-
-  /**
-   * Fetch all colors from backend
-   */
-  const fetchColors = async () => {
-    try {
-      const response = await fetch("http://localhost:3000/api/v1/colors");
-      const result = await response.json();
-      if (result.success) {
-        setDbColors(result.data);
-      }
-    } catch (error) {
-      console.error("Error fetching colors:", error);
-    }
-  };
-
-  /**
-   * Fetch all sizes from backend
-   */
-  const fetchSizes = async () => {
-    try {
-      const response = await fetch("http://localhost:3000/api/v1/sizes");
-      const result = await response.json();
-      if (result.success) {
-        setDbSizes(result.data);
-      }
-    } catch (error) {
-      console.error("Error fetching sizes:", error);
-    }
-  };
-
-  /**
-   * Create or update product in backend
-   */
   const showNotification = (message: string, type: "error" | "success") => {
     setNotificationMessage(message);
     setNotificationType(type);
@@ -269,67 +319,72 @@ const ProductsPage: React.FC = () => {
     }, 3000);
   };
 
+  /**
+   * FIX: Improved API saving logic to get and use IDs of newly created colors/sizes
+   * immediately without waiting for a re-fetch of the full lists.
+   */
   const handleSaveProduct = async () => {
-    // === SYNCHRONOUS VALIDATION FIRST - NEVER CLOSE MODAL ON THESE ===
-
-    // Validate form data
+    // === SYNCHRONOUS VALIDATION ===
     if (!formData.code.trim()) {
       showNotification("Product Code is required", "error");
-      return; // Exit early, modal stays open
+      return;
     }
     if (!formData.name.trim()) {
       showNotification("Product Name is required", "error");
-      return; // Exit early, modal stays open
+      return;
     }
-    if (!formData.costPrice || parseFloat(formData.costPrice) < 0) {
-      showNotification("Valid Product Cost is required", "error");
-      return; // Exit early, modal stays open
-    }
-    if (!formData.printCost || parseFloat(formData.printCost) < 0) {
-      showNotification("Valid Print Cost is required", "error");
-      return; // Exit early, modal stays open
-    }
-    if (!formData.retailPrice || parseFloat(formData.retailPrice) < 0) {
-      showNotification("Valid Retail Price is required", "error");
-      return; // Exit early, modal stays open
-    }
+    const cost = parseFloat(formData.costPrice);
+    const printCost = parseFloat(formData.printCost || "0");
+    const retailPrice = parseFloat(formData.retailPrice);
+    const wholesalePrice = parseFloat(formData.wholesalePrice || "0");
 
-    // Validate stock rows
+    if (isNaN(cost) || cost < 0) {
+      showNotification("Valid Product Cost is required (>= 0)", "error");
+      return;
+    }
+    if (isNaN(printCost) || printCost < 0) {
+      showNotification("Valid Print Cost is required (>= 0)", "error");
+      return;
+    }
+    if (isNaN(retailPrice) || retailPrice < 0) {
+      showNotification("Valid Retail Price is required (>= 0)", "error");
+      return;
+    }
     if (stockRows.length === 0) {
       showNotification("Please add at least one stock entry.", "error");
-      return; // Exit early, modal stays open
+      return;
     }
-
-    // Check for incomplete rows
     const hasIncompleteRows = stockRows.some((row) => !row.size || !row.color);
     if (hasIncompleteRows) {
-      showNotification("Please fill all size/color combinations for stock entries.", "error");
-      return; // Exit early, modal stays open
+      showNotification(
+        "Please fill all size/color combinations for stock entries.",
+        "error"
+      );
+      return;
     }
-
-    // Check for rows with zero quantity
-    const hasZeroQtyRows = stockRows.some((row) => row.qty <= 0);
-    if (hasZeroQtyRows) {
-      showNotification("All stock entries must have a quantity greater than 0.", "error");
-      return; // Exit early, modal stays open
+    const totalQty = stockRows.reduce((sum, row) => sum + row.qty, 0);
+    if (!isEditMode && totalQty <= 0) {
+      showNotification(
+        "A new product must have a total quantity greater than 0.",
+        "error"
+      );
+      return;
     }
+    // === END OF VALIDATION ===
 
-    // === ALL VALIDATION PASSED - NOW ATTEMPT SAVE ===
-    setIsLoading(true);
+    setIsSaving(true);
 
     try {
-      // Create product first
+      // 1. Prepare Product Payload and Get/Update Product ID
       const productPayload = {
         sku: formData.code,
         product_name: formData.name,
-        category_id: 1, // Default category - you should get this from the selected category
+        category_id: parseInt(selectedCategory),
         description: "",
-        product_cost: parseFloat(formData.costPrice),
-        print_cost: parseFloat(formData.printCost),
-        retail_price: parseFloat(formData.retailPrice),
-        wholesale_price: formData.wholesalePrice
-          ? parseFloat(formData.wholesalePrice)
-          : null,
+        product_cost: cost,
+        print_cost: printCost,
+        retail_price: retailPrice,
+        wholesale_price: wholesalePrice || null,
         product_status: "active",
       };
 
@@ -345,12 +400,9 @@ const ProductsPage: React.FC = () => {
             body: JSON.stringify(productPayload),
           }
         );
-
         const updateResult = await updateResponse.json();
         if (!updateResult.success) {
-          showNotification(updateResult.error || "Failed to update product", "error");
-          setIsLoading(false);
-          return; // Exit early, modal stays open on API error
+          throw new Error(updateResult.error || "Failed to update product");
         }
         productId = selectedProductId;
       } else {
@@ -363,32 +415,30 @@ const ProductsPage: React.FC = () => {
             body: JSON.stringify(productPayload),
           }
         );
-
         const createResult = await createResponse.json();
-        if (!createResult.success) {
-          showNotification(createResult.error || "Failed to create product", "error");
-          setIsLoading(false);
-          return; // Exit early, modal stays open on API error
+        if (!createResult.success || !createResult.data.product_id) {
+          throw new Error(createResult.error || "Failed to create product");
         }
         productId = createResult.data.product_id;
       }
 
-      // Add colors and sizes to the product
-      const colors = stockRows
+      // 2. Process Colors and Sizes (Ensure existence and retrieve IDs)
+      const uniqueColors = stockRows
         .map((row) => row.color)
         .filter((c, i, a) => a.indexOf(c) === i);
-      const sizes = stockRows
+      const uniqueSizes = stockRows
         .map((row) => row.size)
         .filter((s, i, a) => a.indexOf(s) === i);
 
-      // Add colors
-      for (const colorName of colors) {
-        let colorId = dbColors.find(
-          (c) => c.color_name.toLowerCase() === colorName.toLowerCase()
-        )?.color_id;
+      const colorIdMap = new Map<string, number>();
+      const sizeIdMap = new Map<string, number>();
 
+      dbColors?.forEach((c) => colorIdMap.set(c.color_name, c.color_id));
+      dbSizes?.forEach((s) => sizeIdMap.set(s.size_name, s.size_id));
+
+      for (const colorName of uniqueColors) {
+        let colorId = colorIdMap.get(colorName);
         if (!colorId) {
-          // Create new color if it doesn't exist
           const colorResponse = await fetch(
             "http://localhost:3000/api/v1/colors",
             {
@@ -397,22 +447,13 @@ const ProductsPage: React.FC = () => {
               body: JSON.stringify({ color_name: colorName }),
             }
           );
-
           const colorResult = await colorResponse.json();
-          if (colorResult.success) {
+          if (colorResult.success && colorResult.data.color_id) {
             colorId = colorResult.data.color_id;
-          } else {
-            console.error("Failed to create color:", colorName);
-            continue;
+            colorIdMap.set(colorName, colorId);
           }
         }
-
-        // Check if color is already associated with product
-        const hasColor = dbProducts
-          .find((p) => p.product_id === productId)
-          ?.colors?.some((c: any) => c.color_id === colorId);
-
-        if (!hasColor) {
+        if (colorId) {
           await fetch(
             `http://localhost:3000/api/v1/products/${productId}/colors`,
             {
@@ -424,36 +465,24 @@ const ProductsPage: React.FC = () => {
         }
       }
 
-      // Add sizes (similar logic)
-      for (const sizeName of sizes) {
-        let sizeId = dbSizes.find((s) => s.size_name === sizeName)?.size_id;
-
+      for (const sizeName of uniqueSizes) {
+        let sizeId = sizeIdMap.get(sizeName);
         if (!sizeId) {
-          // Create new size if it doesn't exist
           const sizeResponse = await fetch(
             "http://localhost:3000/api/v1/sizes",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ size_name: sizeName, size_type_id: 1 }), // Default size type
+              body: JSON.stringify({ size_name: sizeName, size_type_id: 1 }),
             }
           );
-
           const sizeResult = await sizeResponse.json();
-          if (sizeResult.success) {
+          if (sizeResult.success && sizeResult.data.size_id) {
             sizeId = sizeResult.data.size_id;
-          } else {
-            console.error("Failed to create size:", sizeName);
-            continue;
+            sizeIdMap.set(sizeName, sizeId);
           }
         }
-
-        // Check if size is already associated with product
-        const hasSize = dbProducts
-          .find((p) => p.product_id === productId)
-          ?.sizes?.some((s: any) => s.size_id === sizeId);
-
-        if (!hasSize) {
+        if (sizeId) {
           await fetch(
             `http://localhost:3000/api/v1/products/${productId}/sizes`,
             {
@@ -465,119 +494,132 @@ const ProductsPage: React.FC = () => {
         }
       }
 
-      // Clear existing stock entries for this product first (to remove deleted rows)
+      // 3. Clear existing stock and Update new stock
       if (isEditMode) {
         try {
           await clearProductStock(productId);
         } catch (error) {
           console.error("Failed to clear product stock:", error);
-          // Continue with update even if clear fails
         }
       }
 
-      // Update stock for each row
       for (const row of stockRows) {
-        const sizeId = dbSizes.find((s) => s.size_name === row.size)?.size_id;
-        const colorId = dbColors.find((c) => c.color_name === row.color)?.color_id;
+        const sizeId = sizeIdMap.get(row.size);
+        const colorId = colorIdMap.get(row.color);
 
-        console.log("Updating stock:", { productId, sizeId, colorId, qty: row.qty });
         if (productId && sizeId && colorId && row.qty > 0) {
           try {
             await updateProductStock(productId, sizeId, colorId, row.qty);
           } catch (error) {
-            console.error("Failed to update stock for a row:", { productId, sizeId, colorId, error });
+            console.error("Failed to update stock for a row:", {
+              productId,
+              sizeId,
+              colorId,
+              error,
+            });
+            showNotification("Some stock entries failed to save.", "error");
           }
         }
       }
 
-      // === SUCCESS - ONLY CLOSE MODAL HERE ===
-      setIsLoading(false);
-      showNotification(isEditMode ? "Product updated successfully!" : "Product created successfully!", "success");
-      fetchProducts(); // Refresh product list
-      handleCloseModal(); // ONLY close modal on complete success
+      // 4. Success and Cleanup
+      setIsSaving(false);
+      showNotification(
+        isEditMode
+          ? "Product updated successfully!"
+          : "Product created successfully!",
+        "success"
+      );
 
+      // Refresh all dependent lists
+      await Promise.all([refetchProducts(), refetchColors(), refetchSizes()]);
+
+      handleCloseModal();
     } catch (error: any) {
-      // === ERROR - KEEP MODAL OPEN ===
-      setIsLoading(false);
-      showNotification(error.message || "An error occurred while saving the product", "error");
-      // DO NOT close modal on error - user needs to see their data
+      setIsSaving(false);
+      showNotification(
+        error.message || "An error occurred while saving the product",
+        "error"
+      );
     }
   };
 
-  // Load data from backend on component mount
-  useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-    fetchColors();
-    fetchSizes();
-  }, []);
-
-  // Add new stock row - Fixed to use functional updates
+  // Add new stock row - Fixed to ensure nextRowId is updated correctly
   const addStockRow = () => {
-    setStockRows((currentRows) => [
-      ...currentRows,
-      { id: nextRowId, size: "", color: "", qty: 0 },
-    ]);
-    setNextRowId((currentId) => currentId + 1);
+    setStockRows((currentRows) => {
+      const newRowId = nextRowId;
+      setNextRowId((currentId) => currentId + 1);
+      return [...currentRows, { id: newRowId, size: "", color: "", qty: 0 }];
+    });
   };
 
-  // Update stock row - Fixed to use functional updates
+  // Update stock row - Functional update
   const updateStockRow = (id: number, field: string, value: any) => {
     setStockRows((currentRows) =>
-      currentRows.map((row) => (row.id === id ? { ...row, [field]: value } : row))
+      currentRows.map((row) =>
+        row.id === id ? { ...row, [field]: value } : row
+      )
     );
   };
 
-  // Remove stock row - Fixed to prevent duplication
+  // Remove stock row - Functional update
   const removeStockRow = (id: number) => {
-    // Use functional update to ensure we're working with latest state
     setStockRows((currentRows) => {
       const filteredRows = currentRows.filter((row) => row.id !== id);
-      // Return new array reference to force React re-render
       return [...filteredRows];
     });
   };
 
   // Add custom size
   const handleAddSize = () => {
-    if (newSize && !getAllSizes().includes(newSize)) {
-      setCustomSizes([...customSizes, newSize]);
+    const trimmedSize = newSize.trim();
+    if (
+      trimmedSize &&
+      !getAllSizes().some((s) => s.toLowerCase() === trimmedSize.toLowerCase())
+    ) {
+      setCustomSizes([...customSizes, trimmedSize]);
       setNewSize("");
       setShowAddSizeModal(false);
+    } else if (trimmedSize) {
+      showNotification(`Size "${trimmedSize}" already exists.`, "error");
     }
   };
 
   // Add custom color
   const handleAddColor = () => {
-    if (newColor && !getAllColors().includes(newColor)) {
-      setCustomColors([...customColors, newColor]);
+    const trimmedColor = newColor.trim();
+    if (
+      trimmedColor &&
+      !getAllColors().some(
+        (c) => c.toLowerCase() === trimmedColor.toLowerCase()
+      )
+    ) {
+      setCustomColors([...customColors, trimmedColor]);
       setNewColor("");
       setShowAddColorModal(false);
+    } else if (trimmedColor) {
+      showNotification(`Color "${trimmedColor}" already exists.`, "error");
     }
   };
 
-  // Sample product data
-  // const allProducts = [ ... ]; // This is now removed and we will use dbProducts
-
-  // Filter and sort products based on all criteria
+  // Filter and sort products (using total_stock property from API for qty)
   const filteredAndSortedProducts = useMemo(() => {
-    // Use backend products
-    const productsToFilter = dbProducts.map((p: any) => ({
-        id: p.product_id,
-        code: p.sku,
-        name: p.product_name,
-        colors: p.colors?.map((c: any) => c.color_name).join(", ") || "N/A",
-        sizes: p.sizes?.map((s: any) => s.size_name).join(", ") || "N/A",
-        cost: p.product_cost || 0,
-        printCost: p.print_cost || 0,
-        qty: p.stock || 0,
-        retailPrice: p.retail_price,
-        wholesalePrice: p.wholesale_price || 0,
-      }));
+    const productsToFilter = (dbProducts || []).map((p: any) => ({
+      id: p.product_id,
+      code: p.sku,
+      name: p.product_name,
+      colors: p.colors?.map((c: any) => c.color_name).join(", ") || "N/A",
+      sizes: p.sizes?.map((s: any) => s.size_name).join(", ") || "N/A",
+      cost: p.product_cost || 0,
+      printCost: p.print_cost || 0,
+      qty: p.total_stock || 0, // Assuming API returns total stock as 'total_stock'
+      retailPrice: p.retail_price,
+      wholesalePrice: p.wholesale_price || 0,
+      category_id: p.category_id,
+    }));
 
     let result = [...productsToFilter];
 
-    // Search filter - by code, name, or color
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -588,7 +630,6 @@ const ProductsPage: React.FC = () => {
       );
     }
 
-    // Stock status filter
     if (stockFilter === "low") {
       result = result.filter((p) => p.qty <= 3 && p.qty > 0);
     } else if (stockFilter === "out") {
@@ -597,7 +638,6 @@ const ProductsPage: React.FC = () => {
       result = result.filter((p) => p.qty > 0);
     }
 
-    // Sort products
     if (sortBy === "name") {
       result.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === "code") {
@@ -617,26 +657,15 @@ const ProductsPage: React.FC = () => {
     return result;
   }, [searchQuery, sortBy, stockFilter, dbProducts]);
 
-  const totalProducts = filteredAndSortedProducts.length;
-
-  const handleResetFilters = () => {
-    setSearchQuery("");
-    setSortBy("name");
-    setStockFilter("all");
-  };
-
-
+  // --- RENDER (JSX) ---
   return (
-    <div className="space-y-6 h-full flex flex-col">
-      {/* Header Section */}
-      <div className="flex justify-between items-center">
+    <div className="flex flex-col h-full p-6 bg-gray-900 text-white space-y-6">
+      {/* Header & Main Actions */}
+      <div className="flex justify-between items-start border-b border-gray-700 pb-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-red-500">Stock</h1>
-            <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
-              {totalProducts} items
-            </span>
-          </div>
+          <h1 className="text-3xl font-bold text-red-500">
+            📦 Product Catalog
+          </h1>
           <p className="text-gray-400 mt-2">
             Manage your stock catalog and inventory
           </p>
@@ -711,7 +740,7 @@ const ProductsPage: React.FC = () => {
             </select>
           </div>
 
-          <div>
+          <div className="col-span-2 md:col-span-1">
             <label className="block text-xs font-semibold text-gray-400 mb-2">
               Action
             </label>
@@ -823,11 +852,13 @@ const ProductsPage: React.FC = () => {
             <div className="p-6 space-y-5">
               {/* Notification Display */}
               {notificationMessage && (
-                <div className={`p-3 rounded-lg text-sm font-semibold ${
-                  notificationType === "error"
-                    ? "bg-red-900/30 border border-red-600/50 text-red-400"
-                    : "bg-green-900/30 border border-green-600/50 text-green-400"
-                }`}>
+                <div
+                  className={`p-3 rounded-lg text-sm font-semibold ${
+                    notificationType === "error"
+                      ? "bg-red-900/30 border border-red-600/50 text-red-400"
+                      : "bg-green-900/30 border border-green-600/50 text-green-400"
+                  }`}
+                >
                   {notificationMessage}
                 </div>
               )}
@@ -861,7 +892,7 @@ const ProductsPage: React.FC = () => {
                     onChange={(e) => handleCategoryChange(e.target.value)}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
                   >
-                    {dbCategories.map((cat) => (
+                    {(dbCategories || []).map((cat) => (
                       <option key={cat.category_id} value={cat.category_id}>
                         {cat.category_name}
                       </option>
@@ -962,111 +993,128 @@ const ProductsPage: React.FC = () => {
                 </label>
 
                 {/* Stock Rows Table with Scroll */}
-                                <div className="mb-4 bg-gray-900/50 border border-gray-700 rounded-lg p-4 h-64 overflow-y-auto">
-                                  {stockRows.length === 0 ? (
-                                    <p className="text-sm text-gray-400 text-center py-6">No stock entries yet. Click "Add Row" to start adding stock.</p>
-                                  ) : (
-                                    <div className="space-y-3">
-                                      {stockRows.map((row) => (
-                                        <div
-                                          key={row.id}
-                                          className="flex gap-2 items-end bg-gray-800/50 border border-gray-700 rounded-lg p-3 hover:border-red-600/50 transition-colors"
-                                        >
-                                          {/* Size Dropdown */}
-                                          <div className="flex-1 min-w-[120px]">
-                                            <label className="block text-xs text-gray-400 font-semibold mb-1">Size</label>
-                                            <select
-                                              value={row.size}
-                                              onChange={(e) => updateStockRow(row.id, "size", e.target.value)}
-                                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
-                                            >
-                                              <option value="">Select Size</option>
-                                              {getAllSizes().map((size) => (
-                                                <option key={size} value={size}>
-                                                  {size}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          </div>
-                
-                                          {/* Color Dropdown */}
-                                          <div className="flex-1 min-w-[120px]">
-                                            <label className="block text-xs text-gray-400 font-semibold mb-1">Color</label>
-                                            <select
-                                              value={row.color}
-                                              onChange={(e) => updateStockRow(row.id, "color", e.target.value)}
-                                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
-                                            >
-                                              <option value="">Select Color</option>
-                                              {getAllColors().map((color) => (
-                                                <option key={color} value={color}>
-                                                  {color}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          </div>
-                
-                                          {/* Quantity Input */}
-                                          <div className="flex-1 min-w-[100px]">
-                                            <label className="block text-xs text-gray-400 font-semibold mb-1">Qty</label>
-                                            <input
-                                              type="number"
-                                              min="0"
-                                              step="1"
-                                              value={row.qty}
-                                              onChange={(e) => {
-                                                let value = e.target.value;
-                                                if (value.startsWith("0") && value.length > 1) {
-                                                  value = value.replace(/^0+/, "");
-                                                }
-                                                updateStockRow(row.id, "qty", parseInt(value) || 0);
-                                              }}
-                                              placeholder="0"
-                                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none text-center"
-                                            />
-                                          </div>
-                
-                                          {/* Delete Row Button */}
-                                          <button
-                                            onClick={() => removeStockRow(row.id)}
-                                            className="px-3 py-2 bg-red-900/30 border border-red-600/50 text-red-400 text-sm rounded-lg hover:bg-red-900/50 transition-colors font-semibold"
-                                            title="Delete this row"
-                                          >
-                                            Delete
-                                          </button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex gap-2">
-                                  {/* Add Size Button */}
-                                  <button
-                                    onClick={() => setShowAddSizeModal(true)}
-                                    className="px-3 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg hover:border-red-500 hover:text-red-400 transition-colors font-semibold"
-                                    title="Add custom size"
-                                  >
-                                    + Add Custom Size
-                                  </button>
-                
-                                  {/* Add Color Button */}
-                                  <button
-                                    onClick={() => setShowAddColorModal(true)}
-                                    className="px-3 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg hover:border-red-500 hover:text-red-400 transition-colors font-semibold"
-                                    title="Add custom color"
-                                  >
-                                    + Add Custom Color
-                                  </button>
-                                </div>
-                
-                                {/* Add Row Button */}
-                                <button
-                                  onClick={addStockRow}
-                                  className="w-full mt-4 px-4 py-2 bg-gray-700 border-2 border-dashed border-red-600/50 text-red-400 rounded-lg hover:border-red-500 hover:bg-gray-700/80 transition-colors font-semibold text-sm"
-                                >
-                                  + Add Row
-                                </button>
-                              </div>
+                <div className="mb-4 bg-gray-900/50 border border-gray-700 rounded-lg p-4 h-64 overflow-y-auto">
+                  {stockRows.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-6">
+                      No stock entries yet. Click "Add Row" to start adding
+                      stock.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {stockRows.map((row) => (
+                        <div
+                          key={row.id}
+                          className="flex gap-2 items-end bg-gray-800/50 border border-gray-700 rounded-lg p-3 hover:border-red-600/50 transition-colors"
+                        >
+                          {/* Size Dropdown */}
+                          <div className="flex-1 min-w-[120px]">
+                            <label className="block text-xs text-gray-400 font-semibold mb-1">
+                              Size
+                            </label>
+                            <select
+                              value={row.size}
+                              onChange={(e) =>
+                                updateStockRow(row.id, "size", e.target.value)
+                              }
+                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
+                            >
+                              <option value="">Select Size</option>
+                              {getAllSizes().map((size) => (
+                                <option key={size} value={size}>
+                                  {size}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Color Dropdown */}
+                          <div className="flex-1 min-w-[120px]">
+                            <label className="block text-xs text-gray-400 font-semibold mb-1">
+                              Color
+                            </label>
+                            <select
+                              value={row.color}
+                              onChange={(e) =>
+                                updateStockRow(row.id, "color", e.target.value)
+                              }
+                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
+                            >
+                              <option value="">Select Color</option>
+                              {getAllColors().map((color) => (
+                                <option key={color} value={color}>
+                                  {color}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Quantity Input */}
+                          <div className="flex-1 min-w-[100px]">
+                            <label className="block text-xs text-gray-400 font-semibold mb-1">
+                              Qty
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={row.qty === 0 ? "" : row.qty}
+                              onChange={(e) => {
+                                let value = e.target.value;
+                                if (value.startsWith("0") && value.length > 1) {
+                                  value = value.replace(/^0+/, "");
+                                }
+                                updateStockRow(
+                                  row.id,
+                                  "qty",
+                                  parseInt(value) || 0
+                                );
+                              }}
+                              placeholder="0"
+                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none text-center"
+                            />
+                          </div>
+
+                          {/* Delete Row Button */}
+                          <button
+                            onClick={() => removeStockRow(row.id)}
+                            className="px-3 py-2 bg-red-900/30 border border-red-600/50 text-red-400 text-sm rounded-lg hover:bg-red-900/50 transition-colors font-semibold"
+                            title="Delete this row"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {/* Add Size Button */}
+                  <button
+                    onClick={() => setShowAddSizeModal(true)}
+                    className="px-3 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg hover:border-red-500 hover:text-red-400 transition-colors font-semibold"
+                    title="Add custom size"
+                  >
+                    + Add Custom Size
+                  </button>
+
+                  {/* Add Color Button */}
+                  <button
+                    onClick={() => setShowAddColorModal(true)}
+                    className="px-3 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg hover:border-red-500 hover:text-red-400 transition-colors font-semibold"
+                    title="Add custom color"
+                  >
+                    + Add Custom Color
+                  </button>
+                </div>
+
+                {/* Add Row Button */}
+                <button
+                  onClick={addStockRow}
+                  className="w-full mt-4 px-4 py-2 bg-gray-700 border-2 border-dashed border-red-600/50 text-red-400 rounded-lg hover:border-red-500 hover:bg-gray-700/80 transition-colors font-semibold text-sm"
+                >
+                  + Add Row
+                </button>
+              </div>
 
               {/* Mini-Modal for Adding Custom Size */}
               {showAddSizeModal && (
@@ -1176,15 +1224,14 @@ const ProductsPage: React.FC = () => {
                 </div>
               )}
 
-
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-700">
                 <button
                   onClick={handleSaveProduct}
-                  disabled={isLoading}
+                  disabled={isSaving}
                   className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading
+                  {isSaving
                     ? "Saving..."
                     : isEditMode
                       ? "Update Product"

@@ -63,11 +63,11 @@ class OrderModel {
   /**
    * Get order by ID
    */
-  async getOrderById(orderId: number): Promise<Order | null> {
+  async getOrderById(orderId: number, shopId: number): Promise<Order | null> {
     try {
-      const results = await query('SELECT * FROM orders WHERE order_id = ?', [orderId]);
+      const results = await query('SELECT * FROM orders WHERE order_id = ? AND shop_id = ?', [orderId, shopId]);
       const order = (results as Order[])[0] || null;
-      logger.debug('Retrieved order by ID', { orderId });
+      logger.debug('Retrieved order by ID', { orderId, shopId });
       return order;
     } catch (error) {
       logger.error('Error fetching order by ID:', error);
@@ -78,10 +78,10 @@ class OrderModel {
   /**
    * Get orders by customer
    */
-  async getOrdersByCustomer(customerId: number): Promise<Order[]> {
+  async getOrdersByCustomer(customerId: number, shopId: number): Promise<Order[]> {
     try {
-      const results = await query('SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC', [customerId]);
-      logger.debug('Retrieved orders by customer', { customerId, count: (results as any[]).length });
+      const results = await query('SELECT * FROM orders WHERE customer_id = ? AND shop_id = ? ORDER BY created_at DESC', [customerId, shopId]);
+      logger.debug('Retrieved orders by customer', { customerId, shopId, count: (results as any[]).length });
       return results as Order[];
     } catch (error) {
       logger.error('Error fetching orders by customer:', error);
@@ -152,12 +152,22 @@ class OrderModel {
   /**
    * Update order
    */
-  async updateOrder(orderId: number, orderData: Partial<Omit<Order, 'order_id' | 'created_at' | 'updated_at'>>): Promise<boolean> {
+  async updateOrder(orderId: number, shopId: number, orderData: Partial<Omit<Order, 'order_id' | 'created_at' | 'updated_at' | 'shop_id'>>): Promise<boolean> {
     try {
+      // Verify ownership first
+      const ownership = await query(
+        'SELECT order_id FROM orders WHERE order_id = ? AND shop_id = ?',
+        [orderId, shopId]
+      );
+      if ((ownership as any[]).length === 0) {
+        logger.warn('Order not found or does not belong to shop', { orderId, shopId });
+        return false;
+      }
+
       const fields: string[] = [];
       const values: any[] = [];
 
-      const updateableFields: (keyof Omit<Order, 'order_id' | 'created_at' | 'updated_at'>)[] = [
+      const updateableFields: (keyof Omit<Order, 'order_id' | 'created_at' | 'updated_at' | 'shop_id'>)[] = [
         'order_number',
         'customer_id',
         'total_items',
@@ -189,11 +199,12 @@ class OrderModel {
 
       fields.push('updated_at = NOW()');
       values.push(orderId);
+      values.push(shopId);
 
-      const results = await query(`UPDATE orders SET ${fields.join(', ')} WHERE order_id = ?`, values);
+      const results = await query(`UPDATE orders SET ${fields.join(', ')} WHERE order_id = ? AND shop_id = ?`, values);
       const affectedRows = (results as any).affectedRows;
 
-      logger.info('Order updated successfully', { orderId, affectedRows });
+      logger.info('Order updated successfully', { orderId, shopId, affectedRows });
       return affectedRows > 0;
     } catch (error) {
       logger.error('Error updating order:', error);
@@ -204,10 +215,10 @@ class OrderModel {
   /**
    * Record payment for an order
    */
-  async recordPayment(orderId: number, amountPaid: number, paymentType: 'advance' | 'balance' | 'full'): Promise<boolean> {
+  async recordPayment(orderId: number, shopId: number, amountPaid: number, paymentType: 'advance' | 'balance' | 'full'): Promise<boolean> {
     try {
       // Get current order data
-      const order = await this.getOrderById(orderId);
+      const order = await this.getOrderById(orderId, shopId);
       if (!order) throw new Error('Order not found');
 
       let newAdvancePaid = order.advance_paid;
@@ -237,11 +248,11 @@ class OrderModel {
       const results = await query(
         `UPDATE orders
          SET advance_paid = ?, balance_paid = ?, total_paid = ?, payment_status = ?, remaining_amount = ?, updated_at = NOW()
-         WHERE order_id = ?`,
-        [newAdvancePaid, newBalancePaid, newTotalPaid, paymentStatus, newRemainingAmount, orderId]
+         WHERE order_id = ? AND shop_id = ?`,
+        [newAdvancePaid, newBalancePaid, newTotalPaid, paymentStatus, newRemainingAmount, orderId, shopId]
       );
 
-      logger.info('Payment recorded for order', { orderId, amountPaid, paymentType, newPaymentStatus: paymentStatus });
+      logger.info('Payment recorded for order', { orderId, shopId, amountPaid, paymentType, newPaymentStatus: paymentStatus });
       return (results as any).affectedRows > 0;
     } catch (error) {
       logger.error('Error recording payment:', error);

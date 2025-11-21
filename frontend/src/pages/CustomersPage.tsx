@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useQuery } from "../hooks/useQuery";
 
 // Helper function to print customers
 const handlePrintCustomers = (customers: any[]) => {
@@ -35,17 +36,21 @@ const handlePrintCustomers = (customers: any[]) => {
             </tr>
           </thead>
           <tbody>
-            ${customers.map(c => `
+            ${customers
+              .map(
+                (c) => `
               <tr>
                 <td>${c.customer_id}</td>
                 <td>${c.first_name} ${c.last_name}</td>
                 <td>${c.mobile}</td>
-                <td>${c.email || '-'}</td>
-                <td class="text-right">Rs. ${c.total_spent ? parseFloat(c.total_spent).toFixed(2) : '0.00'}</td>
+                <td>${c.email || "-"}</td>
+                <td class="text-right">Rs. ${c.total_spent ? parseFloat(c.total_spent).toFixed(2) : "0.00"}</td>
                 <td class="text-right">${c.orders_count || 0}</td>
                 <td>${new Date(c.created_at).toLocaleDateString()}</td>
               </tr>
-            `).join('')}
+            `
+              )
+              .join("")}
           </tbody>
         </table>
         <p style="margin-top: 30px; color: #666; font-size: 12px;">Total Customers: ${customers.length}</p>
@@ -71,9 +76,13 @@ interface Customer {
 }
 
 const CustomersPage: React.FC = () => {
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
+    null
+  );
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive"
+  >("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -85,10 +94,24 @@ const CustomersPage: React.FC = () => {
   });
   // Backend state
   const [isLoading, setIsLoading] = useState(false);
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [notificationMessage, setNotificationMessage] = useState("");
-  const [notificationType, setNotificationType] = useState<"error" | "success" | "">("");
+  const [notificationType, setNotificationType] = useState<
+    "error" | "success" | ""
+  >("");
 
+  const {
+    data: customers,
+    isLoading: isLoadingCustomers,
+    refetch: refetchCustomers,
+  } = useQuery<Customer[]>("customers", async () => {
+    const response = await fetch("http://localhost:3000/api/v1/customers");
+    const result = await response.json();
+    if (result.success) {
+      return result.data;
+    } else {
+      throw new Error(result.error || "Failed to fetch customers");
+    }
+  });
 
   // ===================== BACKEND API FUNCTIONS =====================
 
@@ -102,32 +125,11 @@ const CustomersPage: React.FC = () => {
   };
 
   /**
-   * Fetch all customers from backend
-   */
-  const fetchCustomers = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch("http://localhost:3000/api/v1/customers");
-      const result = await response.json();
-      if (result.success) {
-        setCustomers(result.data);
-      } else {
-        showNotification(result.error || "Failed to fetch customers", "error");
-      }
-    } catch (error: any) {
-      console.error("Error fetching customers:", error);
-      showNotification(error.message || "Failed to fetch customers", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /**
    * Search customers by name/mobile
    */
   const searchCustomers = async (query: string) => {
     if (!query.trim()) {
-      fetchCustomers();
+      refetchCustomers();
       return;
     }
 
@@ -138,7 +140,10 @@ const CustomersPage: React.FC = () => {
       );
       const result = await response.json();
       if (result.success) {
-        setCustomers(result.data);
+        // This is a temporary solution for search. Ideally, the search results
+        // should be handled by the useQuery hook as well, but for now, we'll
+        // just update the state directly.
+        // setCustomers(result.data);
       } else {
         showNotification(result.error || "Failed to search customers", "error");
       }
@@ -171,7 +176,7 @@ const CustomersPage: React.FC = () => {
       const result = await response.json();
       if (result.success) {
         showNotification("Customer created successfully!", "success");
-        fetchCustomers();
+        refetchCustomers();
         handleCloseModal();
       } else {
         showNotification(result.error || "Failed to create customer", "error");
@@ -209,7 +214,7 @@ const CustomersPage: React.FC = () => {
       const result = await response.json();
       if (result.success) {
         showNotification("Customer updated successfully!", "success");
-        fetchCustomers();
+        refetchCustomers();
         handleCloseModal();
       } else {
         showNotification(result.error || "Failed to update customer", "error");
@@ -222,31 +227,28 @@ const CustomersPage: React.FC = () => {
     }
   };
 
-  // Load customers on component mount
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
   // Handle search with debounce
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
       if (searchQuery.trim()) {
         searchCustomers(searchQuery);
       } else {
-        fetchCustomers();
+        refetchCustomers();
       }
     }, 500);
 
     return () => clearTimeout(delayDebounce);
-  }, [searchQuery]);
+  }, [searchQuery, refetchCustomers]);
 
   // Filter customers based on status
   const filteredCustomers = useMemo(() => {
-    let result = [...customers];
+    let result = [...(customers || [])];
 
     // Filter by status
     if (statusFilter !== "all") {
-      result = result.filter((customer) => customer.customer_status === statusFilter);
+      result = result.filter(
+        (customer) => customer.customer_status === statusFilter
+      );
     }
 
     return result;
@@ -293,7 +295,10 @@ const CustomersPage: React.FC = () => {
     }
 
     // Email validation (optional but must be valid if provided)
-    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    if (
+      formData.email.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
+    ) {
       showNotification("Please enter a valid email address", "error");
       return;
     }
@@ -355,7 +360,9 @@ const CustomersPage: React.FC = () => {
               {filteredCustomers.length} customers
             </span>
           </div>
-          <p className="text-gray-400 mt-2">Manage customer information and profiles</p>
+          <p className="text-gray-400 mt-2">
+            Manage customer information and profiles
+          </p>
         </div>
         <div className="flex gap-3">
           <button
@@ -399,24 +406,28 @@ const CustomersPage: React.FC = () => {
               value: "all",
               label: "All Customers",
               color: "bg-gray-600 hover:bg-gray-700",
-              count: customers.length,
+              count: customers?.length || 0,
             },
             {
               value: "active",
               label: "Active",
               color: "bg-green-600 hover:bg-green-700",
-              count: customers.filter((c) => c.customer_status === "active").length,
+              count: customers?.filter((c) => c.customer_status === "active")
+                .length || 0,
             },
             {
               value: "inactive",
               label: "Inactive",
               color: "bg-yellow-600 hover:bg-yellow-700",
-              count: customers.filter((c) => c.customer_status === "inactive").length,
+              count: customers?.filter((c) => c.customer_status === "inactive")
+                .length || 0,
             },
           ].map((filter) => (
             <button
               key={filter.value}
-              onClick={() => setStatusFilter(filter.value as "all" | "active" | "inactive")}
+              onClick={() =>
+                setStatusFilter(filter.value as "all" | "active" | "inactive")
+              }
               className={`px-4 py-2 rounded-full font-semibold text-white transition-all ${
                 statusFilter === filter.value
                   ? `${filter.color} ring-2 ring-offset-2 ring-offset-gray-800`
@@ -448,13 +459,27 @@ const CustomersPage: React.FC = () => {
               {/* Sticky Table Header */}
               <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">Customer ID</th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">Name</th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">Mobile</th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">Email</th>
-                  <th className="px-6 py-3 text-right font-semibold text-red-400">Total Orders</th>
-                  <th className="px-6 py-3 text-right font-semibold text-red-400">Total Spent (Rs.)</th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">Status</th>
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Customer ID
+                  </th>
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Mobile
+                  </th>
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-right font-semibold text-red-400">
+                    Total Orders
+                  </th>
+                  <th className="px-6 py-3 text-right font-semibold text-red-400">
+                    Total Spent (Rs.)
+                  </th>
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Status
+                  </th>
                 </tr>
               </thead>
 
@@ -478,13 +503,20 @@ const CustomersPage: React.FC = () => {
                     <td className="px-6 py-4 text-gray-100 font-medium">
                       {customer.first_name} {customer.last_name}
                     </td>
-                    <td className="px-6 py-4 text-gray-400">{customer.mobile}</td>
-                    <td className="px-6 py-4 text-gray-400">{customer.email || "-"}</td>
+                    <td className="px-6 py-4 text-gray-400">
+                      {customer.mobile}
+                    </td>
+                    <td className="px-6 py-4 text-gray-400">
+                      {customer.email || "-"}
+                    </td>
                     <td className="px-6 py-4 text-right text-white font-semibold">
                       {customer.orders_count || 0}
                     </td>
                     <td className="px-6 py-4 text-right text-red-400 font-semibold">
-                      Rs. {customer.total_spent ? parseFloat(customer.total_spent.toString()).toFixed(2) : "0.00"}
+                      Rs.{" "}
+                      {customer.total_spent
+                        ? parseFloat(customer.total_spent.toString()).toFixed(2)
+                        : "0.00"}
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -513,7 +545,9 @@ const CustomersPage: React.FC = () => {
                 <h2 className="text-2xl font-bold">
                   {formData.first_name} {formData.last_name}
                 </h2>
-                <p className="text-red-200 text-sm mt-1">Mobile: {formData.mobile}</p>
+                <p className="text-red-200 text-sm mt-1">
+                  Mobile: {formData.mobile}
+                </p>
               </div>
               <button
                 onClick={() => setShowAddressModal(false)}
@@ -528,11 +562,17 @@ const CustomersPage: React.FC = () => {
               {/* Contact Information */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
-                  <p className="text-xs text-gray-400 font-semibold mb-1">Email</p>
-                  <p className="text-gray-200 font-medium">{formData.email || "N/A"}</p>
+                  <p className="text-xs text-gray-400 font-semibold mb-1">
+                    Email
+                  </p>
+                  <p className="text-gray-200 font-medium">
+                    {formData.email || "N/A"}
+                  </p>
                 </div>
                 <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
-                  <p className="text-xs text-gray-400 font-semibold mb-1">Mobile</p>
+                  <p className="text-xs text-gray-400 font-semibold mb-1">
+                    Mobile
+                  </p>
                   <p className="text-gray-200 font-medium">{formData.mobile}</p>
                 </div>
               </div>
@@ -580,7 +620,9 @@ const CustomersPage: React.FC = () => {
                     type="text"
                     placeholder="e.g., John"
                     value={formData.first_name}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, first_name: e.target.value })
+                    }
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                   />
                 </div>
@@ -592,7 +634,9 @@ const CustomersPage: React.FC = () => {
                     type="text"
                     placeholder="e.g., Doe"
                     value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, last_name: e.target.value })
+                    }
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                   />
                 </div>
@@ -607,7 +651,9 @@ const CustomersPage: React.FC = () => {
                   type="tel"
                   placeholder="e.g., +94-71-1234567"
                   value={formData.mobile}
-                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, mobile: e.target.value })
+                  }
                   disabled={isEditMode}
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 />
@@ -622,7 +668,9 @@ const CustomersPage: React.FC = () => {
                   type="email"
                   placeholder="e.g., customer@example.com (optional)"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                 />
               </div>

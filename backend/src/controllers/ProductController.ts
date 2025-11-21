@@ -9,11 +9,20 @@ import { logger } from "../utils/logger";
 
 class ProductController {
   /**
-   * GET /products - Get all products
+   * GET /products?shop_id=1 - Get all products
    */
-  async getAllProducts(_req: Request, res: Response): Promise<void> {
+  async getAllProducts(req: Request, res: Response): Promise<void> {
     try {
-      const products = await ProductModel.getAllProducts();
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
+
+      const products = await ProductModel.getAllProducts(shopId);
       res.json({
         success: true,
         data: products,
@@ -30,12 +39,21 @@ class ProductController {
   }
 
   /**
-   * GET /products/:id - Get product by ID
+   * GET /products/:id?shop_id=1 - Get product by ID
    */
   async getProductById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const product = await ProductModel.getProductById(Number(id));
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
+
+      const product = await ProductModel.getProductById(Number(id), shopId);
 
       if (!product) {
         res.status(404).json({
@@ -60,12 +78,21 @@ class ProductController {
   }
 
   /**
-   * GET /products/sku/:sku - Get product by SKU
+   * GET /products/sku/:sku?shop_id=1 - Get product by SKU
    */
   async getProductBySku(req: Request, res: Response): Promise<void> {
     try {
       const { sku } = req.params;
-      const product = await ProductModel.getProductBySku(sku);
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
+
+      const product = await ProductModel.getProductBySku(sku, shopId);
 
       if (!product) {
         res.status(404).json({
@@ -90,13 +117,23 @@ class ProductController {
   }
 
   /**
-   * GET /products/category/:categoryId - Get products by category
+   * GET /products/category/:categoryId?shop_id=1 - Get products by category
    */
   async getProductsByCategory(req: Request, res: Response): Promise<void> {
     try {
       const { categoryId } = req.params;
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
+
       const products = await ProductModel.getProductsByCategory(
-        Number(categoryId)
+        Number(categoryId),
+        shopId
       );
 
       res.json({
@@ -115,11 +152,12 @@ class ProductController {
   }
 
   /**
-   * POST /products - Create new product
+   * POST /products (body: { shop_id, ... }) - Create new product
    */
   async createProduct(req: Request, res: Response): Promise<void> {
     try {
       const {
+        shop_id,
         sku,
         product_name,
         category_id,
@@ -132,6 +170,14 @@ class ProductController {
       } = req.body;
 
       // Validation
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: "Missing required field: shop_id",
+        });
+        return;
+      }
+
       if (!sku || !product_name || !category_id || !retail_price) {
         res.status(400).json({
           success: false,
@@ -141,7 +187,7 @@ class ProductController {
         return;
       }
 
-      const productId = await ProductModel.createProduct({
+      const productId = await ProductModel.createProduct(shop_id, {
         sku,
         product_name,
         category_id,
@@ -169,14 +215,22 @@ class ProductController {
   }
 
   /**
-   * PUT /products/:id - Update product
+   * PUT /products/:id (body: { shop_id, ... }) - Update product
    */
   async updateProduct(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const updateData = req.body;
+      const { shop_id, ...updateData } = req.body;
 
-      const success = await ProductModel.updateProduct(Number(id), updateData);
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: "Missing required field: shop_id",
+        });
+        return;
+      }
+
+      const success = await ProductModel.updateProduct(Number(id), shop_id, updateData);
 
       if (!success) {
         res.status(404).json({
@@ -201,13 +255,22 @@ class ProductController {
   }
 
   /**
-   * DELETE /products/:id - Delete product (soft delete)
+   * DELETE /products/:id?shop_id=1 - Delete product (soft delete)
    */
   async deleteProduct(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const shopId = Number(req.query.shop_id);
 
-      const success = await ProductModel.deleteProduct(Number(id));
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
+
+      const success = await ProductModel.deleteProduct(Number(id), shopId);
 
       if (!success) {
         res.status(404).json({
@@ -232,14 +295,24 @@ class ProductController {
   }
 
   /**
-   * GET /products/active - Get active products with pagination
+   * GET /products/active?shop_id=1&page=1&limit=10 - Get active products with pagination
    */
   async getActiveProducts(req: Request, res: Response): Promise<void> {
     try {
+      const shopId = Number(req.query.shop_id);
       const page = Number(req.query.page) || 1;
       const limit = Number(req.query.limit) || 10;
 
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
+
       const { products, total } = await ProductModel.getActiveProducts(
+        shopId,
         page,
         limit
       );
@@ -265,11 +338,20 @@ class ProductController {
   }
 
   /**
-   * GET /products/search - Search products
+   * GET /products/search?shop_id=1&q=term - Search products
    */
   async searchProducts(req: Request, res: Response): Promise<void> {
     try {
+      const shopId = Number(req.query.shop_id);
       const { q } = req.query;
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
 
       if (!q || typeof q !== "string") {
         res.status(400).json({
@@ -279,7 +361,7 @@ class ProductController {
         return;
       }
 
-      const products = await ProductModel.searchProducts(q);
+      const products = await ProductModel.searchProducts(shopId, q);
 
       res.json({
         success: true,
@@ -297,12 +379,22 @@ class ProductController {
   }
 
   /**
-   * GET /products/:id/prices - Get product prices
+   * GET /products/:id/prices?shop_id=1 - Get product prices
    */
   async getProductPrices(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const prices = await ProductModel.getProductPrices(Number(id));
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
+
+      const prices = await ProductModel.getProductPrices(Number(id), shopId);
 
       if (!prices) {
         res.status(404).json({
@@ -327,12 +419,22 @@ class ProductController {
   }
 
   /**
-   * GET /products/:id/details - Get product with all details (colors, sizes)
+   * GET /products/:id/details?shop_id=1 - Get product with all details (colors, sizes)
    */
   async getProductWithDetails(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const product = await ProductModel.getProductWithDetails(Number(id));
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
+
+      const product = await ProductModel.getProductWithDetails(Number(id), shopId);
 
       if (!product) {
         res.status(404).json({
@@ -357,12 +459,22 @@ class ProductController {
   }
 
   /**
-   * GET /products/:id/colors - Get all colors for a product
+   * GET /products/:id/colors?shop_id=1 - Get all colors for a product
    */
   async getProductColors(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const colors = await ProductModel.getProductColors(Number(id));
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
+
+      const colors = await ProductModel.getProductColors(Number(id), shopId);
 
       res.json({
         success: true,
@@ -380,12 +492,20 @@ class ProductController {
   }
 
   /**
-   * POST /products/:id/colors - Add color to product
+   * POST /products/:id/colors (body: { shop_id, color_id }) - Add color to product
    */
   async addProductColor(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { color_id } = req.body;
+      const { shop_id, color_id } = req.body;
+
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: "Missing required field: shop_id",
+        });
+        return;
+      }
 
       if (!color_id) {
         res.status(400).json({
@@ -397,7 +517,8 @@ class ProductController {
 
       const productColorId = await ProductModel.addProductColor(
         Number(id),
-        color_id
+        color_id,
+        shop_id
       );
 
       res.status(201).json({
@@ -416,15 +537,25 @@ class ProductController {
   }
 
   /**
-   * DELETE /products/:id/colors/:colorId - Remove color from product
+   * DELETE /products/:id/colors/:colorId?shop_id=1 - Remove color from product
    */
   async removeProductColor(req: Request, res: Response): Promise<void> {
     try {
       const { id, colorId } = req.params;
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
 
       const success = await ProductModel.removeProductColor(
         Number(id),
-        Number(colorId)
+        Number(colorId),
+        shopId
       );
 
       if (!success) {
@@ -450,12 +581,22 @@ class ProductController {
   }
 
   /**
-   * GET /products/:id/sizes - Get all sizes for a product
+   * GET /products/:id/sizes?shop_id=1 - Get all sizes for a product
    */
   async getProductSizes(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const sizes = await ProductModel.getProductSizes(Number(id));
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
+
+      const sizes = await ProductModel.getProductSizes(Number(id), shopId);
 
       res.json({
         success: true,
@@ -473,12 +614,20 @@ class ProductController {
   }
 
   /**
-   * POST /products/:id/sizes - Add size to product
+   * POST /products/:id/sizes (body: { shop_id, size_id }) - Add size to product
    */
   async addProductSize(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { size_id } = req.body;
+      const { shop_id, size_id } = req.body;
+
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: "Missing required field: shop_id",
+        });
+        return;
+      }
 
       if (!size_id) {
         res.status(400).json({
@@ -490,7 +639,8 @@ class ProductController {
 
       const productSizeId = await ProductModel.addProductSize(
         Number(id),
-        size_id
+        size_id,
+        shop_id
       );
 
       res.status(201).json({
@@ -509,15 +659,25 @@ class ProductController {
   }
 
   /**
-   * DELETE /products/:id/sizes/:sizeId - Remove size from product
+   * DELETE /products/:id/sizes/:sizeId?shop_id=1 - Remove size from product
    */
   async removeProductSize(req: Request, res: Response): Promise<void> {
     try {
       const { id, sizeId } = req.params;
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
 
       const success = await ProductModel.removeProductSize(
         Number(id),
-        Number(sizeId)
+        Number(sizeId),
+        shopId
       );
 
       if (!success) {
@@ -543,11 +703,19 @@ class ProductController {
   }
 
   /**
-   * POST /products/stock - Update stock quantity for a product variant
+   * POST /products/stock (body: { shop_id, productId, sizeId, colorId, quantity }) - Update stock
    */
   async updateProductStock(req: Request, res: Response): Promise<void> {
     try {
-      const { productId, sizeId, colorId, quantity } = req.body;
+      const { shop_id, productId, sizeId, colorId, quantity } = req.body;
+
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: "Missing required field: shop_id",
+        });
+        return;
+      }
 
       if (
         productId === undefined ||
@@ -567,7 +735,8 @@ class ProductController {
         Number(productId),
         Number(sizeId),
         Number(colorId),
-        Number(quantity)
+        Number(quantity),
+        shop_id
       );
 
       if (!success) {
@@ -593,12 +762,22 @@ class ProductController {
   }
 
   /**
-   * DELETE /products/:id/stock - Clear all stock for a product
+   * DELETE /products/:id/stock?shop_id=1 - Clear all stock for a product
    */
   async clearProductStock(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const success = await ProductModel.clearProductStock(Number(id));
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
+
+      const success = await ProductModel.clearProductStock(Number(id), shopId);
 
       if (!success) {
         res.status(500).json({

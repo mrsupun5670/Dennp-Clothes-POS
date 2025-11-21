@@ -11,12 +11,28 @@ import { logger } from '../utils/logger';
 
 class OrderController {
   /**
-   * GET /orders - Get all orders
+   * GET /orders - Get all orders with optional status filtering
    */
   async getAllOrders(req: Request, res: Response): Promise<void> {
     try {
       const shopId = req.query.shop_id ? Number(req.query.shop_id) : undefined;
-      const orders = await OrderModel.getAllOrders(shopId);
+      const status = req.query.status ? String(req.query.status) : undefined;
+
+      let orders = await OrderModel.getAllOrders(shopId);
+
+      // Filter by status if provided
+      if (status && status !== 'all') {
+        const statusMap: { [key: string]: string } = {
+          'pending': 'Pending',
+          'processing': 'Processing',
+          'shipped': 'Shipped',
+          'delivered': 'Delivered'
+        };
+        const dbStatus = statusMap[status.toLowerCase()];
+        if (dbStatus) {
+          orders = orders.filter(order => order.order_status === dbStatus);
+        }
+      }
 
       res.json({
         success: true,
@@ -334,6 +350,322 @@ class OrderController {
         details: error.message,
       });
     }
+  }
+
+  /**
+   * GET /orders/:id/receipt - Generate receipt HTML for printing/export
+   */
+  async getOrderReceipt(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const order = await OrderModel.getOrderById(Number(id));
+
+      if (!order) {
+        res.status(404).json({
+          success: false,
+          error: 'Order not found',
+        });
+        return;
+      }
+
+      // Get order items with details
+      const items = await OrderItemModel.getOrderItemsWithDetails(Number(id));
+
+      const receiptHtml = this.generateReceiptHTML({ ...order, items });
+
+      res.json({
+        success: true,
+        data: { html: receiptHtml },
+      });
+    } catch (error: any) {
+      logger.error('Error in getOrderReceipt:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate receipt',
+        details: error.message,
+      });
+    }
+  }
+
+  /**
+   * Helper method to generate receipt HTML
+   */
+  private generateReceiptHTML(order: any): string {
+    const currentDate = new Date().toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+
+    const itemsHTML = (order.items || [])
+      .map((item: any) => `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.product_name || 'N/A'}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">Rs. ${(item.sold_price || 0).toFixed(2)}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">Rs. ${(item.total_price || 0).toFixed(2)}</td>
+        </tr>
+      `)
+      .join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Order Receipt - ${order.order_number}</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: 'Arial', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+          }
+          .receipt-container {
+            width: 210mm;
+            height: 297mm;
+            background: white;
+            padding: 15mm;
+            margin: 0 auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            font-size: 10pt;
+            color: #333;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 2px solid #ef4444;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+          }
+          .header h1 {
+            color: #ef4444;
+            font-size: 18pt;
+            margin-bottom: 5px;
+          }
+          .header p {
+            color: #666;
+            font-size: 9pt;
+            margin: 3px 0;
+          }
+          .order-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+            font-size: 9pt;
+          }
+          .info-box {
+            background: #f9f9f9;
+            padding: 10px;
+            border-left: 3px solid #ef4444;
+          }
+          .info-box label {
+            font-weight: bold;
+            color: #ef4444;
+            display: block;
+            margin-bottom: 2px;
+          }
+          .info-box value {
+            color: #333;
+            display: block;
+          }
+          .section-title {
+            color: #ef4444;
+            font-weight: bold;
+            font-size: 11pt;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            margin-top: 12px;
+            margin-bottom: 8px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+          }
+          table thead {
+            background: #f0f0f0;
+            border-bottom: 2px solid #ef4444;
+          }
+          table th {
+            padding: 8px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 9pt;
+            color: #333;
+          }
+          table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+            font-size: 9pt;
+          }
+          .total-section {
+            background: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-top: 10px;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 9pt;
+            border-bottom: 1px solid #eee;
+          }
+          .total-row.final {
+            border: none;
+            font-weight: bold;
+            font-size: 11pt;
+            color: #ef4444;
+            padding: 8px 0;
+          }
+          .address-section {
+            background: #f9f9f9;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 9pt;
+          }
+          .address-title {
+            font-weight: bold;
+            color: #ef4444;
+            margin-bottom: 5px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            font-size: 8pt;
+            color: #999;
+          }
+          .payment-status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 8pt;
+            margin-top: 5px;
+          }
+          .status-unpaid {
+            background: #fff3cd;
+            color: #856404;
+          }
+          .status-partial {
+            background: #cfe2ff;
+            color: #084298;
+          }
+          .status-fully_paid {
+            background: #d1e7dd;
+            color: #0f5132;
+          }
+          @media print {
+            body {
+              padding: 0;
+              background: white;
+            }
+            .receipt-container {
+              width: 100%;
+              height: auto;
+              box-shadow: none;
+              padding: 0;
+              margin: 0;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="receipt-container">
+          <div class="header">
+            <h1>DENNUP CLOTHES</h1>
+            <p>Order Receipt</p>
+            <p style="font-weight: bold; margin-top: 8px;">#${order.order_number}</p>
+          </div>
+
+          <div class="order-info">
+            <div class="info-box">
+              <label>Order ID</label>
+              <value>${order.order_id}</value>
+            </div>
+            <div class="info-box">
+              <label>Order Date</label>
+              <value>${new Date(order.order_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' })}</value>
+            </div>
+            <div class="info-box">
+              <label>Status</label>
+              <value>${order.order_status}</value>
+            </div>
+            <div class="info-box">
+              <label>Payment Method</label>
+              <value>${(order.payment_method || 'cash').toUpperCase()}</value>
+            </div>
+          </div>
+
+          <div class="section-title">Recipient Information</div>
+          <div class="address-section">
+            <div class="address-title">${order.recipient_name || 'N/A'}</div>
+            <div>${order.recipient_phone || 'N/A'}</div>
+            <div style="margin-top: 8px; line-height: 1.5;">
+              ${order.line1 || 'N/A'}<br>
+              ${order.line2 || 'N/A'}<br>
+              ${order.city_name || 'N/A'}, ${order.district_name || 'N/A'} ${order.postal_code || 'N/A'}<br>
+              ${order.province_name || 'N/A'}
+            </div>
+          </div>
+
+          <div class="section-title">Order Items</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: right;">Unit Price</th>
+                <th style="text-align: right;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHTML}
+            </tbody>
+          </table>
+
+          <div class="total-section">
+            <div class="total-row">
+              <span>Subtotal:</span>
+              <span>Rs. ${(order.total_amount || 0).toFixed(2)}</span>
+            </div>
+            <div class="total-row">
+              <span>Amount Paid:</span>
+              <span>Rs. ${(order.total_paid || 0).toFixed(2)}</span>
+            </div>
+            <div class="total-row">
+              <span>Remaining Balance:</span>
+              <span>Rs. ${(order.remaining_amount || 0).toFixed(2)}</span>
+            </div>
+            <div class="total-row final">
+              <span>Total Amount:</span>
+              <span>Rs. ${(order.total_amount || 0).toFixed(2)}</span>
+            </div>
+            <div style="text-align: center; margin-top: 8px;">
+              <span class="payment-status status-${order.payment_status || 'unpaid'}">${(order.payment_status || 'unpaid').toUpperCase().replace('_', ' ')}</span>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p>Generated on ${currentDate}</p>
+            <p>Thank you for your order!</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
   }
 }
 

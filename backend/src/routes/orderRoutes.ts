@@ -14,6 +14,7 @@ router.get('/pending', OrderController.getPendingOrders.bind(OrderController));
 router.get('/summary', OrderController.getOrderSummary.bind(OrderController));
 router.get('/customer/:customerId', OrderController.getOrdersByCustomer.bind(OrderController));
 router.get('/:id/payments', OrderController.getOrderPayments.bind(OrderController));
+router.get('/:id/receipt', OrderController.getOrderReceipt.bind(OrderController));
 router.get('/:id', OrderController.getOrderById.bind(OrderController));
 
 // POST routes

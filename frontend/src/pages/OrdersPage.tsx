@@ -126,7 +126,7 @@ const exportReceiptAsImage = async (
 
 const OrdersPage: React.FC = () => {
   const { shopId } = useShop();
-  const [selectedStatus, setSelectedStatus] = useState<string>("pending");
+  const [selectedStatus, setSelectedStatus] = useState<string>("completed");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -358,14 +358,12 @@ const OrdersPage: React.FC = () => {
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
-      case "Pending":
-        return "bg-yellow-900/50 text-yellow-400";
-      case "Processing":
-        return "bg-blue-900/50 text-blue-400";
-      case "Shipped":
-        return "bg-purple-900/50 text-purple-400";
-      case "Delivered":
+      case "completed":
         return "bg-green-900/50 text-green-400";
+      case "cancelled":
+        return "bg-red-900/50 text-red-400";
+      case "refunded":
+        return "bg-blue-900/50 text-blue-400";
       default:
         return "bg-gray-700/50 text-gray-400";
     }
@@ -425,24 +423,19 @@ const OrdersPage: React.FC = () => {
         <div className="flex gap-2 flex-wrap">
           {[
             {
-              value: "pending",
-              label: "Pending",
-              color: "bg-yellow-600 hover:bg-yellow-700",
-            },
-            {
-              value: "processing",
-              label: "Processing",
-              color: "bg-blue-600 hover:bg-blue-700",
-            },
-            {
-              value: "shipped",
-              label: "Shipped",
-              color: "bg-purple-600 hover:bg-purple-700",
-            },
-            {
-              value: "delivered",
-              label: "Delivered",
+              value: "completed",
+              label: "Completed",
               color: "bg-green-600 hover:bg-green-700",
+            },
+            {
+              value: "cancelled",
+              label: "Cancelled",
+              color: "bg-red-600 hover:bg-red-700",
+            },
+            {
+              value: "refunded",
+              label: "Refunded",
+              color: "bg-blue-600 hover:bg-blue-700",
             },
             {
               value: "all",

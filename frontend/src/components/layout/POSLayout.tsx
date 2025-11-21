@@ -1,5 +1,6 @@
 import React from "react";
 import { appWindow } from "@tauri-apps/api/window";
+import { ShopBadge } from "../ShopBadge";
 
 interface POSLayoutProps {
   currentPage: string;
@@ -41,6 +42,7 @@ const POSLayout: React.FC<POSLayoutProps> = ({ currentPage, onPageChange, childr
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <ShopBadge size="sm" />
             <div className="text-sm text-red-400 font-mono bg-gray-900/50 px-3 py-2 rounded border border-red-600/30">
               {new Date().toLocaleTimeString()}
             </div>

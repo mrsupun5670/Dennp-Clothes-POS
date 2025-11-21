@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "../hooks/useQuery";
+import { useShop } from "../context/ShopContext";
 
 // Helper function to print customers
 const handlePrintCustomers = (customers: any[]) => {
@@ -76,6 +77,8 @@ interface Customer {
 }
 
 const CustomersPage: React.FC = () => {
+  const { shopId } = useShop();
+
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
     null
   );
@@ -103,15 +106,18 @@ const CustomersPage: React.FC = () => {
     data: customers,
     isLoading: isLoadingCustomers,
     refetch: refetchCustomers,
-  } = useQuery<Customer[]>("customers", async () => {
-    const response = await fetch("http://localhost:3000/api/v1/customers");
+  } = useQuery<Customer[]>(["customers", shopId], async () => {
+    if (!shopId) {
+      throw new Error("Shop ID is required");
+    }
+    const response = await fetch(`http://localhost:3000/api/v1/customers?shop_id=${shopId}`);
     const result = await response.json();
     if (result.success) {
       return result.data;
     } else {
       throw new Error(result.error || "Failed to fetch customers");
     }
-  });
+  }, shopId !== null);
 
   // ===================== BACKEND API FUNCTIONS =====================
 
@@ -165,6 +171,7 @@ const CustomersPage: React.FC = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          shop_id: shopId,
           first_name: formData.first_name,
           last_name: formData.last_name,
           mobile: formData.mobile,

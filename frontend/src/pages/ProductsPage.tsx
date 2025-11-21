@@ -4,6 +4,7 @@ import {
   clearProductStock,
 } from "../services/productService";
 import { useQuery } from "../hooks/useQuery";
+import { useShop } from "../context/ShopContext";
 
 /**
  * Global utility function for printing product reports.
@@ -76,6 +77,8 @@ const handlePrintProducts = (products: any[]) => {
  * The main Products Page component.
  */
 const ProductsPage: React.FC = () => {
+  const { shopId } = useShop();
+
   // --- STATE DECLARATIONS ---
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null
@@ -115,55 +118,71 @@ const ProductsPage: React.FC = () => {
 
   // --- DATA FETCHING (useQuery Hooks) ---
   const { data: dbProducts, refetch: refetchProducts } = useQuery<any[]>(
-    "products",
+    ["products", shopId],
     async () => {
-      const response = await fetch("http://localhost:3000/api/v1/products");
+      if (!shopId) {
+        throw new Error("Shop ID is required");
+      }
+      const response = await fetch(`http://localhost:3000/api/v1/products?shop_id=${shopId}`);
       const result = await response.json();
       if (result.success) {
         return result.data;
       } else {
         throw new Error(result.error || "Failed to fetch products");
       }
-    }
+    },
+    shopId !== null
   );
 
   const { data: dbCategories, refetch: refetchCategories } = useQuery<any[]>(
-    "categories",
+    ["categories", shopId],
     async () => {
-      const response = await fetch("http://localhost:3000/api/v1/categories");
+      if (!shopId) {
+        throw new Error("Shop ID is required");
+      }
+      const response = await fetch(`http://localhost:3000/api/v1/categories?shop_id=${shopId}`);
       const result = await response.json();
       if (result.success) {
         return result.data;
       } else {
         throw new Error(result.error || "Failed to fetch categories");
       }
-    }
+    },
+    shopId !== null
   );
 
   const { data: dbColors, refetch: refetchColors } = useQuery<any[]>(
-    "colors",
+    ["colors", shopId],
     async () => {
-      const response = await fetch("http://localhost:3000/api/v1/colors");
+      if (!shopId) {
+        throw new Error("Shop ID is required");
+      }
+      const response = await fetch(`http://localhost:3000/api/v1/colors?shop_id=${shopId}`);
       const result = await response.json();
       if (result.success) {
         return result.data;
       } else {
         throw new Error(result.error || "Failed to fetch colors");
       }
-    }
+    },
+    shopId !== null
   );
 
   const { data: dbSizes, refetch: refetchSizes } = useQuery<any[]>(
-    "sizes",
+    ["sizes", shopId],
     async () => {
-      const response = await fetch("http://localhost:3000/api/v1/sizes");
+      if (!shopId) {
+        throw new Error("Shop ID is required");
+      }
+      const response = await fetch(`http://localhost:3000/api/v1/sizes?shop_id=${shopId}`);
       const result = await response.json();
       if (result.success) {
         return result.data;
       } else {
         throw new Error(result.error || "Failed to fetch sizes");
       }
-    }
+    },
+    shopId !== null
   );
 
   // --- SIDE EFFECTS (useEffect) ---
@@ -377,6 +396,7 @@ const ProductsPage: React.FC = () => {
     try {
       // 1. Prepare Product Payload and Get/Update Product ID
       const productPayload = {
+        shop_id: shopId,
         sku: formData.code,
         product_name: formData.name,
         category_id: parseInt(selectedCategory),
@@ -444,7 +464,7 @@ const ProductsPage: React.FC = () => {
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ color_name: colorName }),
+              body: JSON.stringify({ shop_id: shopId, color_name: colorName }),
             }
           );
           const colorResult = await colorResponse.json();
@@ -473,7 +493,7 @@ const ProductsPage: React.FC = () => {
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ size_name: sizeName, size_type_id: 1 }),
+              body: JSON.stringify({ shop_id: shopId, size_name: sizeName, size_type_id: 1 }),
             }
           );
           const sizeResult = await sizeResponse.json();

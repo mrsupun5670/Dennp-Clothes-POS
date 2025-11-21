@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import "./App.css";
 import POSLayout from "./components/layout/POSLayout";
+import { ShopProvider } from "./context/ShopContext";
 import SalesPage from "./pages/SalesPage";
 import ProductsPage from "./pages/ProductsPage";
 import InventoryPage from "./pages/InventoryPage";
@@ -58,9 +59,11 @@ function App() {
   };
 
   return (
-    <POSLayout currentPage={currentPage} onPageChange={setCurrentPage}>
-      {renderPage()}
-    </POSLayout>
+    <ShopProvider>
+      <POSLayout currentPage={currentPage} onPageChange={setCurrentPage}>
+        {renderPage()}
+      </POSLayout>
+    </ShopProvider>
   );
 }
 

@@ -493,7 +493,7 @@ const OrdersPage: React.FC = () => {
                   Order Date
                 </th>
                 <th className="px-6 py-3 text-right font-semibold text-red-400">
-                  Amount (Rs.)
+                  Order Total (Rs.)
                 </th>
                 <th className="px-6 py-3 text-left font-semibold text-red-400">
                   Status
@@ -557,7 +557,7 @@ const OrdersPage: React.FC = () => {
               ) : (
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
-                    No orders found
+                    No orders found for this status
                   </td>
                 </tr>
               )}

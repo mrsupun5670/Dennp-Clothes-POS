@@ -3,6 +3,7 @@ import "./App.css";
 import POSLayout from "./components/layout/POSLayout";
 import { ShopProvider } from "./context/ShopContext";
 import { ShopDetailsModal } from "./components/ShopDetailsModal";
+import { ShopSelector } from "./components/ShopSelector";
 import SalesPage from "./pages/SalesPage";
 import ProductsPage from "./pages/ProductsPage";
 import InventoryPage from "./pages/InventoryPage";
@@ -61,6 +62,7 @@ function App() {
 
   return (
     <ShopProvider>
+      <ShopSelector isInitialSetup={true} />
       <POSLayout currentPage={currentPage} onPageChange={setCurrentPage}>
         {renderPage()}
       </POSLayout>

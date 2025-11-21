@@ -4,13 +4,15 @@ import { useShop } from "../context/ShopContext";
 interface ShopBadgeProps {
   size?: "sm" | "md" | "lg";
   showBorder?: boolean;
+  showFullDetails?: boolean;
 }
 
 export const ShopBadge: React.FC<ShopBadgeProps> = ({
   size = "md",
   showBorder = true,
+  showFullDetails = false,
 }) => {
-  const { shopId, shopName } = useShop();
+  const { shopId, shopName, shopData } = useShop();
 
   if (!shopId || !shopName) {
     return null;
@@ -24,6 +26,28 @@ export const ShopBadge: React.FC<ShopBadgeProps> = ({
 
   const borderClass = showBorder ? "border-2 border-red-600" : "";
 
+  // Full details view
+  if (showFullDetails && shopData) {
+    return (
+      <div
+        className={`${borderClass} bg-red-900/30 rounded-lg text-red-400 font-semibold p-4 min-w-max`}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-3xl">🏪</span>
+          <div className="space-y-1">
+            <div className="font-bold text-red-400 text-lg">{shopData.shop_name}</div>
+            <div className="text-xs text-red-500/70">ID: {shopData.shop_id}</div>
+            <div className="text-xs text-gray-400">Manager: {shopData.manager_name || "N/A"}</div>
+            <div className="text-xs text-gray-400">📞 {shopData.contact_phone}</div>
+            <div className="text-xs text-gray-400">📍 {shopData.address}</div>
+            <div className="text-xs text-gray-400">Status: {shopData.shop_status}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Compact view
   return (
     <div
       className={`${sizeClasses[size]} ${borderClass} bg-red-900/30 rounded-lg text-red-400 font-semibold flex items-center gap-2 whitespace-nowrap`}

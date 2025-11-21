@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useShop } from "../context/ShopContext";
-
-interface Shop {
-  shop_id: number;
-  shop_name: string;
-  address: string;
-  contact_phone: string;
-  manager_name: string;
-  shop_status: string;
-}
+import { useShop, Shop } from "../context/ShopContext";
 
 interface ShopSelectorProps {
   onShopSelected?: () => void;
@@ -19,7 +10,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({
   onShopSelected,
   isInitialSetup = false,
 }) => {
-  const { shopId, setShop } = useShop();
+  const { shopId, setShopData } = useShop();
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +37,7 @@ export const ShopSelector: React.FC<ShopSelectorProps> = ({
   }, []);
 
   const handleSelectShop = (shop: Shop) => {
-    setShop(shop.shop_id, shop.shop_name);
+    setShopData(shop);
     if (onShopSelected) {
       onShopSelected();
     }

@@ -200,29 +200,13 @@ class OrderController {
   }
 
   /**
-   * PUT /orders/:id (body: { shop_id, ...updateData }) - Update order
+   * PUT /orders/:id (body: { shop_id, order_status?, tracking_number?, ... }) - Update order
+   * Can update order_status and/or tracking_number
    */
   async updateOrder(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-
-      logger.info('=== STEP 1: Raw request body ===', req.body);
-
-      const { shop_id, order_status, ...updateData } = req.body;
-
-      logger.info('=== STEP 2: Destructured values ===', {
-        id,
-        shop_id,
-        order_status,
-        updateDataKeys: Object.keys(updateData),
-        updateData
-      });
-
-      logger.info('TRACKING_NUMBER CHECK:', {
-        has_tracking_number: 'tracking_number' in updateData,
-        tracking_number_value: updateData.tracking_number,
-        typeof_tracking_number: typeof updateData.tracking_number
-      });
+      const { shop_id, order_status, tracking_number, ...otherData } = req.body;
 
       if (!shop_id) {
         res.status(400).json({
@@ -231,6 +215,20 @@ class OrderController {
         });
         return;
       }
+
+      // Build update data
+      const updateData: any = {};
+
+      if (order_status) {
+        updateData.order_status = order_status;
+      }
+
+      if (tracking_number !== undefined) {
+        updateData.tracking_number = tracking_number;
+      }
+
+      // If updating other fields
+      Object.assign(updateData, otherData);
 
       // If trying to change status to shipped, check if payment is complete
       if (order_status === 'shipped') {
@@ -259,7 +257,7 @@ class OrderController {
         }
       }
 
-      const success = await OrderModel.updateOrder(Number(id), shop_id, { order_status, ...updateData });
+      const success = await OrderModel.updateOrder(Number(id), shop_id, updateData);
 
       if (!success) {
         res.status(404).json({

@@ -286,7 +286,7 @@ const OrdersPage: React.FC = () => {
     setEditingStatus("pending");
   };
 
-  const handleUpdateOrder = async () => {
+  const handleUpdateOrderStatus = async () => {
     if (!selectedOrderId || !shopId) return;
 
     setIsUpdatingOrder(true);
@@ -296,18 +296,10 @@ const OrdersPage: React.FC = () => {
         order_status: editingStatus,
       };
 
-      // Include tracking number only if it's not empty (don't send empty strings)
-      console.log('STEP 1: trackingNumber value:', trackingNumber);
-      console.log('STEP 1: trackingNumber trimmed:', trackingNumber.trim());
-
-      if (trackingNumber && trackingNumber.trim()) {
+      // Include tracking number only if provided when changing to shipped
+      if (editingStatus === "shipped" && trackingNumber && trackingNumber.trim()) {
         updateData.tracking_number = trackingNumber.trim();
-        console.log('STEP 2: Added tracking_number to updateData');
-      } else {
-        console.log('STEP 2: Tracking number is empty, NOT adding');
       }
-
-      console.log('STEP 3: Final updateData being sent:', JSON.stringify(updateData, null, 2));
 
       const response = await fetch(
         `${API_URL}/orders/${selectedOrderId}`,
@@ -318,20 +310,55 @@ const OrdersPage: React.FC = () => {
         }
       );
 
-      console.log('STEP 4: Response received:', response.status);
       const result = await response.json();
       if (result.success) {
-        setPaymentMessage("✅ Order updated successfully!");
+        setPaymentMessage("✅ Order status updated successfully!");
         setTimeout(() => {
           refetchOrders();
-          handleCloseModal();
-        }, 1000);
+        }, 800);
       } else {
         setPaymentMessage(`❌ Error: ${result.error}`);
       }
     } catch (error) {
-      console.error("Error updating order:", error);
-      setPaymentMessage("❌ Failed to update order");
+      console.error("Error updating order status:", error);
+      setPaymentMessage("❌ Failed to update order status");
+    } finally {
+      setIsUpdatingOrder(false);
+    }
+  };
+
+  const handleUpdateTrackingNumber = async () => {
+    if (!selectedOrderId || !shopId || !trackingNumber.trim()) {
+      setPaymentMessage("❌ Please enter a tracking number");
+      return;
+    }
+
+    setIsUpdatingOrder(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/orders/${selectedOrderId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shop_id: shopId,
+            tracking_number: trackingNumber.trim(),
+          }),
+        }
+      );
+
+      const result = await response.json();
+      if (result.success) {
+        setPaymentMessage("✅ Tracking number updated successfully!");
+        setTimeout(() => {
+          refetchOrders();
+        }, 800);
+      } else {
+        setPaymentMessage(`❌ Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error updating tracking number:", error);
+      setPaymentMessage("❌ Failed to update tracking number");
     } finally {
       setIsUpdatingOrder(false);
     }
@@ -839,15 +866,15 @@ const OrdersPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Order Status & Tracking */}
+              {/* Order Status Section */}
               <div className="border-t border-gray-700 pt-6">
                 <h3 className="text-lg font-bold text-red-400 mb-4">
-                  Order Status & Tracking
+                  Order Status
                 </h3>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-red-400 mb-2">
-                      Current Status
+                      Current Status: <span className="text-white">{selectedOrder?.order_status.toUpperCase()}</span>
                     </label>
                     <select
                       value={editingStatus}
@@ -858,6 +885,7 @@ const OrdersPage: React.FC = () => {
                             | "processing"
                             | "shipped"
                             | "delivered"
+                            | "cancelled"
                         )
                       }
                       className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
@@ -868,6 +896,7 @@ const OrdersPage: React.FC = () => {
                         Shipped {!isPaymentComplete(selectedOrder) ? "(Payment incomplete)" : ""}
                       </option>
                       <option value="delivered">Delivered</option>
+                      <option value="cancelled">Cancelled</option>
                     </select>
                   </div>
 
@@ -886,39 +915,27 @@ const OrdersPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Tracking Number Input - Only show for Shipped status */}
+                  {/* Optional Tracking Number Input - Only for Shipped status */}
                   {editingStatus === "shipped" && (
                     <div>
                       <label className="block text-sm font-semibold text-blue-400 mb-2">
-                        Tracking Number
+                        Tracking Number (Optional)
                       </label>
                       <input
                         type="text"
-                        placeholder="Enter tracking number (e.g., TRK123456789)"
+                        placeholder="Enter tracking number (e.g., TRK123456789) - optional"
                         value={trackingNumber}
                         onChange={(e) => setTrackingNumber(e.target.value)}
                         className="w-full px-4 py-2 bg-gray-700 border-2 border-blue-600/30 text-white rounded-lg focus:border-blue-500 focus:outline-none"
                       />
-                    </div>
-                  )}
-
-                  {/* Tracking Number Display - Show for Delivered status (read-only) */}
-                  {editingStatus === "delivered" && (
-                    <div>
-                      <label className="block text-sm font-semibold text-green-400 mb-2">
-                        Tracking Number (Read-Only)
-                      </label>
-                      <input
-                        type="text"
-                        value={trackingNumber || "No tracking number available"}
-                        disabled
-                        className="w-full px-4 py-2 bg-gray-600 border-2 border-green-600/30 text-gray-300 rounded-lg cursor-not-allowed"
-                      />
+                      <p className="text-gray-400 text-xs mt-2">
+                        You can add or update the tracking number anytime after shipping.
+                      </p>
                     </div>
                   )}
 
                   <button
-                    onClick={handleUpdateOrder}
+                    onClick={handleUpdateOrderStatus}
                     disabled={
                       isUpdatingOrder || editingStatus === selectedOrder.order_status
                     }
@@ -932,6 +949,78 @@ const OrdersPage: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              {/* Tracking Number Section - Show for Shipped and Delivered */}
+              {(selectedOrder?.order_status === "shipped" || selectedOrder?.order_status === "delivered") && (
+                <div className="border-t border-gray-700 pt-6">
+                  <h3 className="text-lg font-bold text-blue-400 mb-4">
+                    Tracking Number
+                  </h3>
+                  <div className="space-y-4">
+                    {selectedOrder?.tracking_number ? (
+                      <div>
+                        <label className="block text-sm font-semibold text-green-400 mb-2">
+                          Current Tracking Number
+                        </label>
+                        <div className="w-full px-4 py-2 bg-gray-700 border-2 border-green-600/30 text-white rounded-lg">
+                          {selectedOrder.tracking_number}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-yellow-900/30 border-l-4 border-yellow-500 p-3 rounded">
+                        <p className="text-yellow-300 text-sm font-semibold">
+                          ℹ️ No Tracking Number
+                        </p>
+                        <p className="text-yellow-200 text-xs mt-1">
+                          Add a tracking number to help customer track their shipment.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Tracking Number Input - Editable if not delivered, read-only if delivered */}
+                    {selectedOrder?.order_status === "shipped" ? (
+                      <div>
+                        <label className="block text-sm font-semibold text-blue-400 mb-2">
+                          Add or Update Tracking Number
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Enter tracking number (e.g., TRK123456789)"
+                          value={trackingNumber}
+                          onChange={(e) => setTrackingNumber(e.target.value)}
+                          className="w-full px-4 py-2 bg-gray-700 border-2 border-blue-600/30 text-white rounded-lg focus:border-blue-500 focus:outline-none"
+                        />
+                        <button
+                          onClick={handleUpdateTrackingNumber}
+                          disabled={isUpdatingOrder || !trackingNumber.trim()}
+                          className={`w-full mt-3 py-2 rounded-lg font-semibold transition-colors ${
+                            isUpdatingOrder || !trackingNumber.trim()
+                              ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                              : "bg-blue-600 text-white hover:bg-blue-700"
+                          }`}
+                        >
+                          {isUpdatingOrder ? "Updating..." : "📦 Update Tracking Number"}
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-semibold text-green-400 mb-2">
+                          Tracking Number (Read-Only)
+                        </label>
+                        <input
+                          type="text"
+                          value={selectedOrder?.tracking_number || "No tracking number"}
+                          disabled
+                          className="w-full px-4 py-2 bg-gray-600 border-2 border-green-600/30 text-gray-300 rounded-lg cursor-not-allowed"
+                        />
+                        <p className="text-gray-400 text-xs mt-2">
+                          Order delivered - tracking number is read-only.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
 
               {/* Action Buttons */}

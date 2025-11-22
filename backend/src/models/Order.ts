@@ -155,13 +155,6 @@ class OrderModel {
    */
   async updateOrder(orderId: number, shopId: number, orderData: Partial<Omit<Order, 'order_id' | 'created_at' | 'updated_at' | 'shop_id'>>): Promise<boolean> {
     try {
-      logger.info('=== MODEL STEP 1: updateOrder called with ===', {
-        orderId,
-        shopId,
-        orderDataKeys: Object.keys(orderData),
-        orderData
-      });
-
       // Verify ownership first
       const ownership = await query(
         'SELECT order_id FROM orders WHERE order_id = ? AND shop_id = ?',
@@ -191,27 +184,21 @@ class OrderModel {
         'tracking_number',
       ];
 
-      logger.info('=== MODEL STEP 2: Building update fields ===', { updateableFields });
-
       for (const field of updateableFields) {
         if (field in orderData) {
-          logger.info(`Found field: ${field}`, { value: orderData[field] });
           fields.push(`${field} = ?`);
           values.push(orderData[field]);
         }
       }
 
-      logger.info('=== MODEL STEP 3: Fields after loop ===', { fields, values });
-
       // Handle delivery_address separately (it's a JSON field)
       if ('delivery_address' in orderData) {
-        logger.info('Found delivery_address field');
         fields.push('delivery_address = ?');
         values.push(JSON.stringify(orderData.delivery_address));
       }
 
       if (fields.length === 0) {
-        logger.warn('No fields to update!');
+        logger.warn('No fields to update');
         return false;
       }
 
@@ -220,16 +207,10 @@ class OrderModel {
       values.push(shopId);
 
       const sql = `UPDATE orders SET ${fields.join(', ')} WHERE order_id = ? AND shop_id = ?`;
-
-      logger.info('=== MODEL STEP 4: FINAL SQL QUERY ===');
-      logger.info('SQL:', sql);
-      logger.info('VALUES:', values);
-      logger.info('TRACKING_NUMBER IN VALUES?', values.includes(orderData.tracking_number || null));
-
       const results = await query(sql, values);
       const affectedRows = (results as any).affectedRows;
 
-      logger.info('Order updated successfully', { orderId, shopId, affectedRows, fields });
+      logger.info('Order updated successfully', { orderId, shopId, affectedRows });
       return affectedRows > 0;
     } catch (error) {
       logger.error('Error updating order:', error);

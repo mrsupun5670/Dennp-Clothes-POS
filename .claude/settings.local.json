@@ -8,7 +8,13 @@
       "Bash(npm run vite-build:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npm start)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(wmic process where processid=20932 delete)",
+      "Bash(pwsh -c \"Stop-Process -Id 20932 -Force\")"
     ],
     "deny": [],
     "ask": []

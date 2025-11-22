@@ -125,6 +125,11 @@ const exportReceiptAsImage = async (
   }
 };
 
+// Helper function to check if order payment is complete
+const isPaymentComplete = (order: Order): boolean => {
+  return order.total_paid >= order.total_amount;
+};
+
 const OrdersPage: React.FC = () => {
   const { shopId } = useShop();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -291,9 +296,9 @@ const OrdersPage: React.FC = () => {
         order_status: editingStatus,
       };
 
-      // Include tracking number (for shipped status or if tracking number exists)
-      if (trackingNumber) {
-        updateData.tracking_number = trackingNumber;
+      // Include tracking number only if it's not empty (don't send empty strings)
+      if (trackingNumber && trackingNumber.trim()) {
+        updateData.tracking_number = trackingNumber.trim();
       }
 
       const response = await fetch(
@@ -849,10 +854,27 @@ const OrdersPage: React.FC = () => {
                     >
                       <option value="pending">Pending</option>
                       <option value="processing">Processing</option>
-                      <option value="shipped">Shipped</option>
+                      <option value="shipped" disabled={!isPaymentComplete(selectedOrder)}>
+                        Shipped {!isPaymentComplete(selectedOrder) ? "(Payment incomplete)" : ""}
+                      </option>
                       <option value="delivered">Delivered</option>
                     </select>
                   </div>
+
+                  {/* Payment incomplete warning for shipped status */}
+                  {editingStatus === "shipped" && !isPaymentComplete(selectedOrder) && (
+                    <div className="bg-yellow-900/30 border-l-4 border-yellow-500 p-3 rounded">
+                      <p className="text-yellow-300 text-sm font-semibold">
+                        ⚠️ Payment Not Complete
+                      </p>
+                      <p className="text-yellow-200 text-xs mt-1">
+                        Amount Due: Rs. {(selectedOrder.total_amount - selectedOrder.total_paid).toFixed(2)}
+                      </p>
+                      <p className="text-yellow-200 text-xs mt-1">
+                        Please settle payment before marking order as shipped.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Tracking Number Input - Only show for Shipped status */}
                   {editingStatus === "shipped" && (

@@ -205,7 +205,7 @@ class OrderController {
   async updateOrder(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { shop_id, ...updateData } = req.body;
+      const { shop_id, order_status, ...updateData } = req.body;
 
       if (!shop_id) {
         res.status(400).json({
@@ -215,7 +215,34 @@ class OrderController {
         return;
       }
 
-      const success = await OrderModel.updateOrder(Number(id), shop_id, updateData);
+      // If trying to change status to shipped, check if payment is complete
+      if (order_status === 'shipped') {
+        const order = await OrderModel.getOrderById(Number(id), shop_id);
+
+        if (!order) {
+          res.status(404).json({
+            success: false,
+            error: 'Order not found',
+          });
+          return;
+        }
+
+        // Check if payment is fully settled (total_paid >= total_amount)
+        if (order.total_paid < order.total_amount) {
+          res.status(400).json({
+            success: false,
+            error: `Payment not complete. Amount due: Rs. ${(order.total_amount - order.total_paid).toFixed(2)}. Please settle payment before marking as shipped.`,
+            details: {
+              total_amount: order.total_amount,
+              total_paid: order.total_paid,
+              remaining: order.total_amount - order.total_paid,
+            },
+          });
+          return;
+        }
+      }
+
+      const success = await OrderModel.updateOrder(Number(id), shop_id, { order_status, ...updateData });
 
       if (!success) {
         res.status(404).json({

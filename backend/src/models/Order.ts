@@ -203,10 +203,13 @@ class OrderModel {
       values.push(orderId);
       values.push(shopId);
 
-      const results = await query(`UPDATE orders SET ${fields.join(', ')} WHERE order_id = ? AND shop_id = ?`, values);
+      const sql = `UPDATE orders SET ${fields.join(', ')} WHERE order_id = ? AND shop_id = ?`;
+      logger.info('Update query', { sql, orderId, shopId, fields, values: values.slice(0, -2) });
+
+      const results = await query(sql, values);
       const affectedRows = (results as any).affectedRows;
 
-      logger.info('Order updated successfully', { orderId, shopId, affectedRows });
+      logger.info('Order updated successfully', { orderId, shopId, affectedRows, fields });
       return affectedRows > 0;
     } catch (error) {
       logger.error('Error updating order:', error);

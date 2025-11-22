@@ -3,7 +3,7 @@
 
 const getApiUrl = (): string => {
   // If running in development with Vite, use localhost
-  if (import.meta.env.DEV) {
+  if ((import.meta as any).env?.DEV) {
     return 'http://localhost:3000/api/v1';
   }
 

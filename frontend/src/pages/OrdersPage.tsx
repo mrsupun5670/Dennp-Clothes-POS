@@ -25,7 +25,7 @@ interface Order {
   payment_status: "unpaid" | "partial" | "fully_paid";
   remaining_amount: number;
   payment_method: "cash" | "card" | "online" | "other";
-  order_status: "Pending" | "Processing" | "Shipped" | "Delivered";
+  order_status: "pending" | "processing" | "shipped" | "delivered";
   notes: string | null;
   order_date: string;
   recipient_name: string;
@@ -36,6 +36,7 @@ interface Order {
   district_name: string;
   province_name: string;
   postal_code: string;
+  tracking_number?: string | null;
   items?: OrderItem[];
 }
 
@@ -126,7 +127,7 @@ const exportReceiptAsImage = async (
 
 const OrdersPage: React.FC = () => {
   const { shopId } = useShop();
-  const [selectedStatus, setSelectedStatus] = useState<string>("completed");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -145,12 +146,17 @@ const OrdersPage: React.FC = () => {
 
   // Order update state
   const [editingStatus, setEditingStatus] = useState<
-    "Pending" | "Processing" | "Shipped" | "Delivered"
-  >("Pending");
+    "pending" | "processing" | "shipped" | "delivered"
+  >("pending");
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+  const [trackingNumber, setTrackingNumber] = useState("");
 
   // Receipt HTML state
   const [receiptHTML, setReceiptHTML] = useState<string>("");
+
+  // Order items loading state
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
 
   const {
     data: orders,
@@ -161,25 +167,14 @@ const OrdersPage: React.FC = () => {
       throw new Error("Shop ID is required");
     }
     const url = `${API_URL}/orders?shop_id=${shopId}&status=${selectedStatus}`;
-    console.log("Fetching orders from:", url);
     const response = await fetch(url);
     const result = await response.json();
-    console.log("Orders API Response:", result);
     if (result.success) {
-      console.log("Orders received:", result.data.length, "orders");
       return result.data;
     } else {
       throw new Error(result.error || "Failed to fetch orders");
     }
   }, { enabled: shopId !== null });
-
-  // Log when orders change
-  useEffect(() => {
-    console.log("Orders state updated:", orders);
-    console.log("isLoadingOrders:", isLoadingOrders);
-    console.log("shopId:", shopId);
-    console.log("selectedStatus:", selectedStatus);
-  }, [orders, isLoadingOrders, shopId, selectedStatus]);
 
   // Filter and search orders
   const filteredOrders = useMemo(() => {
@@ -209,6 +204,36 @@ const OrdersPage: React.FC = () => {
     (order) => order.order_id === selectedOrderId
   );
 
+  // Fetch order items when modal opens
+  useEffect(() => {
+    if (selectedOrderId && showOrderModal && !shopId) {
+      return; // Don't fetch if no shopId
+    }
+
+    if (selectedOrderId && showOrderModal) {
+      const fetchOrderItems = async () => {
+        setIsLoadingItems(true);
+        try {
+          const response = await fetch(
+            `${API_URL}/orders/${selectedOrderId}?shop_id=${shopId}`
+          );
+          const result = await response.json();
+          if (result.success && result.data.items) {
+            setOrderItems(result.data.items);
+          } else {
+            setOrderItems([]);
+          }
+        } catch (error) {
+          console.error("Error fetching order items:", error);
+          setOrderItems([]);
+        } finally {
+          setIsLoadingItems(false);
+        }
+      };
+      fetchOrderItems();
+    }
+  }, [selectedOrderId, showOrderModal, shopId]);
+
   // Fetch receipt HTML when showing receipt
   useEffect(() => {
     if (selectedOrderId && showReceiptPreview) {
@@ -235,6 +260,7 @@ const OrdersPage: React.FC = () => {
   const handleOpenOrderDetails = (order: Order) => {
     setSelectedOrderId(order.order_id);
     setEditingStatus(order.order_status);
+    setTrackingNumber(order.tracking_number || "");
     setPaymentAmount("");
     setPaymentType("balance");
     setPaymentMethod("cash");
@@ -250,21 +276,32 @@ const OrdersPage: React.FC = () => {
     setPaymentAmount("");
     setPaymentMessage("");
     setReceiptHTML("");
+    setOrderItems([]);
+    setTrackingNumber("");
+    setEditingStatus("pending");
   };
 
   const handleUpdateOrder = async () => {
-    if (!selectedOrderId) return;
+    if (!selectedOrderId || !shopId) return;
 
     setIsUpdatingOrder(true);
     try {
+      const updateData: any = {
+        shop_id: shopId,
+        order_status: editingStatus,
+      };
+
+      // Include tracking number if status is shipped
+      if (editingStatus === "shipped" && trackingNumber) {
+        updateData.tracking_number = trackingNumber;
+      }
+
       const response = await fetch(
         `${API_URL}/orders/${selectedOrderId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            order_status: editingStatus,
-          }),
+          body: JSON.stringify(updateData),
         }
       );
       const result = await response.json();
@@ -368,12 +405,14 @@ const OrdersPage: React.FC = () => {
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
-      case "completed":
-        return "bg-green-900/50 text-green-400";
-      case "cancelled":
-        return "bg-red-900/50 text-red-400";
-      case "refunded":
+      case "pending":
+        return "bg-yellow-900/50 text-yellow-400";
+      case "processing":
         return "bg-blue-900/50 text-blue-400";
+      case "shipped":
+        return "bg-purple-900/50 text-purple-400";
+      case "delivered":
+        return "bg-green-900/50 text-green-400";
       default:
         return "bg-gray-700/50 text-gray-400";
     }
@@ -403,16 +442,6 @@ const OrdersPage: React.FC = () => {
 
   return (
     <div className="space-y-6 h-full flex flex-col">
-      {/* Debug Panel */}
-      <div className="bg-gray-900/50 border border-gray-700 rounded p-3 text-xs">
-        <p className="text-gray-400">
-          <span className="text-yellow-400">shopId:</span> {shopId || "NULL"} |
-          <span className="text-yellow-400"> status:</span> {selectedStatus} |
-          <span className="text-yellow-400"> orders:</span> {orders?.length || 0} |
-          <span className="text-yellow-400"> loading:</span> {isLoadingOrders ? "true" : "false"}
-        </p>
-      </div>
-
       {/* Header Section */}
       <div className="flex justify-between items-center">
         <div>
@@ -444,19 +473,24 @@ const OrdersPage: React.FC = () => {
         <div className="flex gap-2 flex-wrap">
           {[
             {
-              value: "completed",
-              label: "Completed",
-              color: "bg-green-600 hover:bg-green-700",
+              value: "pending",
+              label: "Pending",
+              color: "bg-yellow-600 hover:bg-yellow-700",
             },
             {
-              value: "cancelled",
-              label: "Cancelled",
-              color: "bg-red-600 hover:bg-red-700",
-            },
-            {
-              value: "refunded",
-              label: "Refunded",
+              value: "processing",
+              label: "Processing",
               color: "bg-blue-600 hover:bg-blue-700",
+            },
+            {
+              value: "shipped",
+              label: "Shipped",
+              color: "bg-purple-600 hover:bg-purple-700",
+            },
+            {
+              value: "delivered",
+              label: "Delivered",
+              color: "bg-green-600 hover:bg-green-700",
             },
             {
               value: "all",
@@ -655,62 +689,71 @@ const OrdersPage: React.FC = () => {
                   Order Items
                 </h3>
                 <div className="bg-gray-700/30 border border-gray-700 rounded-lg overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-700/50 border-b border-gray-600">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-gray-300 font-semibold">
-                            Product
-                          </th>
-                          <th className="px-4 py-3 text-center text-gray-300 font-semibold">
-                            Qty
-                          </th>
-                          <th className="px-4 py-3 text-right text-gray-300 font-semibold">
-                            Unit Price (Rs.)
-                          </th>
-                          <th className="px-4 py-3 text-right text-gray-300 font-semibold">
-                            Total (Rs.)
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-700">
-                        {(selectedOrder.items || []).map((item, idx) => (
-                          <tr key={idx}>
-                            <td className="px-4 py-3 text-gray-200">
-                              {item.product_name}
+                  {isLoadingItems ? (
+                    <div className="p-6 text-center text-gray-400">
+                      Loading order items...
+                    </div>
+                  ) : orderItems.length === 0 ? (
+                    <div className="p-6 text-center text-gray-400">
+                      No items found for this order
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-700/50 border-b border-gray-600">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-gray-300 font-semibold">
+                              Product
+                            </th>
+                            <th className="px-4 py-3 text-center text-gray-300 font-semibold">
+                              Qty
+                            </th>
+                            <th className="px-4 py-3 text-right text-gray-300 font-semibold">
+                              Unit Price (Rs.)
+                            </th>
+                            <th className="px-4 py-3 text-right text-gray-300 font-semibold">
+                              Total (Rs.)
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700">
+                          {orderItems.map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="px-4 py-3 text-gray-200">
+                                {item.product_name}
+                              </td>
+                              <td className="px-4 py-3 text-center text-gray-300">
+                                {item.quantity}
+                              </td>
+                              <td className="px-4 py-3 text-right text-gray-400">
+                                {item.sold_price.toFixed(2)}
+                              </td>
+                              <td className="px-4 py-3 text-right text-red-400 font-semibold">
+                                {item.total_price.toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+                          <tr className="bg-gray-700/50 font-semibold">
+                            <td colSpan={3} className="px-4 py-3 text-right">
+                              Subtotal:
                             </td>
-                            <td className="px-4 py-3 text-center text-gray-300">
-                              {item.quantity}
-                            </td>
-                            <td className="px-4 py-3 text-right text-gray-400">
-                              {item.sold_price.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-right text-red-400 font-semibold">
-                              {item.total_price.toFixed(2)}
+                            <td className="px-4 py-3 text-right text-red-400">
+                              Rs. {selectedOrder.total_amount.toFixed(2)}
                             </td>
                           </tr>
-                        ))}
-                        <tr className="bg-gray-700/50 font-semibold">
-                          <td colSpan={3} className="px-4 py-3 text-right">
-                            Subtotal:
-                          </td>
-                          <td className="px-4 py-3 text-right text-red-400">
-                            Rs. {selectedOrder.total_amount.toFixed(2)}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Payment Summary Section */}
               <div className="border-t border-gray-700 pt-6">
                 <h3 className="text-lg font-bold text-red-400 mb-4">
-                  Payment Summary
+                  Payment Details
                 </h3>
-
-                <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 mb-6 space-y-3">
+                <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 space-y-3">
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <p className="text-xs text-gray-400 font-semibold mb-2">
@@ -722,183 +765,92 @@ const OrdersPage: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 font-semibold mb-2">
-                        Total Paid
+                        Advance Paid
                       </p>
                       <p className="text-green-400 font-bold text-xl">
-                        Rs. {selectedOrder.total_paid.toFixed(2)}
+                        Rs. {selectedOrder.advance_paid.toFixed(2)}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 font-semibold mb-2">
-                        Remaining Balance
+                        Balance {selectedOrder.remaining_amount > 0 ? "To Be Paid" : "Paid"}
                       </p>
-                      <p
-                        className={`font-bold text-xl ${
-                          selectedOrder.remaining_amount <= 0
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }`}
-                      >
+                      <p className={`font-bold text-xl ${selectedOrder.remaining_amount > 0 ? "text-red-400" : "text-green-400"}`}>
                         Rs. {Math.max(0, selectedOrder.remaining_amount).toFixed(2)}
                       </p>
                     </div>
                   </div>
-
-                  <div className="pt-4 border-t border-gray-600">
-                    <div className="flex gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-400">Advance Paid</p>
-                        <p className="text-gray-200 font-semibold">
-                          Rs. {selectedOrder.advance_paid.toFixed(2)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400">Balance Paid</p>
-                        <p className="text-gray-200 font-semibold">
-                          Rs. {selectedOrder.balance_paid.toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="flex-1">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getPaymentStatusBadgeColor(
-                            selectedOrder.payment_status
-                          )}`}
-                        >
-                          {selectedOrder.payment_status.replace("_", " ").toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
+                  <div className="pt-2 border-t border-gray-600">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getPaymentStatusBadgeColor(
+                      selectedOrder.payment_status
+                    )}`}>
+                      {selectedOrder.payment_status.replace("_", " ").toUpperCase()}
+                    </span>
                   </div>
                 </div>
-
-                {/* Payment Recording Form - Only show if balance remaining */}
-                {selectedOrder.remaining_amount > 0 && (
-                  <div className="bg-blue-900/20 border-2 border-blue-600/50 rounded-lg p-4 mb-6">
-                    <h4 className="text-sm font-bold text-blue-300 mb-4">
-                      💰 Record Payment
-                    </h4>
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-semibold text-gray-300 block mb-2">
-                            Payment Amount (Rs.)
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max={selectedOrder.remaining_amount}
-                            value={paymentAmount}
-                            onChange={(e) => setPaymentAmount(e.target.value)}
-                            placeholder="0.00"
-                            className="w-full px-3 py-2 bg-gray-700 border border-blue-600/50 text-white rounded text-sm focus:border-blue-500 focus:outline-none"
-                          />
-                          <p className="text-xs text-gray-400 mt-1">
-                            Max: Rs. {selectedOrder.remaining_amount.toFixed(2)}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-xs font-semibold text-gray-300 block mb-2">
-                            Payment Method
-                          </label>
-                          <select
-                            value={paymentMethod}
-                            onChange={(e) =>
-                              setPaymentMethod(
-                                e.target.value as
-                                  | "cash"
-                                  | "card"
-                                  | "online"
-                                  | "other"
-                              )
-                            }
-                            className="w-full px-3 py-2 bg-gray-700 border border-blue-600/50 text-white rounded text-sm focus:border-blue-500 focus:outline-none"
-                          >
-                            <option value="cash">💵 Cash</option>
-                            <option value="card">💳 Card</option>
-                            <option value="online">🌐 Online Transfer</option>
-                            <option value="other">📌 Other</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-semibold text-gray-300 block mb-2">
-                            Payment Type
-                          </label>
-                          <select
-                            value={paymentType}
-                            onChange={(e) =>
-                              setPaymentType(
-                                e.target.value as "advance" | "balance"
-                              )
-                            }
-                            className="w-full px-3 py-2 bg-gray-700 border border-blue-600/50 text-white rounded text-sm focus:border-blue-500 focus:outline-none"
-                          >
-                            <option value="advance">📥 Advance</option>
-                            <option value="balance">✅ Balance</option>
-                          </select>
-                        </div>
-                        <div />
-                      </div>
-                      {paymentMessage && (
-                        <div
-                          className={`text-sm p-3 rounded ${
-                            paymentMessage.includes("✅")
-                              ? "bg-green-900/30 text-green-300"
-                              : "bg-red-900/30 text-red-300"
-                          }`}
-                        >
-                          {paymentMessage}
-                        </div>
-                      )}
-                      <button
-                        onClick={handleRecordPayment}
-                        disabled={
-                          isProcessingPayment || !paymentAmount.trim()
-                        }
-                        className={`w-full py-2 rounded-lg font-semibold transition-colors ${
-                          isProcessingPayment || !paymentAmount.trim()
-                            ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                            : "bg-green-600 text-white hover:bg-green-700"
-                        }`}
-                      >
-                        {isProcessingPayment ? "Processing..." : "✅ Record Payment"}
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* Order Status Update */}
+              {/* Order Status & Tracking */}
               <div className="border-t border-gray-700 pt-6">
                 <h3 className="text-lg font-bold text-red-400 mb-4">
-                  Order Status
+                  Order Status & Tracking
                 </h3>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-red-400 mb-2">
-                      Update Status
+                      Current Status
                     </label>
                     <select
                       value={editingStatus}
                       onChange={(e) =>
                         setEditingStatus(
                           e.target.value as
-                            | "Pending"
-                            | "Processing"
-                            | "Shipped"
-                            | "Delivered"
+                            | "pending"
+                            | "processing"
+                            | "shipped"
+                            | "delivered"
                         )
                       }
                       className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
                     >
-                      <option value="Pending">Pending</option>
-                      <option value="Processing">Processing</option>
-                      <option value="Shipped">Shipped</option>
-                      <option value="Delivered">Delivered</option>
+                      <option value="pending">Pending</option>
+                      <option value="processing">Processing</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="delivered">Delivered</option>
                     </select>
                   </div>
+
+                  {/* Tracking Number Input - Only show for Shipped status */}
+                  {editingStatus === "shipped" && (
+                    <div>
+                      <label className="block text-sm font-semibold text-blue-400 mb-2">
+                        Tracking Number
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter tracking number (e.g., TRK123456789)"
+                        value={trackingNumber}
+                        onChange={(e) => setTrackingNumber(e.target.value)}
+                        className="w-full px-4 py-2 bg-gray-700 border-2 border-blue-600/30 text-white rounded-lg focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                  )}
+
+                  {/* Tracking Number Display - Show for Delivered status (read-only) */}
+                  {editingStatus === "delivered" && (
+                    <div>
+                      <label className="block text-sm font-semibold text-green-400 mb-2">
+                        Tracking Number (Read-Only)
+                      </label>
+                      <input
+                        type="text"
+                        value={trackingNumber || "No tracking number available"}
+                        disabled
+                        className="w-full px-4 py-2 bg-gray-600 border-2 border-green-600/30 text-gray-300 rounded-lg cursor-not-allowed"
+                      />
+                    </div>
+                  )}
+
                   <button
                     onClick={handleUpdateOrder}
                     disabled={
@@ -915,11 +867,12 @@ const OrdersPage: React.FC = () => {
                 </div>
               </div>
 
+
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-700 flex-wrap">
                 {/* Edit Order - Only for Pending and Processing */}
-                {(selectedOrder.order_status === "Pending" ||
-                  selectedOrder.order_status === "Processing") && (
+                {(selectedOrder.order_status === "pending" ||
+                  selectedOrder.order_status === "processing") && (
                   <button
                     onClick={handleEditOrder}
                     className="flex-1 min-w-[150px] bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
@@ -928,45 +881,58 @@ const OrdersPage: React.FC = () => {
                   </button>
                 )}
 
-                {/* Show Receipt Button */}
-                <button
-                  onClick={() => setShowReceiptPreview(!showReceiptPreview)}
-                  className="flex-1 min-w-[150px] bg-purple-600 text-white py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  {showReceiptPreview ? "📄 Hide Receipt" : "📄 Show Receipt"}
-                </button>
+                {/* Print Receipt Button - Only for Shipped and Delivered */}
+                {(selectedOrder.order_status === "shipped" ||
+                  selectedOrder.order_status === "delivered") && (
+                  <button
+                    onClick={() => printReceipt(selectedOrder.order_id)}
+                    disabled={!receiptHTML}
+                    className={`flex-1 min-w-[150px] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
+                      !receiptHTML
+                        ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    🖨️ Print Bill
+                  </button>
+                )}
 
-                {/* Print Receipt Button */}
-                <button
-                  onClick={() => printReceipt(selectedOrder.order_id)}
-                  disabled={!receiptHTML}
-                  className={`flex-1 min-w-[150px] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
-                    !receiptHTML
-                      ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-                >
-                  🖨️ Print Receipt
-                </button>
+                {/* Save as PNG Button - Only for Shipped and Delivered */}
+                {(selectedOrder.order_status === "shipped" ||
+                  selectedOrder.order_status === "delivered") && (
+                  <button
+                    onClick={() =>
+                      exportReceiptAsImage(
+                        selectedOrder.order_id,
+                        selectedOrder.recipient_phone,
+                        "png"
+                      )
+                    }
+                    disabled={!receiptHTML}
+                    className={`flex-1 min-w-[150px] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
+                      !receiptHTML
+                        ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                        : "bg-indigo-600 text-white hover:bg-indigo-700"
+                    }`}
+                  >
+                    💾 Save as PNG
+                  </button>
+                )}
 
-                {/* Save as PNG Button */}
-                <button
-                  onClick={() =>
-                    exportReceiptAsImage(
-                      selectedOrder.order_id,
-                      selectedOrder.recipient_phone,
-                      "png"
-                    )
-                  }
-                  disabled={!receiptHTML}
-                  className={`flex-1 min-w-[150px] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
-                    !receiptHTML
-                      ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                      : "bg-indigo-600 text-white hover:bg-indigo-700"
-                  }`}
-                >
-                  💾 Save as PNG
-                </button>
+                {/* Cancel Order Button - Only for Pending */}
+                {selectedOrder.order_status === "pending" && (
+                  <button
+                    onClick={() => {
+                      if (window.confirm("Are you sure you want to cancel this order?")) {
+                        // TODO: Implement cancel order functionality
+                        alert("Cancel functionality will be implemented");
+                      }
+                    }}
+                    className="flex-1 min-w-[150px] bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    ❌ Cancel Order
+                  </button>
+                )}
 
                 {/* Close Button */}
                 <button

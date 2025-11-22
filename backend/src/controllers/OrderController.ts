@@ -22,15 +22,10 @@ class OrderController {
 
       // Filter by status if provided
       if (status && status !== 'all') {
-        const statusMap: { [key: string]: string } = {
-          'pending': 'Pending',
-          'processing': 'Processing',
-          'shipped': 'Shipped',
-          'delivered': 'Delivered'
-        };
-        const dbStatus = statusMap[status.toLowerCase()];
-        if (dbStatus) {
-          orders = orders.filter(order => order.order_status === dbStatus);
+        const validStatuses = ['pending', 'processing', 'shipped', 'delivered'];
+        const lowerStatus = status.toLowerCase();
+        if (validStatuses.includes(lowerStatus)) {
+          orders = orders.filter(order => order.order_status === lowerStatus);
         }
       }
 
@@ -174,7 +169,7 @@ class OrderController {
         payment_status: 'unpaid',
         remaining_amount: total_amount,
         payment_method: payment_method || 'cash',
-        order_status: 'completed',
+        order_status: 'pending',
         notes,
         order_date: new Date(order_date),
         delivery_address,

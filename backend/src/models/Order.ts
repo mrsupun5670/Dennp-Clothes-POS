@@ -20,7 +20,7 @@ export interface Order {
   payment_status: 'unpaid' | 'partial' | 'fully_paid';
   remaining_amount: number;
   payment_method: 'cash' | 'card' | 'online' | 'check' | 'other';
-  order_status: 'completed' | 'cancelled' | 'refunded';
+  order_status: 'pending' | 'processing' | 'shipped' | 'delivered';
   notes?: string;
   order_date: Date;
   created_at: Date;

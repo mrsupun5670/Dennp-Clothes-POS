@@ -19,7 +19,7 @@ export function useQuery<T>(
 ): QueryResult<T> {
   const queryKeyString = JSON.stringify(queryKey);
   const [data, setData] = useState<T | null>(cache.get(queryKeyString) || null);
-  const [isLoading, setIsLoading] = useState(options.enabled && !cache.has(queryKeyString));
+  const [isLoading, setIsLoading] = useState<boolean>((options.enabled ?? true) && !cache.has(queryKeyString));
   const [error, setError] = useState<Error | null>(null);
 
   const queryFnRef = useRef(queryFn);

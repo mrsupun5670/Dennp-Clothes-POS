@@ -25,7 +25,7 @@ interface Order {
   payment_status: "unpaid" | "partial" | "fully_paid";
   remaining_amount: number;
   payment_method: "cash" | "card" | "online" | "other";
-  order_status: "pending" | "processing" | "shipped" | "delivered";
+  order_status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   notes: string | null;
   order_date: string;
   recipient_name: string;
@@ -146,7 +146,7 @@ const OrdersPage: React.FC = () => {
 
   // Order update state
   const [editingStatus, setEditingStatus] = useState<
-    "pending" | "processing" | "shipped" | "delivered"
+    "pending" | "processing" | "shipped" | "delivered" | "cancelled"
   >("pending");
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -317,6 +317,40 @@ const OrdersPage: React.FC = () => {
     } catch (error) {
       console.error("Error updating order:", error);
       setPaymentMessage("❌ Failed to update order");
+    } finally {
+      setIsUpdatingOrder(false);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!selectedOrderId || !shopId) return;
+
+    setIsUpdatingOrder(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/orders/${selectedOrderId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shop_id: shopId,
+            order_status: "cancelled",
+          }),
+        }
+      );
+      const result = await response.json();
+      if (result.success) {
+        setPaymentMessage("✅ Order cancelled successfully!");
+        setTimeout(() => {
+          refetchOrders();
+          handleCloseModal();
+        }, 1000);
+      } else {
+        setPaymentMessage(`❌ Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      setPaymentMessage("❌ Failed to cancel order");
     } finally {
       setIsUpdatingOrder(false);
     }
@@ -923,14 +957,18 @@ const OrdersPage: React.FC = () => {
                 {selectedOrder.order_status === "pending" && (
                   <button
                     onClick={() => {
-                      if (window.confirm("Are you sure you want to cancel this order?")) {
-                        // TODO: Implement cancel order functionality
-                        alert("Cancel functionality will be implemented");
+                      if (window.confirm("Are you sure you want to cancel this order? This action cannot be undone.")) {
+                        handleCancelOrder();
                       }
                     }}
-                    className="flex-1 min-w-[150px] bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                    disabled={isUpdatingOrder}
+                    className={`flex-1 min-w-[150px] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
+                      isUpdatingOrder
+                        ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                        : "bg-red-600 text-white hover:bg-red-700"
+                    }`}
                   >
-                    ❌ Cancel Order
+                    {isUpdatingOrder ? "⏳ Cancelling..." : "❌ Cancel Order"}
                   </button>
                 )}
 

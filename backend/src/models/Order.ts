@@ -14,6 +14,7 @@ export interface Order {
   user_id?: number;
   total_items: number;
   total_amount: number;
+  delivery_charge?: number;
   advance_paid: number;
   balance_paid: number;
   total_paid: number;
@@ -220,12 +221,16 @@ class OrderModel {
 
   /**
    * Record payment for an order
+   * Note: Calculations now include delivery_charge in the grand total
    */
   async recordPayment(orderId: number, shopId: number, amountPaid: number, paymentType: 'advance' | 'balance' | 'full'): Promise<boolean> {
     try {
       // Get current order data
       const order = await this.getOrderById(orderId, shopId);
       if (!order) throw new Error('Order not found');
+
+      // Calculate grand total including delivery charge
+      const grandTotal = order.total_amount + (order.delivery_charge || 0);
 
       let newAdvancePaid = order.advance_paid;
       let newBalancePaid = order.balance_paid;
@@ -236,16 +241,18 @@ class OrderModel {
       } else if (paymentType === 'balance') {
         newBalancePaid += amountPaid;
       } else if (paymentType === 'full') {
-        newTotalPaid = order.total_amount;
+        // Full payment means paying the grand total (order + delivery)
+        newTotalPaid = grandTotal;
         newAdvancePaid = 0;
-        newBalancePaid = order.total_amount;
+        newBalancePaid = grandTotal;
       }
 
       newTotalPaid = newAdvancePaid + newBalancePaid;
-      const newRemainingAmount = Math.max(0, order.total_amount - newTotalPaid);
+      // Remaining amount is now based on grand total (order + delivery)
+      const newRemainingAmount = Math.max(0, grandTotal - newTotalPaid);
 
       let paymentStatus: 'unpaid' | 'partial' | 'fully_paid' = 'unpaid';
-      if (newTotalPaid >= order.total_amount) {
+      if (newTotalPaid >= grandTotal) {
         paymentStatus = 'fully_paid';
       } else if (newTotalPaid > 0) {
         paymentStatus = 'partial';
@@ -258,7 +265,7 @@ class OrderModel {
         [newAdvancePaid, newBalancePaid, newTotalPaid, paymentStatus, newRemainingAmount, orderId, shopId]
       );
 
-      logger.info('Payment recorded for order', { orderId, shopId, amountPaid, paymentType, newPaymentStatus: paymentStatus });
+      logger.info('Payment recorded for order', { orderId, shopId, amountPaid, paymentType, newPaymentStatus: paymentStatus, grandTotal });
       return (results as any).affectedRows > 0;
     } catch (error) {
       logger.error('Error recording payment:', error);

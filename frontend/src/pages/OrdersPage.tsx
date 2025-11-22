@@ -789,12 +789,20 @@ const OrdersPage: React.FC = () => {
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 font-semibold mb-1">
-                        {selectedOrder.remaining_amount > 0 ? "Balance To Be Paid" : "Balance Paid"}
-                      </p>
-                      <p className={`font-bold text-lg ${selectedOrder.remaining_amount > 0 ? "text-red-400" : "text-green-400"}`}>
-                        Rs. {Math.max(0, selectedOrder.remaining_amount).toFixed(2)}
-                      </p>
+                      {(() => {
+                        const grandTotal = selectedOrder.total_amount + (selectedOrder.delivery_charge || 0);
+                        const balanceToPay = Math.max(0, grandTotal - selectedOrder.total_paid);
+                        return (
+                          <>
+                            <p className="text-xs text-gray-400 font-semibold mb-1">
+                              {balanceToPay > 0 ? "Balance To Be Paid" : "Balance Paid"}
+                            </p>
+                            <p className={`font-bold text-lg ${balanceToPay > 0 ? "text-red-400" : "text-green-400"}`}>
+                              Rs. {balanceToPay.toFixed(2)}
+                            </p>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
 

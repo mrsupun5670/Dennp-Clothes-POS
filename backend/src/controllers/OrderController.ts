@@ -207,6 +207,8 @@ class OrderController {
       const { id } = req.params;
       const { shop_id, order_status, ...updateData } = req.body;
 
+      logger.info('Update order request', { id, shop_id, order_status, updateData });
+
       if (!shop_id) {
         res.status(400).json({
           success: false,

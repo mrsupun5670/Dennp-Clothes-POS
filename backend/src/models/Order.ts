@@ -204,7 +204,8 @@ class OrderModel {
       values.push(shopId);
 
       const sql = `UPDATE orders SET ${fields.join(', ')} WHERE order_id = ? AND shop_id = ?`;
-      logger.info('Update query', { sql, orderId, shopId, fields, values: values.slice(0, -2) });
+      logger.info('Update SQL', { sql, orderId, shopId });
+      logger.info('Update data', { fields, allValues: values });
 
       const results = await query(sql, values);
       const affectedRows = (results as any).affectedRows;

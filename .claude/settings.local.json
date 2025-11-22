@@ -1,27 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run type-check:*)",
+      "Bash(node update_test_orders.js:*)",
+      "Bash(nul)",
+      "Bash(npm run build:*)",
+      "Bash(grep:*)",
+      "Bash(npm run vite-build:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(grep:*)",
-      "Bash(ren categoryRoutes.ts categoryRoutes.js)",
-      "Bash(ren:*)",
-      "Bash(ren orderRoutes.ts orderRoutes.js)",
-      "Bash(find:*)",
-      "Bash(curl:*)",
-      "Bash(npm run build:*)",
-      "Bash(wc:*)",
-      "Bash(git push:*)",
-      "Bash(npm run dev:*)",
-      "Bash(timeout 5 bash -c 'sleep 3 && curl -s http://localhost:3000/health')",
-      "Bash(taskkill:*)",
-      "Bash(nul)",
-      "Bash(netstat:*)",
-      "Bash(findstr:*)",
-      "Bash(powershell -Command \"Stop-Process -Id 13420 -Force\")",
-      "Bash(powershell -Command \"Get-Process node | Stop-Process -Force; Start-Sleep -Seconds 2; cd backend; npm run dev\")",
-      "Bash(python3:*)"
+      "Bash(npm run:*)"
     ],
     "deny": [],
     "ask": []

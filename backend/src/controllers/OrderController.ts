@@ -205,9 +205,24 @@ class OrderController {
   async updateOrder(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+
+      logger.info('=== STEP 1: Raw request body ===', req.body);
+
       const { shop_id, order_status, ...updateData } = req.body;
 
-      logger.info('Update order request', { id, shop_id, order_status, updateData });
+      logger.info('=== STEP 2: Destructured values ===', {
+        id,
+        shop_id,
+        order_status,
+        updateDataKeys: Object.keys(updateData),
+        updateData
+      });
+
+      logger.info('TRACKING_NUMBER CHECK:', {
+        has_tracking_number: 'tracking_number' in updateData,
+        tracking_number_value: updateData.tracking_number,
+        typeof_tracking_number: typeof updateData.tracking_number
+      });
 
       if (!shop_id) {
         res.status(400).json({

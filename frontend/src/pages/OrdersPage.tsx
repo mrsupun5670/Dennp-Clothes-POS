@@ -297,9 +297,17 @@ const OrdersPage: React.FC = () => {
       };
 
       // Include tracking number only if it's not empty (don't send empty strings)
+      console.log('STEP 1: trackingNumber value:', trackingNumber);
+      console.log('STEP 1: trackingNumber trimmed:', trackingNumber.trim());
+
       if (trackingNumber && trackingNumber.trim()) {
         updateData.tracking_number = trackingNumber.trim();
+        console.log('STEP 2: Added tracking_number to updateData');
+      } else {
+        console.log('STEP 2: Tracking number is empty, NOT adding');
       }
+
+      console.log('STEP 3: Final updateData being sent:', JSON.stringify(updateData, null, 2));
 
       const response = await fetch(
         `${API_URL}/orders/${selectedOrderId}`,
@@ -309,6 +317,8 @@ const OrdersPage: React.FC = () => {
           body: JSON.stringify(updateData),
         }
       );
+
+      console.log('STEP 4: Response received:', response.status);
       const result = await response.json();
       if (result.success) {
         setPaymentMessage("✅ Order updated successfully!");

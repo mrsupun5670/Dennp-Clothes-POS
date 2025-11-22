@@ -37,6 +37,7 @@ interface Order {
   province_name: string;
   postal_code: string;
   tracking_number?: string | null;
+  delivery_charge?: number;
   items?: OrderItem[];
 }
 
@@ -125,11 +126,6 @@ const exportReceiptAsImage = async (
   }
 };
 
-// Helper function to check if order payment is complete
-const isPaymentComplete = (order: Order): boolean => {
-  return order.total_paid >= order.total_amount;
-};
-
 const OrdersPage: React.FC = () => {
   const { shopId } = useShop();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -148,13 +144,7 @@ const OrdersPage: React.FC = () => {
   >("cash");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState("");
-
-  // Order update state
-  const [editingStatus, setEditingStatus] = useState<
-    "pending" | "processing" | "shipped" | "delivered" | "cancelled"
-  >("pending");
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
-  const [trackingNumber, setTrackingNumber] = useState("");
 
   // Receipt HTML state
   const [receiptHTML, setReceiptHTML] = useState<string>("");
@@ -264,8 +254,6 @@ const OrdersPage: React.FC = () => {
 
   const handleOpenOrderDetails = (order: Order) => {
     setSelectedOrderId(order.order_id);
-    setEditingStatus(order.order_status);
-    setTrackingNumber(order.tracking_number || "");
     setPaymentAmount("");
     setPaymentType("balance");
     setPaymentMethod("cash");
@@ -282,86 +270,6 @@ const OrdersPage: React.FC = () => {
     setPaymentMessage("");
     setReceiptHTML("");
     setOrderItems([]);
-    setTrackingNumber("");
-    setEditingStatus("pending");
-  };
-
-  const handleUpdateOrderStatus = async () => {
-    if (!selectedOrderId || !shopId) return;
-
-    setIsUpdatingOrder(true);
-    try {
-      const updateData: any = {
-        shop_id: shopId,
-        order_status: editingStatus,
-      };
-
-      // Include tracking number only if provided when changing to shipped
-      if (editingStatus === "shipped" && trackingNumber && trackingNumber.trim()) {
-        updateData.tracking_number = trackingNumber.trim();
-      }
-
-      const response = await fetch(
-        `${API_URL}/orders/${selectedOrderId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updateData),
-        }
-      );
-
-      const result = await response.json();
-      if (result.success) {
-        setPaymentMessage("✅ Order status updated successfully!");
-        setTimeout(() => {
-          refetchOrders();
-        }, 800);
-      } else {
-        setPaymentMessage(`❌ Error: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Error updating order status:", error);
-      setPaymentMessage("❌ Failed to update order status");
-    } finally {
-      setIsUpdatingOrder(false);
-    }
-  };
-
-  const handleUpdateTrackingNumber = async () => {
-    if (!selectedOrderId || !shopId || !trackingNumber.trim()) {
-      setPaymentMessage("❌ Please enter a tracking number");
-      return;
-    }
-
-    setIsUpdatingOrder(true);
-    try {
-      const response = await fetch(
-        `${API_URL}/orders/${selectedOrderId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            shop_id: shopId,
-            tracking_number: trackingNumber.trim(),
-          }),
-        }
-      );
-
-      const result = await response.json();
-      if (result.success) {
-        setPaymentMessage("✅ Tracking number updated successfully!");
-        setTimeout(() => {
-          refetchOrders();
-        }, 800);
-      } else {
-        setPaymentMessage(`❌ Error: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Error updating tracking number:", error);
-      setPaymentMessage("❌ Failed to update tracking number");
-    } finally {
-      setIsUpdatingOrder(false);
-    }
   };
 
   const handleCancelOrder = async () => {
@@ -631,6 +539,9 @@ const OrdersPage: React.FC = () => {
                 <th className="px-6 py-3 text-left font-semibold text-red-400">
                   Payment Status
                 </th>
+                <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  Tracking Number
+                </th>
               </tr>
             </thead>
 
@@ -682,11 +593,20 @@ const OrdersPage: React.FC = () => {
                         {order.payment_status.replace("_", " ").toUpperCase()}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-gray-300 text-sm">
+                      {order.tracking_number ? (
+                        <span className="bg-green-900/30 text-green-300 px-2 py-1 rounded text-xs font-mono">
+                          {order.tracking_number}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500 italic">-</span>
+                      )}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
                     No orders found for this status
                   </td>
                 </tr>
@@ -824,38 +744,61 @@ const OrdersPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Payment Summary Section */}
+              {/* Payment Summary Section with Delivery Charge */}
               <div className="border-t border-gray-700 pt-6">
                 <h3 className="text-lg font-bold text-red-400 mb-4">
-                  Payment Details
+                  Order Summary & Payment
                 </h3>
                 <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 space-y-3">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-xs text-gray-400 font-semibold mb-2">
-                        Total Amount
-                      </p>
-                      <p className="text-gray-100 font-bold text-xl">
-                        Rs. {selectedOrder.total_amount.toFixed(2)}
+                  {/* Subtotal */}
+                  <div className="flex justify-between items-center pb-3 border-b border-gray-600">
+                    <p className="text-gray-300">Order Subtotal:</p>
+                    <p className="text-gray-100 font-semibold">
+                      Rs. {selectedOrder.total_amount.toFixed(2)}
+                    </p>
+                  </div>
+
+                  {/* Delivery Charge */}
+                  {selectedOrder.delivery_charge ? (
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-600">
+                      <p className="text-gray-300">Delivery Charge:</p>
+                      <p className="text-gray-100 font-semibold">
+                        Rs. {selectedOrder.delivery_charge.toFixed(2)}
                       </p>
                     </div>
+                  ) : null}
+
+                  {/* Grand Total */}
+                  <div className="flex justify-between items-center pb-3 border-b border-gray-600 bg-gray-700/50 rounded p-2">
+                    <p className="text-red-400 font-bold text-lg">
+                      Grand Total (Amount Due):
+                    </p>
+                    <p className="text-red-400 font-bold text-xl">
+                      Rs. {((selectedOrder.total_amount + (selectedOrder.delivery_charge || 0))).toFixed(2)}
+                    </p>
+                  </div>
+
+                  {/* Payment Breakdown */}
+                  <div className="grid grid-cols-2 gap-4 py-3">
                     <div>
-                      <p className="text-xs text-gray-400 font-semibold mb-2">
+                      <p className="text-xs text-gray-400 font-semibold mb-1">
                         Advance Paid
                       </p>
-                      <p className="text-green-400 font-bold text-xl">
+                      <p className="text-green-400 font-bold text-lg">
                         Rs. {selectedOrder.advance_paid.toFixed(2)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 font-semibold mb-2">
-                        Balance {selectedOrder.remaining_amount > 0 ? "To Be Paid" : "Paid"}
+                      <p className="text-xs text-gray-400 font-semibold mb-1">
+                        {selectedOrder.remaining_amount > 0 ? "Balance To Be Paid" : "Balance Paid"}
                       </p>
-                      <p className={`font-bold text-xl ${selectedOrder.remaining_amount > 0 ? "text-red-400" : "text-green-400"}`}>
+                      <p className={`font-bold text-lg ${selectedOrder.remaining_amount > 0 ? "text-red-400" : "text-green-400"}`}>
                         Rs. {Math.max(0, selectedOrder.remaining_amount).toFixed(2)}
                       </p>
                     </div>
                   </div>
+
+                  {/* Payment Status */}
                   <div className="pt-2 border-t border-gray-600">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getPaymentStatusBadgeColor(
                       selectedOrder.payment_status
@@ -866,161 +809,6 @@ const OrdersPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Order Status Section */}
-              <div className="border-t border-gray-700 pt-6">
-                <h3 className="text-lg font-bold text-red-400 mb-4">
-                  Order Status
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-red-400 mb-2">
-                      Current Status: <span className="text-white">{selectedOrder?.order_status.toUpperCase()}</span>
-                    </label>
-                    <select
-                      value={editingStatus}
-                      onChange={(e) =>
-                        setEditingStatus(
-                          e.target.value as
-                            | "pending"
-                            | "processing"
-                            | "shipped"
-                            | "delivered"
-                            | "cancelled"
-                        )
-                      }
-                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="processing">Processing</option>
-                      <option value="shipped" disabled={!isPaymentComplete(selectedOrder)}>
-                        Shipped {!isPaymentComplete(selectedOrder) ? "(Payment incomplete)" : ""}
-                      </option>
-                      <option value="delivered">Delivered</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  </div>
-
-                  {/* Payment incomplete warning for shipped status */}
-                  {editingStatus === "shipped" && !isPaymentComplete(selectedOrder) && (
-                    <div className="bg-yellow-900/30 border-l-4 border-yellow-500 p-3 rounded">
-                      <p className="text-yellow-300 text-sm font-semibold">
-                        ⚠️ Payment Not Complete
-                      </p>
-                      <p className="text-yellow-200 text-xs mt-1">
-                        Amount Due: Rs. {(selectedOrder.total_amount - selectedOrder.total_paid).toFixed(2)}
-                      </p>
-                      <p className="text-yellow-200 text-xs mt-1">
-                        Please settle payment before marking order as shipped.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Optional Tracking Number Input - Only for Shipped status */}
-                  {editingStatus === "shipped" && (
-                    <div>
-                      <label className="block text-sm font-semibold text-blue-400 mb-2">
-                        Tracking Number (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter tracking number (e.g., TRK123456789) - optional"
-                        value={trackingNumber}
-                        onChange={(e) => setTrackingNumber(e.target.value)}
-                        className="w-full px-4 py-2 bg-gray-700 border-2 border-blue-600/30 text-white rounded-lg focus:border-blue-500 focus:outline-none"
-                      />
-                      <p className="text-gray-400 text-xs mt-2">
-                        You can add or update the tracking number anytime after shipping.
-                      </p>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={handleUpdateOrderStatus}
-                    disabled={
-                      isUpdatingOrder || editingStatus === selectedOrder.order_status
-                    }
-                    className={`w-full py-2 rounded-lg font-semibold transition-colors ${
-                      isUpdatingOrder || editingStatus === selectedOrder.order_status
-                        ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                        : "bg-red-600 text-white hover:bg-red-700"
-                    }`}
-                  >
-                    {isUpdatingOrder ? "Updating..." : "🔄 Update Order Status"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Tracking Number Section - Show for Shipped and Delivered */}
-              {(selectedOrder?.order_status === "shipped" || selectedOrder?.order_status === "delivered") && (
-                <div className="border-t border-gray-700 pt-6">
-                  <h3 className="text-lg font-bold text-blue-400 mb-4">
-                    Tracking Number
-                  </h3>
-                  <div className="space-y-4">
-                    {selectedOrder?.tracking_number ? (
-                      <div>
-                        <label className="block text-sm font-semibold text-green-400 mb-2">
-                          Current Tracking Number
-                        </label>
-                        <div className="w-full px-4 py-2 bg-gray-700 border-2 border-green-600/30 text-white rounded-lg">
-                          {selectedOrder.tracking_number}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-yellow-900/30 border-l-4 border-yellow-500 p-3 rounded">
-                        <p className="text-yellow-300 text-sm font-semibold">
-                          ℹ️ No Tracking Number
-                        </p>
-                        <p className="text-yellow-200 text-xs mt-1">
-                          Add a tracking number to help customer track their shipment.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Tracking Number Input - Editable if not delivered, read-only if delivered */}
-                    {selectedOrder?.order_status === "shipped" ? (
-                      <div>
-                        <label className="block text-sm font-semibold text-blue-400 mb-2">
-                          Add or Update Tracking Number
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Enter tracking number (e.g., TRK123456789)"
-                          value={trackingNumber}
-                          onChange={(e) => setTrackingNumber(e.target.value)}
-                          className="w-full px-4 py-2 bg-gray-700 border-2 border-blue-600/30 text-white rounded-lg focus:border-blue-500 focus:outline-none"
-                        />
-                        <button
-                          onClick={handleUpdateTrackingNumber}
-                          disabled={isUpdatingOrder || !trackingNumber.trim()}
-                          className={`w-full mt-3 py-2 rounded-lg font-semibold transition-colors ${
-                            isUpdatingOrder || !trackingNumber.trim()
-                              ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                              : "bg-blue-600 text-white hover:bg-blue-700"
-                          }`}
-                        >
-                          {isUpdatingOrder ? "Updating..." : "📦 Update Tracking Number"}
-                        </button>
-                      </div>
-                    ) : (
-                      <div>
-                        <label className="block text-sm font-semibold text-green-400 mb-2">
-                          Tracking Number (Read-Only)
-                        </label>
-                        <input
-                          type="text"
-                          value={selectedOrder?.tracking_number || "No tracking number"}
-                          disabled
-                          className="w-full px-4 py-2 bg-gray-600 border-2 border-green-600/30 text-gray-300 rounded-lg cursor-not-allowed"
-                        />
-                        <p className="text-gray-400 text-xs mt-2">
-                          Order delivered - tracking number is read-only.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
 
               {/* Action Buttons */}

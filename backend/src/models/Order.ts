@@ -22,6 +22,7 @@ export interface Order {
   payment_method: 'cash' | 'card' | 'online' | 'check' | 'other';
   order_status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   notes?: string;
+  tracking_number?: string | null;
   order_date: Date;
   created_at: Date;
   updated_at: Date;
@@ -180,6 +181,7 @@ class OrderModel {
         'payment_method',
         'order_status',
         'notes',
+        'tracking_number',
       ];
 
       for (const field of updateableFields) {

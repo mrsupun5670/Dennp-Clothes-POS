@@ -291,8 +291,8 @@ const OrdersPage: React.FC = () => {
         order_status: editingStatus,
       };
 
-      // Include tracking number if status is shipped
-      if (editingStatus === "shipped" && trackingNumber) {
+      // Include tracking number (for shipped status or if tracking number exists)
+      if (trackingNumber) {
         updateData.tracking_number = trackingNumber;
       }
 

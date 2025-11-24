@@ -6,73 +6,8 @@ import {
 import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
+import { printContent, saveAsPDF, generateProductsHTML } from "../utils/exportUtils";
 
-/**
- * Global utility function for printing product reports.
- */
-const handlePrintProducts = (products: any[]) => {
-  const printWindow = window.open("", "", "width=1000,height=600");
-  if (printWindow) {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Products Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h1 { color: #ef4444; text-align: center; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background-color: #374151; color: white; padding: 10px; text-align: left; border: 1px solid #1f2937; }
-          td { padding: 8px; border: 1px solid #d1d5db; }
-          tr:nth-child(even) { background-color: #f9fafb; }
-          .text-right { text-align: right; }
-          .text-center { text-align: center; }
-        </style>
-      </head>
-      <body>
-        <h1>Products Report</h1>
-        <p style="text-align: center; color: #666;">Generated on ${new Date().toLocaleString()}</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Product Code</th>
-              <th>Name</th>
-              <th>Colors</th>
-              <th>Sizes</th>
-              <th class="text-right">Product Cost (Rs.)</th>
-              <th class="text-right">Print Cost (Rs.)</th>
-              <th class="text-right">Retail Price (Rs.)</th>
-              <th class="text-right">Wholesale Price (Rs.)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${products
-              .map(
-                (p) => `
-              <tr>
-                <td>${p.code}</td>
-                <td>${p.name}</td>
-                <td>${p.colors}</td>
-                <td>${p.sizes}</td>
-                <td class="text-right">${p.cost.toFixed(2)}</td>
-                <td class="text-right">${p.printCost ? p.printCost.toFixed(2) : "0.00"}</td>
-                <td class="text-right">${p.retailPrice.toFixed(2)}</td>
-                <td class="text-right">${p.wholesalePrice.toFixed(2)}</td>
-              </tr>
-            `
-              )
-              .join("")}
-          </tbody>
-        </table>
-        <p style="margin-top: 30px; color: #666; font-size: 12px;">Total Products: ${products.length}</p>
-      </body>
-      </html>
-    `;
-    printWindow.document.write(html);
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 250);
-  }
-};
 
 /**
  * The main Products Page component.
@@ -680,24 +615,40 @@ const ProductsPage: React.FC = () => {
 
   // --- RENDER (JSX) ---
   return (
-    <div className="flex flex-col h-full p-6 bg-gray-900 text-white space-y-6">
-      {/* Header & Main Actions */}
-      <div className="flex justify-between items-start border-b border-gray-700 pb-4">
+    <div className="space-y-6 h-full flex flex-col">
+      {/* Header Section */}
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-red-500">
-            📦 Product Catalog
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-red-500">Product Catalog</h1>
+            <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
+              {filteredAndSortedProducts.length} products
+            </span>
+          </div>
           <p className="text-gray-400 mt-2">
-            Manage your stock catalog and inventory
+            {shopId ? `Shop #${shopId} - Manage your products` : "Select a shop to view products"}
           </p>
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => handlePrintProducts(filteredAndSortedProducts)}
+            onClick={() => {
+              const html = generateProductsHTML(filteredAndSortedProducts);
+              printContent(html, 'Products Report');
+            }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
-            title="Print/Export as PDF"
+            title="Print directly"
           >
-            🖨️ Print/PDF
+            🖨️ Print
+          </button>
+          <button
+            onClick={() => {
+              const html = generateProductsHTML(filteredAndSortedProducts);
+              saveAsPDF(html, 'products_report', 'products');
+            }}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
+            title="Save as PDF"
+          >
+            💾 Save PDF
           </button>
           <button
             onClick={handleAddProductClick}
@@ -708,148 +659,155 @@ const ProductsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Search and Filter Section */}
-      <div className="space-y-4 bg-gray-800/30 border border-gray-700 rounded-lg p-5">
-        {/* Search Bar */}
+      {/* Search Bar */}
+      <div className="space-y-2">
+        <label className="block text-sm font-semibold text-red-400">
+          Search Products
+        </label>
+        <input
+          type="text"
+          placeholder="Search by product code, name, or color..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full px-4 py-3 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-colors"
+        />
+      </div>
+
+      {/* Filters Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label className="block text-sm font-semibold text-red-400 mb-2">
-            Search Products
+          <label className="block text-xs font-semibold text-gray-400 mb-2">
+            Sort By
           </label>
-          <input
-            type="text"
-            placeholder="Search by product code, name, or color..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-colors"
-          />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
+          >
+            <option value="name">Name (A-Z)</option>
+            <option value="code">Product Code</option>
+            <option value="price-high">Retail Price (High to Low)</option>
+            <option value="price-low">Retail Price (Low to High)</option>
+            <option value="cost-high">Cost Price (High to Low)</option>
+            <option value="cost-low">Cost Price (Low to High)</option>
+            <option value="qty-high">Quantity (High to Low)</option>
+          </select>
         </div>
 
-        {/* Sorting Options */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-2">
-              Sort By
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
-            >
-              <option value="name">Name (A-Z)</option>
-              <option value="code">Product Code</option>
-              <option value="price-high">Retail Price (High to Low)</option>
-              <option value="price-low">Retail Price (Low to High)</option>
-              <option value="cost-high">Cost Price (High to Low)</option>
-              <option value="cost-low">Cost Price (Low to High)</option>
-              <option value="qty-high">Quantity (High to Low)</option>
-            </select>
-          </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 mb-2">
+            Stock Status
+          </label>
+          <select
+            value={stockFilter}
+            onChange={(e) => setStockFilter(e.target.value)}
+            className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
+          >
+            <option value="all">All Products</option>
+            <option value="low">Low Stock (≤ 3)</option>
+            <option value="out">Out of Stock</option>
+            <option value="in">In Stock</option>
+          </select>
+        </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-2">
-              Stock Status
-            </label>
-            <select
-              value={stockFilter}
-              onChange={(e) => setStockFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
-            >
-              <option value="all">All Products</option>
-              <option value="low">Low Stock (≤ 3)</option>
-              <option value="out">Out of Stock</option>
-              <option value="in">In Stock</option>
-            </select>
-          </div>
-
-          <div className="col-span-2 md:col-span-1">
-            <label className="block text-xs font-semibold text-gray-400 mb-2">
-              Action
-            </label>
-            <button
-              onClick={handleResetFilters}
-              className="w-full px-3 py-2 bg-red-600/20 border border-red-600 text-red-400 text-sm rounded-lg hover:bg-red-600/30 transition-colors font-semibold"
-            >
-              Reset Filters
-            </button>
-          </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 mb-2">
+            Action
+          </label>
+          <button
+            onClick={handleResetFilters}
+            className="w-full px-3 py-2 bg-red-600/20 border border-red-600 text-red-400 text-sm rounded-lg hover:bg-red-600/30 transition-colors font-semibold"
+          >
+            Reset Filters
+          </button>
         </div>
       </div>
 
       {/* Products Table - Scrollable */}
       <div className="flex-1 overflow-hidden flex flex-col bg-gray-800/50 border border-gray-700 rounded-lg">
-        <div className="overflow-x-auto overflow-y-auto flex-1">
-          <table className="w-full text-sm">
-            {/* Sticky Table Header */}
-            <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
-              <tr>
-                <th className="px-4 py-3 text-left font-semibold text-red-400">
-                  Product Code
-                </th>
-                <th className="px-4 py-3 text-left font-semibold text-red-400">
-                  Name
-                </th>
-                <th className="px-4 py-3 text-left font-semibold text-red-400">
-                  Colors
-                </th>
-                <th className="px-4 py-3 text-left font-semibold text-red-400">
-                  Sizes
-                </th>
-                <th className="px-4 py-3 text-right font-semibold text-red-400">
-                  Product Cost (Rs.)
-                </th>
-                <th className="px-4 py-3 text-right font-semibold text-red-400">
-                  Print Cost (Rs.)
-                </th>
-                <th className="px-4 py-3 text-right font-semibold text-red-400">
-                  Retail Price (Rs.)
-                </th>
-                <th className="px-4 py-3 text-right font-semibold text-red-400">
-                  Wholesale Price (Rs.)
-                </th>
-              </tr>
-            </thead>
-
-            {/* Table Body - Scrollable Rows */}
-            <tbody className="divide-y divide-gray-700">
-              {filteredAndSortedProducts.map((product) => (
-                <tr
-                  key={product.id}
-                  onClick={() => setSelectedProductId(product.id)}
-                  onDoubleClick={() => handleEditProduct(product)}
-                  className={`cursor-pointer transition-all duration-200 ${
-                    selectedProductId === product.id
-                      ? "bg-red-900/40 border-l-4 border-l-red-600"
-                      : "hover:bg-gray-700/30 border-l-4 border-l-transparent"
-                  }`}
-                  title="Double-click to edit"
-                >
-                  <td className="px-4 py-3 text-gray-300 font-mono font-semibold">
-                    {product.code}
-                  </td>
-                  <td className="px-4 py-3 text-gray-100 font-medium">
-                    {product.name}
-                  </td>
-                  <td className="px-4 py-3 text-gray-400">{product.colors}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">
-                    {product.sizes}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-300 font-semibold">
-                    {product.cost.toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-300 font-semibold">
-                    {product.printCost ? product.printCost.toFixed(2) : "0.00"}
-                  </td>
-                  <td className="px-4 py-3 text-right text-red-400 font-semibold">
-                    {product.retailPrice.toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-300 font-semibold">
-                    {product.wholesalePrice.toFixed(2)}
-                  </td>
+        {filteredAndSortedProducts.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-gray-400 text-center">
+              {dbProducts && dbProducts.length === 0
+                ? "No products for this shop. Add one to get started!"
+                : "No products match your search"}
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto overflow-y-auto flex-1">
+            <table className="w-full text-sm">
+              {/* Sticky Table Header */}
+              <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
+                <tr>
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Product Code
+                  </th>
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Colors
+                  </th>
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Sizes
+                  </th>
+                  <th className="px-6 py-3 text-right font-semibold text-red-400">
+                    Product Cost (Rs.)
+                  </th>
+                  <th className="px-6 py-3 text-right font-semibold text-red-400">
+                    Print Cost (Rs.)
+                  </th>
+                  <th className="px-6 py-3 text-right font-semibold text-red-400">
+                    Retail Price (Rs.)
+                  </th>
+                  <th className="px-6 py-3 text-right font-semibold text-red-400">
+                    Wholesale Price (Rs.)
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+
+              {/* Table Body - Scrollable Rows */}
+              <tbody className="divide-y divide-gray-700">
+                {filteredAndSortedProducts.map((product) => (
+                  <tr
+                    key={product.id}
+                    onClick={() => setSelectedProductId(product.id)}
+                    onDoubleClick={() => handleEditProduct(product)}
+                    className={`cursor-pointer transition-all duration-200 ${
+                      selectedProductId === product.id
+                        ? "bg-red-900/40 border-l-4 border-l-red-600"
+                        : "hover:bg-gray-700/30 border-l-4 border-l-transparent"
+                    }`}
+                    title="Double-click to edit"
+                  >
+                    <td className="px-6 py-4 text-gray-200 font-mono font-semibold">
+                      {product.code}
+                    </td>
+                    <td className="px-6 py-4 text-gray-200 font-medium">
+                      {product.name}
+                    </td>
+                    <td className="px-6 py-4 text-gray-300">{product.colors}</td>
+                    <td className="px-6 py-4 text-gray-300 text-xs">
+                      {product.sizes}
+                    </td>
+                    <td className="px-6 py-4 text-right text-gray-300 font-semibold">
+                      {product.cost.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-right text-gray-300 font-semibold">
+                      {product.printCost ? product.printCost.toFixed(2) : "0.00"}
+                    </td>
+                    <td className="px-6 py-4 text-right text-red-400 font-semibold">
+                      {product.retailPrice.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-right text-gray-300 font-semibold">
+                      {product.wholesalePrice.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Add Product Modal */}

@@ -4,11 +4,15 @@ This directory contains SQL migrations to enhance the Dennup Clothes POS databas
 
 ## Overview
 
-Three migrations are provided to align the database with the frontend model:
+Multiple migrations are provided to align the database with the frontend model:
 
 1. **001_add_cost_fields_to_products.sql** - Adds cost tracking fields
 2. **002_create_payments_table.sql** - Creates payment transaction tracking
 3. **003_add_payment_fields_to_orders.sql** - Adds order-level payment status
+4. **004_fix_order_status_enum.sql** - Fixes order status enum
+5. **005_add_cancelled_status.sql** - Adds cancelled status
+6. **006_update_order_status_enum.sql** - Updates order status enum
+7. **007_create_bank_accounts_table.sql** - Creates bank_accounts and updates payments table
 
 ## Pre-Migration Checklist
 
@@ -30,6 +34,10 @@ cd backend/migrations
 mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < 001_add_cost_fields_to_products.sql
 mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < 002_create_payments_table.sql
 mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < 003_add_payment_fields_to_orders.sql
+mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < 004_fix_order_status_enum.sql
+mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < 005_add_cancelled_status.sql
+mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < 006_update_order_status_enum.sql
+mysql -h 193.203.184.9 -u u331468302_dennup_pos -p u331468302_dennup_pos < 007_create_bank_accounts_table.sql
 ```
 
 When prompted, enter your database password: `gM7LfqqUK;|`
@@ -136,6 +144,34 @@ FROM orders LIMIT 3;
 
 **Purpose:** Quick access to payment status without joining to payments table
 
+### Migration 7: Bank Accounts & Updated Payments Table
+
+**Tables created:** `bank_accounts`
+**Tables modified:** `payments` (updated to include bank_account_id foreign key)
+
+**Columns (bank_accounts):**
+
+- `bank_account_id` - Primary key
+- `shop_id` - Foreign key to shops (multi-tenant support)
+- `bank_name` - Bank name (e.g., "Bank of Ceylon", "Commercial Bank")
+- `account_number` - Account number (unique per bank)
+- `account_holder_name` - Name on the account
+- `account_type` - ENUM: checking/savings/business
+- `branch_code` - Optional branch code
+- `ifsc_code` - Optional IFSC code for Indian banks
+- `initial_balance` - Starting balance
+- `current_balance` - Current account balance
+- `status` - ENUM: active/inactive/closed
+- `created_at` - Timestamp
+- `updated_at` - Timestamp with auto-update
+
+**Columns (payments update):**
+
+- `bank_account_id` - New foreign key for bank transfers
+- Proper foreign key constraints to bank_accounts table
+
+**Purpose:** Support Bank Accounts management page and payment method tracking for bank transfers
+
 ## Rollback Instructions
 
 If you need to rollback (not recommended in production):
@@ -154,6 +190,11 @@ DROP TABLE IF EXISTS payments;
 -- Rollback Migration 1
 ALTER TABLE products DROP COLUMN print_cost;
 ALTER TABLE products DROP COLUMN product_cost;
+
+-- Rollback Migration 7
+ALTER TABLE payments DROP FOREIGN KEY payments_ibfk_4;
+ALTER TABLE payments DROP COLUMN bank_account_id;
+DROP TABLE IF EXISTS bank_accounts;
 ```
 
 ## Scheduling

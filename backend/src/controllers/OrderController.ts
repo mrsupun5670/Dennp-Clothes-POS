@@ -287,7 +287,7 @@ class OrderController {
   async recordPayment(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { shop_id, amount_paid, payment_type, payment_method, bank_name, branch_name, is_online_transfer } = req.body;
+      const { shop_id, amount_paid, payment_type, payment_method, bank_name, branch_name } = req.body;
 
       // Validation
       if (!shop_id) {
@@ -318,15 +318,13 @@ class OrderController {
       }
 
       // Create payment record in payments table
-      const paymentId = await PaymentModel.createPayment({
+      const paymentId = await PaymentModel.createPayment(shop_id, {
         order_id: Number(id),
-        payment_date: new Date(),
-        payment_type,
-        amount_paid,
+        payment_amount: amount_paid,
+        payment_date: new Date().toISOString().split('T')[0],
         payment_method: payment_method || 'cash',
-        bank_name,
-        branch_name,
-        is_online_transfer: is_online_transfer || false,
+        payment_status: 'completed',
+        notes: `${payment_type} payment - Bank: ${bank_name || 'N/A'}, Branch: ${branch_name || 'N/A'}`,
       });
 
       res.json({
@@ -417,7 +415,7 @@ class OrderController {
   async getOrderPayments(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const payments = await PaymentModel.getPaymentsByOrder(Number(id));
+      const payments = await PaymentModel.getOrderPayments(Number(id));
 
       res.json({
         success: true,

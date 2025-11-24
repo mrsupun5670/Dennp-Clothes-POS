@@ -56,29 +56,17 @@ const PaymentsPage: React.FC = () => {
     const loadData = async () => {
       try {
         setLoading(true);
-
-        // Load payments and summary
-        const [paymentsData, summaryData] = await Promise.all([
+        const [paymentsData, accountsData, summaryData] = await Promise.all([
           getShopPayments(shopId),
+          getShopBankAccounts(shopId),
           getPaymentSummary(shopId),
-        ]).catch(() => [[], { total_count: 0, total_amount: 0, completed_count: 0 }]);
-
-        setPayments(paymentsData || []);
-        setSummary(summaryData || { total_count: 0, total_amount: 0, completed_count: 0 });
-
-        // Load bank accounts separately (optional, won't crash if fails)
-        try {
-          const accountsData = await getShopBankAccounts(shopId);
-          setBankAccounts(accountsData || []);
-        } catch (error) {
-          console.warn("Could not load bank accounts:", error);
-          setBankAccounts([]);
-        }
+        ]);
+        setPayments(paymentsData);
+        setBankAccounts(accountsData);
+        setSummary(summaryData);
       } catch (error) {
         showNotification("error", "Failed to load payments");
         console.error("Error loading payments:", error);
-        setPayments([]);
-        setSummary({ total_count: 0, total_amount: 0, completed_count: 0 });
       } finally {
         setLoading(false);
       }
@@ -331,7 +319,7 @@ const PaymentsPage: React.FC = () => {
                 TOTAL AMOUNT
               </p>
               <p className="text-3xl font-bold text-green-300">
-                Rs. {(summary?.total_amount || 0).toFixed(2)}
+                Rs. {summary.total_amount.toFixed(2)}
               </p>
             </div>
             <div className="text-3xl text-green-400">💰</div>
@@ -489,7 +477,7 @@ const PaymentsPage: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right text-green-400 font-bold">
-                      Rs. {(payment?.payment_amount || 0).toFixed(2)}
+                      Rs. {payment.payment_amount.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-gray-400 text-xs">
                       <div>{payment.payment_date}</div>

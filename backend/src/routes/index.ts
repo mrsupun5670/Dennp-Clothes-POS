@@ -6,6 +6,9 @@ import categoryRoutes from './categoryRoutes';
 import colorRoutes from './colorRoutes';
 import sizeRoutes from './sizeRoutes';
 import shopRoutes from './shopRoutes';
+import inventoryRoutes from './inventoryRoutes';
+import bankAccountRoutes from './bankAccountRoutes';
+import paymentRoutes from './paymentRoutes';
 
 const router = Router();
 
@@ -16,10 +19,11 @@ router.use('/categories', categoryRoutes);
 router.use('/colors', colorRoutes);
 router.use('/sizes', sizeRoutes);
 router.use('/shops', shopRoutes);
+router.use('/inventory', inventoryRoutes);
+router.use('/bank-accounts', bankAccountRoutes);
+router.use('/payments', paymentRoutes);
 
 // TODO: Add additional routes
-// router.use('/sales', saleRoutes);
-// router.use('/inventory', inventoryRoutes);
-// router.use('/payments', paymentRoutes);
+// router.use('/payment-reconciliation', paymentReconciliationRoutes);
 
 export default router;

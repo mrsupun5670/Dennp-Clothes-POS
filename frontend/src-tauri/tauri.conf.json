@@ -12,7 +12,16 @@
     "allowlist": {
       "all": false,
       "fs": {
-        "all": true
+        "all": true,
+        "scope": [
+          "$APP/**",
+          "$APPDATA/**",
+          "$APPCONFIG/**",
+          "$APPLOCALDATA/**",
+          "$APPLOG/**",
+          "$DOWNLOAD/**",
+          "$DOCUMENT/**"
+        ]
       },
       "path": {
         "all": true
@@ -27,7 +36,10 @@
       "dialog": {
         "all": false,
         "open": true,
-        "save": true
+        "save": true,
+        "message": true,
+        "ask": true,
+        "confirm": true
       }
     },
     "windows": [

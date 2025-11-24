@@ -2,68 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
-
-// Helper function to print customers
-const handlePrintCustomers = (customers: any[]) => {
-  const printWindow = window.open("", "", "width=1000,height=600");
-  if (printWindow) {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Customers Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h1 { color: #ef4444; text-align: center; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background-color: #374151; color: white; padding: 10px; text-align: left; border: 1px solid #1f2937; }
-          td { padding: 8px; border: 1px solid #d1d5db; }
-          tr:nth-child(even) { background-color: #f9fafb; }
-          .text-right { text-align: right; }
-        </style>
-      </head>
-      <body>
-        <h1>Customers Report</h1>
-        <p style="text-align: center; color: #666;">Generated on ${new Date().toLocaleString()}</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Customer ID</th>
-              <th>Name</th>
-              <th>Mobile</th>
-              <th>Email</th>
-              <th class="text-right">Total Spent (Rs.)</th>
-              <th class="text-right">Total Orders</th>
-              <th>Joined Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${customers
-              .map(
-                (c) => `
-              <tr>
-                <td>${c.customer_id}</td>
-                <td>${c.first_name} ${c.last_name}</td>
-                <td>${c.mobile}</td>
-                <td>${c.email || "-"}</td>
-                <td class="text-right">Rs. ${c.total_spent ? parseFloat(c.total_spent).toFixed(2) : "0.00"}</td>
-                <td class="text-right">${c.orders_count || 0}</td>
-                <td>${new Date(c.created_at).toLocaleDateString()}</td>
-              </tr>
-            `
-              )
-              .join("")}
-          </tbody>
-        </table>
-        <p style="margin-top: 30px; color: #666; font-size: 12px;">Total Customers: ${customers.length}</p>
-      </body>
-      </html>
-    `;
-    printWindow.document.write(html);
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 250);
-  }
-};
+import { printContent, saveAsPDF, generateCustomersHTML } from "../utils/exportUtils";
 
 interface Customer {
   customer_id: number;
@@ -374,11 +313,24 @@ const CustomersPage: React.FC = () => {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => handlePrintCustomers(filteredCustomers)}
+            onClick={() => {
+              const html = generateCustomersHTML(filteredCustomers);
+              printContent(html, 'Customers Report');
+            }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
-            title="Print/Export as PDF"
+            title="Print directly"
           >
-            Print/PDF
+            🖨️ Print
+          </button>
+          <button
+            onClick={() => {
+              const html = generateCustomersHTML(filteredCustomers);
+              saveAsPDF(html, 'customers_report', 'customers');
+            }}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
+            title="Save as image"
+          >
+            💾 Save Image
           </button>
           <button
             onClick={handleAddClick}

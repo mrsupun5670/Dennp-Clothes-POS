@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import BankPaymentModal, { BankPaymentData } from "../components/BankPaymentModal";
 import PaymentMethodSelector from "../components/PaymentMethodSelector";
+import { printContent, saveAsPDF, generateOrderBillHTML } from "../utils/exportUtils";
 
 // Interfaces
 interface Customer {
@@ -629,138 +630,44 @@ const SalesPage: React.FC = () => {
       return;
     }
 
-    // Generate print window
-    const printWindow = window.open("", "", "width=900,height=1200");
-    if (!printWindow) {
-      alert("Please allow pop-ups to print bill");
+    const html = generateOrderBillHTML({
+      selectedCustomer,
+      cartItems,
+      subtotal,
+      total,
+      paidAmount,
+    });
+
+    printContent(html, 'Order Bill');
+  };
+
+  const handleSaveBillAsImage = () => {
+    if (!selectedCustomer || cartItems.length === 0) {
+      alert("Please select customer and add items");
       return;
     }
 
-    const paid = parseFloat(paidAmount) || 0;
-    const balance = total - paid;
+    // Only allow saving if cash payment is complete
+    if (paymentMethod === "cash") {
+      if (!paidAmount) {
+        alert("Please enter cash amount to save bill");
+        return;
+      }
+    } else if (paymentMethod === "bank") {
+      alert("Bank payments cannot be saved immediately. Bill will be generated once payment is verified.");
+      return;
+    }
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Order Bill</title>
-        <style>
-          body { font-family: 'Courier New', monospace; padding: 20px; background: white; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; border: 2px solid #333; padding: 20px; }
-          h1 { text-align: center; font-size: 24px; margin-bottom: 5px; color: #d32f2f; }
-          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
-          .date { text-align: center; font-size: 12px; color: #666; }
-          .section { margin-bottom: 15px; }
-          .section-title { font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 8px; }
-          table { width: 100%; border-collapse: collapse; }
-          th { background-color: #f5f5f5; padding: 8px; text-align: left; border-bottom: 1px solid #333; }
-          td { padding: 8px; border-bottom: 1px solid #ddd; }
-          .text-right { text-align: right; }
-          .totals { border-top: 2px solid #333; border-bottom: 2px solid #333; padding: 10px 0; margin: 10px 0; }
-          .total-row { display: flex; justify-content: space-between; padding: 5px 0; }
-          .total-amount { font-weight: bold; font-size: 16px; color: #d32f2f; }
-          .footer { text-align: center; font-size: 12px; margin-top: 20px; color: #666; }
-          .status-badge { font-weight: bold; padding: 5px 10px; border-radius: 3px; display: inline-block; }
-          .status-paid { background-color: #c8e6c9; color: #2e7d32; }
-          .status-balance { background-color: #ffccbc; color: #d84315; }
-          .info-line { display: flex; justify-content: space-between; margin: 5px 0; font-size: 13px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>DENNP CLOTHES</h1>
-            <p>Order Bill</p>
-            <div class="date">${new Date().toLocaleString()}</div>
-          </div>
+    const html = generateOrderBillHTML({
+      selectedCustomer,
+      cartItems,
+      subtotal,
+      total,
+      paidAmount,
+    });
 
-          <div class="section">
-            <div class="section-title">Customer Information</div>
-            <div class="info-line">
-              <span>Name:</span>
-              <span>${selectedCustomer.name}</span>
-            </div>
-            <div class="info-line">
-              <span>Mobile:</span>
-              <span>${selectedCustomer.mobile}</span>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Order Items</div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Size</th>
-                  <th>Color</th>
-                  <th class="text-right">Qty</th>
-                  <th class="text-right">Price</th>
-                  <th class="text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${cartItems.map(item => `
-                  <tr>
-                    <td>${item.productName}</td>
-                    <td>${item.size}</td>
-                    <td>${item.color}</td>
-                    <td class="text-right">${item.quantity}</td>
-                    <td class="text-right">Rs. ${item.price.toFixed(2)}</td>
-                    <td class="text-right">Rs. ${(item.price * item.quantity).toFixed(2)}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-
-          <div class="totals">
-            <div class="total-row">
-              <span>Subtotal:</span>
-              <span>Rs. ${subtotal.toFixed(2)}</span>
-            </div>
-            <div class="total-row">
-              <span class="total-amount">Total:</span>
-              <span class="total-amount">Rs. ${total.toFixed(2)}</span>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Payment Details</div>
-            <div class="info-line">
-              <span>Amount Paid:</span>
-              <span class="total-amount">Rs. ${paid.toFixed(2)}</span>
-            </div>
-            ${balance > 0 ? `
-              <div class="info-line">
-                <span>Balance Due:</span>
-                <span class="status-badge status-balance">Rs. ${balance.toFixed(2)}</span>
-              </div>
-            ` : balance < 0 ? `
-              <div class="info-line">
-                <span>Change:</span>
-                <span>Rs. ${Math.abs(balance).toFixed(2)}</span>
-              </div>
-            ` : `
-              <div class="info-line">
-                <span>Status:</span>
-                <span class="status-badge status-paid">✓ Fully Paid</span>
-              </div>
-            `}
-          </div>
-
-          <div class="footer">
-            <p>Thank you for your purchase!</p>
-            <p style="font-size: 11px; margin-top: 20px;">This is a computer-generated bill</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 250);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+    saveAsPDF(html, `order_bill_${selectedCustomer.name.replace(/\s+/g, '_')}_${timestamp}`, 'orders');
   };
 
   const handleCancelOrder = () => {
@@ -1165,9 +1072,16 @@ const SalesPage: React.FC = () => {
               <button
                 onClick={handlePrintBill}
                 disabled={!selectedCustomer || cartItems.length === 0}
-                className="border-2 border-red-600 text-red-400 py-2 rounded-lg font-semibold hover:bg-red-900/20 disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                className="border-2 border-blue-600 text-blue-400 py-2 rounded-lg font-semibold hover:bg-blue-900/20 disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
               >
                 🖨️ Print
+              </button>
+              <button
+                onClick={handleSaveBillAsImage}
+                disabled={!selectedCustomer || cartItems.length === 0}
+                className="border-2 border-green-600 text-green-400 py-2 rounded-lg font-semibold hover:bg-green-900/20 disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+              >
+                💾 Save Image
               </button>
             </div>
           </div>

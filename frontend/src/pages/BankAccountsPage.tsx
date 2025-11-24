@@ -1,24 +1,8 @@
 import React, { useState, useMemo } from "react";
-
-interface PendingCollection {
-  id: string;
-  bankName: string;
-  branchName: string;
-  pendingAmount: number;
-  fromDate: string;
-  toDate: string;
-  ordersCount: number;
-  status: "pending" | "collected";
-  collectedDate?: string;
-  collectedAmount?: number;
-}
-
-interface BankAccount {
-  bankName: string;
-  branchName: string;
-  totalPendingAmount: number;
-  lastUpdated: string;
-}
+import { useShop } from "../context/ShopContext";
+import { useQuery } from "../hooks/useQuery";
+import { API_URL } from "../config/api";
+import { deleteBankAccount, BankAccount } from "../services/bankAccountService";
 
 const BankAccountsPage: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<

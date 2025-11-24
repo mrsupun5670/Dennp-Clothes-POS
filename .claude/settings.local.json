@@ -14,7 +14,17 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(wmic process where processid=20932 delete)",
-      "Bash(pwsh -c \"Stop-Process -Id 20932 -Force\")"
+      "Bash(pwsh -c \"Stop-Process -Id 20932 -Force\")",
+      "Bash(tree:*)",
+      "Bash(dir:*)",
+      "Bash(curl:*)",
+      "Bash(powershell:*)",
+      "Bash(npm install:*)",
+      "Bash(\"C:\\Users\\LENOVO\\Documents\\ElectronProjects\\Dennp-Clothes-POS\\frontend\\src\\pages\\PaymentsPage.tsx.tmp\")",
+      "Bash(move /y \"C:\\Users\\LENOVO\\Documents\\ElectronProjects\\Dennp-Clothes-POS\\frontend\\src\\pages\\PaymentsPage.tsx.tmp\" \"C:\\Users\\LENOVO\\Documents\\ElectronProjects\\Dennp-Clothes-POS\\frontend\\src\\pages\\PaymentsPage.tsx\")",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 10 npm run dev:*)",
+      "Bash(timeout 15 npm run dev:*)"
     ],
     "deny": [],
     "ask": []

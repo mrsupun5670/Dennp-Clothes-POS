@@ -8,41 +8,39 @@ import { logger } from '../utils/logger';
 
 export interface Payment {
   payment_id: number;
-  order_id: number;
-  payment_type: 'advance' | 'balance' | 'full';
-  amount_paid: number;
-  payment_method: 'cash' | 'card' | 'online' | 'check' | 'other';
-  bank_name?: string;
-  branch_name?: string;
-  is_online_transfer: boolean;
-  payment_date: Date;
-  created_at: Date;
-  updated_at: Date;
+  shop_id: number;
+  order_id?: number;
+  customer_id?: number;
+  payment_amount: number;
+  payment_date: string;
+  payment_time?: string;
+  payment_method: 'cash' | 'card' | 'online' | 'check' | 'bank_transfer';
+  bank_account_id?: number;
+  transaction_id?: string;
+  payment_status: 'completed' | 'pending' | 'failed' | 'refunded';
+  notes?: string;
+  created_by?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 class PaymentModel {
-  /**
-   * Get all payments
-   */
-  async getAllPayments(): Promise<Payment[]> {
+  async getShopPayments(shopId: number): Promise<Payment[]> {
     try {
-      const results = await query('SELECT * FROM payments ORDER BY payment_date DESC');
-      logger.info('Retrieved all payments', { count: (results as any[]).length });
+      const results = await query('SELECT * FROM payments WHERE shop_id = ? ORDER BY payment_date DESC, payment_time DESC', [shopId]);
+      logger.info('Retrieved payments for shop', { shopId, count: (results as any[]).length });
       return results as Payment[];
     } catch (error) {
-      logger.error('Error fetching all payments:', error);
+      logger.error('Error fetching shop payments:', error);
       throw error;
     }
   }
 
-  /**
-   * Get payment by ID
-   */
-  async getPaymentById(paymentId: number): Promise<Payment | null> {
+  async getPaymentById(paymentId: number, shopId: number): Promise<Payment | null> {
     try {
-      const results = await query('SELECT * FROM payments WHERE payment_id = ?', [paymentId]);
+      const results = await query('SELECT * FROM payments WHERE payment_id = ? AND shop_id = ?', [paymentId, shopId]);
       const payment = (results as Payment[])[0] || null;
-      logger.debug('Retrieved payment by ID', { paymentId });
+      logger.debug('Retrieved payment by ID', { paymentId, shopId });
       return payment;
     } catch (error) {
       logger.error('Error fetching payment by ID:', error);
@@ -50,35 +48,27 @@ class PaymentModel {
     }
   }
 
-  /**
-   * Get payments for an order
-   */
-  async getPaymentsByOrder(orderId: number): Promise<Payment[]> {
+  async getOrderPayments(orderId: number): Promise<Payment[]> {
     try {
       const results = await query('SELECT * FROM payments WHERE order_id = ? ORDER BY payment_date DESC', [orderId]);
       logger.debug('Retrieved payments for order', { orderId, count: (results as any[]).length });
       return results as Payment[];
     } catch (error) {
-      logger.error('Error fetching payments for order:', error);
+      logger.error('Error fetching order payments:', error);
       throw error;
     }
   }
 
-  /**
-   * Create new payment
-   */
-  async createPayment(paymentData: Omit<Payment, 'payment_id' | 'created_at' | 'updated_at'>): Promise<number> {
+  async createPayment(shopId: number, paymentData: any): Promise<number> {
     try {
-      const { order_id, payment_type, amount_paid, payment_method, bank_name, branch_name, is_online_transfer, payment_date } = paymentData;
-
       const results = await query(
-        `INSERT INTO payments (order_id, payment_type, amount_paid, payment_method, bank_name, branch_name, is_online_transfer, payment_date)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [order_id, payment_type, amount_paid, payment_method, bank_name || null, branch_name || null, is_online_transfer ? 1 : 0, payment_date]
+        `INSERT INTO payments (shop_id, order_id, customer_id, payment_amount, payment_date, payment_time, payment_method, bank_account_id, transaction_id, payment_status, notes, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [shopId, paymentData.order_id || null, paymentData.customer_id || null, paymentData.payment_amount, paymentData.payment_date, paymentData.payment_time || null, paymentData.payment_method, paymentData.bank_account_id || null, paymentData.transaction_id || null, paymentData.payment_status || 'completed', paymentData.notes || null, paymentData.created_by || null]
       );
 
       const paymentId = (results as any).insertId;
-      logger.info('Payment created successfully', { paymentId, order_id, amount_paid });
+      logger.info('Payment created successfully', { paymentId, shopId, amount: paymentData.payment_amount });
       return paymentId;
     } catch (error) {
       logger.error('Error creating payment:', error);
@@ -86,27 +76,22 @@ class PaymentModel {
     }
   }
 
-  /**
-   * Update payment
-   */
-  async updatePayment(paymentId: number, paymentData: Partial<Omit<Payment, 'payment_id' | 'created_at' | 'updated_at'>>): Promise<boolean> {
+  async updatePayment(paymentId: number, shopId: number, updateData: Partial<Payment>): Promise<boolean> {
     try {
+      const ownership = await query('SELECT payment_id FROM payments WHERE payment_id = ? AND shop_id = ?', [paymentId, shopId]);
+      if ((ownership as any[]).length === 0) {
+        logger.warn('Payment not found', { paymentId, shopId });
+        return false;
+      }
+
       const fields: string[] = [];
       const values: any[] = [];
-
-      const updateableFields: (keyof Omit<Payment, 'payment_id' | 'created_at' | 'updated_at'>)[] = [
-        'payment_type',
-        'amount_paid',
-        'payment_method',
-        'bank_name',
-        'branch_name',
-        'is_online_transfer',
-      ];
+      const updateableFields = ['payment_status', 'notes', 'payment_amount', 'payment_method', 'transaction_id'];
 
       for (const field of updateableFields) {
-        if (field in paymentData) {
+        if (field in updateData) {
           fields.push(`${field} = ?`);
-          values.push(paymentData[field]);
+          values.push((updateData as any)[field]);
         }
       }
 
@@ -114,52 +99,21 @@ class PaymentModel {
 
       fields.push('updated_at = NOW()');
       values.push(paymentId);
+      values.push(shopId);
 
-      const results = await query(`UPDATE payments SET ${fields.join(', ')} WHERE payment_id = ?`, values);
-      const affectedRows = (results as any).affectedRows;
-
-      logger.info('Payment updated successfully', { paymentId, affectedRows });
-      return affectedRows > 0;
+      const results = await query(`UPDATE payments SET ${fields.join(', ')} WHERE payment_id = ? AND shop_id = ?`, values);
+      logger.info('Payment updated successfully', { paymentId, shopId });
+      return (results as any).affectedRows > 0;
     } catch (error) {
       logger.error('Error updating payment:', error);
       throw error;
     }
   }
 
-  /**
-   * Delete payment
-   */
-  async deletePayment(paymentId: number): Promise<boolean> {
+  async getPaymentsByDateRange(shopId: number, startDate: string, endDate: string): Promise<Payment[]> {
     try {
-      const results = await query('DELETE FROM payments WHERE payment_id = ?', [paymentId]);
-      const affectedRows = (results as any).affectedRows;
-
-      logger.info('Payment deleted', { paymentId });
-      return affectedRows > 0;
-    } catch (error) {
-      logger.error('Error deleting payment:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get payments for a date range
-   */
-  async getPaymentsByDateRange(startDate: Date, endDate: Date, shopId?: number): Promise<Payment[]> {
-    try {
-      let sql = `SELECT p.* FROM payments p
-                 JOIN orders o ON p.order_id = o.order_id
-                 WHERE p.payment_date BETWEEN ? AND ?
-                 ORDER BY p.payment_date DESC`;
-      let params: any[] = [startDate, endDate];
-
-      if (shopId) {
-        sql += ' AND o.shop_id = ?';
-        params.push(shopId);
-      }
-
-      const results = await query(sql, params);
-      logger.debug('Retrieved payments by date range', { count: (results as any[]).length, shopId });
+      const results = await query('SELECT * FROM payments WHERE shop_id = ? AND payment_date BETWEEN ? AND ? ORDER BY payment_date DESC', [shopId, startDate, endDate]);
+      logger.debug('Retrieved payments by date range', { shopId, startDate, endDate, count: (results as any[]).length });
       return results as Payment[];
     } catch (error) {
       logger.error('Error fetching payments by date range:', error);
@@ -167,39 +121,10 @@ class PaymentModel {
     }
   }
 
-  /**
-   * Get total payments for a date range
-   */
-  async getTotalPayments(startDate: Date, endDate: Date, shopId?: number): Promise<{ total: number; count: number }> {
+  async getPaymentsByMethod(shopId: number, method: string): Promise<Payment[]> {
     try {
-      let sql = `SELECT SUM(amount_paid) as total, COUNT(*) as count FROM payments p
-                 JOIN orders o ON p.order_id = o.order_id
-                 WHERE p.payment_date BETWEEN ? AND ?`;
-      let params: any[] = [startDate, endDate];
-
-      if (shopId) {
-        sql += ' AND o.shop_id = ?';
-        params.push(shopId);
-      }
-
-      const results = await query(sql, params);
-      const result = (results as any[])[0] || { total: 0, count: 0 };
-
-      logger.debug('Retrieved total payments', { shopId, total: result.total, count: result.count });
-      return { total: result.total || 0, count: result.count || 0 };
-    } catch (error) {
-      logger.error('Error fetching total payments:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get payments by method
-   */
-  async getPaymentsByMethod(method: string): Promise<Payment[]> {
-    try {
-      const results = await query('SELECT * FROM payments WHERE payment_method = ? ORDER BY payment_date DESC', [method]);
-      logger.debug('Retrieved payments by method', { method, count: (results as any[]).length });
+      const results = await query('SELECT * FROM payments WHERE shop_id = ? AND payment_method = ? ORDER BY payment_date DESC', [shopId, method]);
+      logger.debug('Retrieved payments by method', { shopId, method, count: (results as any[]).length });
       return results as Payment[];
     } catch (error) {
       logger.error('Error fetching payments by method:', error);
@@ -207,16 +132,13 @@ class PaymentModel {
     }
   }
 
-  /**
-   * Get payments by bank
-   */
-  async getPaymentsByBank(bankName: string): Promise<Payment[]> {
+  async getPaymentSummary(shopId: number): Promise<any> {
     try {
-      const results = await query('SELECT * FROM payments WHERE bank_name = ? ORDER BY payment_date DESC', [bankName]);
-      logger.debug('Retrieved payments by bank', { bankName, count: (results as any[]).length });
-      return results as Payment[];
+      const results = await query(`SELECT COUNT(*) as total_count, SUM(payment_amount) as total_amount, COUNT(CASE WHEN payment_status = 'completed' THEN 1 END) as completed_count FROM payments WHERE shop_id = ? AND payment_status = 'completed'`, [shopId]);
+      logger.debug('Retrieved payment summary', { shopId });
+      return (results as any[])[0] || { total_count: 0, total_amount: 0, completed_count: 0 };
     } catch (error) {
-      logger.error('Error fetching payments by bank:', error);
+      logger.error('Error fetching payment summary:', error);
       throw error;
     }
   }

@@ -2,14 +2,14 @@
 // Automatically detect API URL based on environment
 
 const getApiUrl = (): string => {
-  // If running in development with Vite, use localhost
+  // If running in development with Vite, use localhost on port 3001
   if ((import.meta as any).env?.DEV) {
-    return 'http://localhost:3000/api/v1';
+    return 'http://localhost:3001/api/v1';
   }
 
   // If running in Electron or production, use relative paths
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'http://localhost:3000/api/v1';
+    return 'http://localhost:3001/api/v1';
   }
 
   // Default to relative API path for production

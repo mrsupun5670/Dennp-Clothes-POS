@@ -35,7 +35,20 @@
       "Bash(wmic process where \"name=''node.exe''\" get ProcessId)",
       "Bash(node check-payments.js:*)",
       "Bash(node check-bank-accounts.js:*)",
-      "Bash(node check-schema.js:*)"
+      "Bash(node check-schema.js:*)",
+      "Bash(pkill:*)",
+      "Bash(kill:*)",
+      "Bash(lsof:*)",
+      "Bash(cmd /c \"taskkill /PID 29168 /F\")",
+      "Bash(wmic process:*)",
+      "Bash(cmd /c \"powershell -NoProfile -Command \"\"Stop-Process -Id 29168 -Force -ErrorAction SilentlyContinue; Write-Host ''''Process killed''''\"\"\")",
+      "Bash(cmd /c \"taskkill /PID 19188 /F & taskkill /IM node.exe /F\")",
+      "Bash(cmd /c \"netstat -ano | findstr :3001\")",
+      "Bash(cmd /c \"taskkill /PID 20084 /F 2>&1\")",
+      "Bash(cmd /c \"taskkill /IM node.exe /F /T\")",
+      "Bash(cmd /c \"taskkill /IM node.exe /F\")",
+      "Bash(cmd /c \"netstat -ano | findstr :3002\")",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

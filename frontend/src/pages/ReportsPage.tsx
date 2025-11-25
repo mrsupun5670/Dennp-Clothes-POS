@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useShop } from "../context/ShopContext";
 import { getSoldItems, getCostBreakdown, getCostDetails, getMultiPeriodBreakdown } from "../services/reportsService";
 import type { SoldItem, CostBreakdown, CostDetails } from "../services/reportsService";
@@ -19,6 +19,9 @@ const ReportsPage: React.FC = () => {
   const [costBreakdown, setCostBreakdown] = useState<CostBreakdown | null>(null);
   const [costDetails, setCostDetails] = useState<CostDetails[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Use ref to prevent duplicate requests in strict mode
+  const loadDataRef = useRef(false);
 
   // Get date range based on period
   const getDateRange = (period: TimePeriod) => {
@@ -58,6 +61,10 @@ const ReportsPage: React.FC = () => {
 
   // Load data from API
   useEffect(() => {
+    // Prevent duplicate requests in React Strict Mode
+    if (loadDataRef.current) return;
+    loadDataRef.current = true;
+
     const loadReportsData = async () => {
       try {
         setLoading(true);
@@ -181,7 +188,7 @@ const ReportsPage: React.FC = () => {
                   </p>
                 </div>
                 <div className="bg-orange-900/40 border border-orange-600/50 rounded p-2">
-                  <p className="text-xs text-orange-300 font-semibold">Product Cost</p>
+                  <p className="text-xs text-orange-300 font-semibold">Total Costs</p>
                   <p className="text-lg font-bold text-orange-400">
                     Rs. {filteredSoldItems.reduce((sum, item) => sum + parseFloat(String(item.totalCost)), 0).toFixed(2)}
                   </p>
@@ -312,30 +319,63 @@ const ReportsPage: React.FC = () => {
 
               {/* Cost Distribution Chart */}
               <div className="flex-1 overflow-hidden flex flex-col bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-                <h3 className="text-sm font-bold text-red-400 mb-3">Cost Distribution</h3>
-                <div className="flex-1 flex flex-col gap-3 justify-center">
-                  {costDetails.map((detail, idx) => {
-                    const colors = ["bg-orange-500", "bg-purple-500", "bg-yellow-500"];
-                    const colors_light = ["text-orange-400", "text-purple-400", "text-yellow-400"];
-                    return (
-                      <div key={idx}>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className={`text-sm font-semibold ${colors_light[idx]}`}>
-                            {detail.costType}
-                          </span>
-                          <span className="text-sm font-bold text-gray-300">
-                            Rs. {parseFloat(String(detail.amount)).toFixed(0)} ({parseFloat(String(detail.percentage)).toFixed(1)}%)
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-700 rounded-full h-2">
-                          <div
-                            className={`${colors[idx]} h-2 rounded-full`}
-                            style={{ width: `${Math.min(parseFloat(String(detail.percentage)), 100)}%` }}
-                          />
-                        </div>
+                <h3 className="text-sm font-bold text-red-400 mb-4">Cost Distribution</h3>
+                <div className="flex-1 flex gap-6 items-end justify-center pb-4">
+                  {costDetails.length > 0 ? (
+                    <>
+                      {/* Legend and Details */}
+                      <div className="flex flex-col gap-3 w-40">
+                        {costDetails.map((detail, idx) => {
+                          const colors = ["bg-orange-500", "bg-purple-500", "bg-yellow-500"];
+                          const colors_light = ["text-orange-400", "text-purple-400", "text-yellow-400"];
+                          return (
+                            <div key={idx} className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${colors[idx]}`}></div>
+                                <span className={`text-xs font-semibold ${colors_light[idx]}`}>
+                                  {detail.costType}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-400 ml-5">
+                                Rs. {parseFloat(String(detail.amount)).toFixed(0)}
+                              </p>
+                              <p className="text-xs font-bold text-gray-300 ml-5">
+                                {parseFloat(String(detail.percentage)).toFixed(1)}%
+                              </p>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+
+                      {/* Bar Chart */}
+                      <div className="flex-1 flex items-end justify-center gap-6 h-64">
+                        {costDetails.map((detail, idx) => {
+                          const colors = ["bg-orange-500", "bg-purple-500", "bg-yellow-500"];
+                          const percentage = parseFloat(String(detail.percentage));
+                          const height = Math.max(percentage * 2, 10); // Scale for visibility
+                          return (
+                            <div
+                              key={idx}
+                              className="flex flex-col items-center gap-2 flex-1"
+                            >
+                              <div
+                                className={`${colors[idx]} rounded-t-lg transition-all duration-300 hover:opacity-80 w-full`}
+                                style={{ height: `${height}px` }}
+                                title={`${detail.costType}: ${parseFloat(String(detail.percentage)).toFixed(1)}%`}
+                              ></div>
+                              <span className="text-xs font-semibold text-gray-300 text-center mt-2">
+                                {percentage.toFixed(1)}%
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-gray-400">
+                      No cost distribution data available
+                    </div>
+                  )}
                 </div>
               </div>
             </>

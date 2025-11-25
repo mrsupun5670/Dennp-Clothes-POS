@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useShop } from "../context/ShopContext";
 import {
   getShopInventory,
@@ -26,8 +26,15 @@ const InventoryPage: React.FC = () => {
   // Inventory items from API
   const [rawMaterials, setRawMaterials] = useState<InventoryItem[]>([]);
 
+  // Use ref to prevent duplicate requests in strict mode
+  const loadInventoryRef = useRef(false);
+
   // Load inventory data when component mounts or shopId changes
   useEffect(() => {
+    // Prevent duplicate requests in React Strict Mode
+    if (loadInventoryRef.current) return;
+    loadInventoryRef.current = true;
+
     const loadInventory = async () => {
       if (!shopId) {
         setError("No shop selected");

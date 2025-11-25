@@ -31,7 +31,7 @@ export const config = {
     level: process.env.LOG_LEVEL || 'debug',
   },
   rateLimit: {
-    max: parseInt(process.env.RATE_LIMIT || '100'),
+    max: parseInt(process.env.RATE_LIMIT || (process.env.NODE_ENV === 'development' ? '10000' : '100')),
   },
 };
 

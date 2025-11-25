@@ -19,6 +19,8 @@ export interface TopSellingItem {
   productName: string;
   unitsSold: number;
   revenue: number;
+  totalCost: number;
+  profit: number;
 }
 
 export interface TopCustomer {

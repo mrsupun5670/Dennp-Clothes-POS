@@ -19,6 +19,8 @@ export interface TopSellingItem {
   productName: string;
   unitsSold: number;
   revenue: number;
+  totalCost: number;
+  profit: number;
 }
 
 export interface TopCustomer {
@@ -59,8 +61,8 @@ class AnalyticsModel {
       const results = await query(
         `SELECT DATE(o.order_date) as date,
                 SUM(o.total_amount) as sales,
-                SUM(oi.quantity * p.product_cost) as cost,
-                (SUM(o.total_amount) - SUM(oi.quantity * p.product_cost)) as profit
+                SUM(oi.quantity * (p.product_cost + p.print_cost)) as cost,
+                (SUM(o.total_amount) - SUM(oi.quantity * (p.product_cost + p.print_cost))) as profit
          FROM orders o
          LEFT JOIN order_items oi ON o.order_id = oi.order_id
          LEFT JOIN products p ON oi.product_id = p.product_id
@@ -100,7 +102,8 @@ class AnalyticsModel {
         `SELECT p.sku as productCode,
                 p.product_name as productName,
                 SUM(oi.quantity) as unitsSold,
-                SUM(oi.total_price) as revenue
+                SUM(oi.total_price) as revenue,
+                SUM(oi.quantity * (p.product_cost + p.print_cost)) as totalCost
          FROM order_items oi
          JOIN orders o ON oi.order_id = o.order_id
          JOIN products p ON oi.product_id = p.product_id
@@ -108,20 +111,27 @@ class AnalyticsModel {
          AND DATE(o.order_date) >= ?
          AND DATE(o.order_date) <= ?
          AND o.order_status != 'cancelled'
-         GROUP BY oi.product_id
+         GROUP BY oi.product_id, p.sku, p.product_name
          ORDER BY unitsSold DESC
          LIMIT ?`,
         [shopId, startDate, endDate, limit]
       );
 
       logger.debug('Retrieved top selling items', { shopId, limit, count: (results as any[]).length });
-      return (results as any[]).map((row, index) => ({
-        rank: index + 1,
-        productCode: row.productCode,
-        productName: row.productName,
-        unitsSold: parseInt(row.unitsSold) || 0,
-        revenue: parseFloat(row.revenue) || 0,
-      }));
+      return (results as any[]).map((row, index) => {
+        const revenue = parseFloat(row.revenue) || 0;
+        const totalCost = parseFloat(row.totalCost) || 0;
+        const profit = revenue - totalCost;
+        return {
+          rank: index + 1,
+          productCode: row.productCode,
+          productName: row.productName,
+          unitsSold: parseInt(row.unitsSold) || 0,
+          revenue,
+          totalCost,
+          profit,
+        };
+      });
     } catch (error) {
       logger.error('Error fetching top selling items:', error);
       throw error;
@@ -135,13 +145,13 @@ class AnalyticsModel {
     try {
       const results = await query(
         `SELECT c.customer_id as customerId,
-                CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, '')) as customerName,
+                COALESCE(c.mobile, 'Unknown Customer') as customerName,
                 COALESCE(c.total_spent, 0) as totalSpent,
                 COUNT(DISTINCT o.order_id) as orders
          FROM customers c
          LEFT JOIN orders o ON c.customer_id = o.customer_id
          WHERE c.shop_id = ?
-         GROUP BY c.customer_id
+         GROUP BY c.customer_id, c.mobile
          ORDER BY c.total_spent DESC
          LIMIT ?`,
         [shopId, limit]
@@ -151,7 +161,7 @@ class AnalyticsModel {
       return (results as any[]).map((row, index) => ({
         rank: index + 1,
         customerId: row.customerId,
-        customerName: row.customerName.trim(),
+        customerName: row.customerName,
         totalSpent: parseFloat(row.totalSpent) || 0,
         orders: parseInt(row.orders) || 0,
       }));
@@ -172,7 +182,7 @@ class AnalyticsModel {
     try {
       const results = await query(
         `SELECT SUM(o.total_amount) as totalSales,
-                SUM(oi.quantity * p.product_cost) as totalCost,
+                SUM(oi.quantity * (p.product_cost + p.print_cost)) as totalCost,
                 COUNT(DISTINCT DATE(o.order_date)) as daysInPeriod,
                 MAX(CASE WHEN DATE(o.order_date) = (
                   SELECT DATE(order_date) FROM orders

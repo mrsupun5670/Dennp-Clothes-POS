@@ -22,6 +22,9 @@ const AnalyticsPage: React.FC = () => {
   const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
   const [metrics, setMetrics] = useState<SalesMetrics | null>(null);
 
+  // Use ref to prevent duplicate requests in strict mode
+  const loadDataRef = useRef(false);
+
   // Get date range based on selected period
   const getDateRange = () => {
     const today = new Date();
@@ -53,6 +56,10 @@ const AnalyticsPage: React.FC = () => {
 
   // Load analytics data
   useEffect(() => {
+    // Prevent duplicate requests in React Strict Mode
+    if (loadDataRef.current) return;
+    loadDataRef.current = true;
+
     const loadAnalyticsData = async () => {
       try {
         setLoading(true);
@@ -202,164 +209,81 @@ const AnalyticsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Sales Chart (Multi-line Graph) */}
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 flex-1 flex flex-col min-h-0">
+            {/* Sales Chart (Bar Graph) */}
+            <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 border border-gray-700/70 rounded-lg p-6 flex-1 flex flex-col min-h-0 shadow-lg">
               <h2 className="text-lg font-bold text-red-500 mb-4">Sales Analysis</h2>
 
               <div className="flex-1 flex flex-col justify-between min-h-0">
-                {/* Line Graph */}
-                <div className="flex items-end justify-between gap-1 h-64 relative">
-                  {/* Y-axis labels */}
-                  <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-400 w-12">
-                    <span>{salesData.length > 0 ? (Math.max(...salesData.map((d) => d.sales)) / 1000).toFixed(1) : 0}k</span>
-                    <span>{salesData.length > 0 ? ((Math.max(...salesData.map((d) => d.sales)) * 0.75) / 1000).toFixed(1) : 0}k</span>
-                    <span>{salesData.length > 0 ? ((Math.max(...salesData.map((d) => d.sales)) * 0.5) / 1000).toFixed(1) : 0}k</span>
-                    <span>{salesData.length > 0 ? ((Math.max(...salesData.map((d) => d.sales)) * 0.25) / 1000).toFixed(1) : 0}k</span>
-                    <span>0</span>
-                  </div>
+                {/* Bar Chart */}
+                <div className="flex items-end justify-center gap-6 h-64 relative px-6 pb-4">
+                  {salesData.length > 0 ? (
+                    <>
+                      {salesData.map((data, index) => {
+                        const maxValue = Math.max(...salesData.map((d) => Math.max(d.sales, d.cost, d.profit)));
+                        const salesHeight = (data.sales / maxValue) * 100;
+                        const costHeight = (data.cost / maxValue) * 100;
+                        const profitHeight = (data.profit / maxValue) * 100;
 
-                  {/* Grid lines and data points */}
-                  <svg className="absolute inset-0 w-full h-64" viewBox="0 0 100 256" preserveAspectRatio="none">
-                    {/* Horizontal grid lines */}
-                    {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
-                      <line
-                        key={`grid-${i}`}
-                        x1="0"
-                        y1={`${(1 - ratio) * 256}`}
-                        x2="100%"
-                        y2={`${(1 - ratio) * 256}`}
-                        stroke="#374151"
-                        strokeDasharray="4"
-                        strokeWidth="1"
-                      />
-                    ))}
+                        return (
+                          <div key={index} className="flex flex-col items-center gap-2 flex-1 h-full">
+                            {/* Bar Group */}
+                            <div className="flex items-end justify-center gap-1 h-56 w-full">
+                              {/* Sales Bar */}
+                              <div className="flex-1 flex flex-col items-center">
+                                <div
+                                  className="w-full bg-blue-500 rounded-t transition-all hover:opacity-80"
+                                  style={{ height: `${salesHeight}%` }}
+                                  title={`Sales: Rs. ${Math.round(data.sales)}`}
+                                ></div>
+                              </div>
 
-                    {/* Sales line */}
-                    {salesData.length > 0 && (
-                      <polyline
-                        points={salesData
-                          .map((data, index) => {
-                            const maxSales = Math.max(...salesData.map((d) => d.sales));
-                            const x = (index / (salesData.length - 1)) * 100;
-                            const y = (1 - data.sales / maxSales) * 256;
-                            return `${x},${y}`;
-                          })
-                          .join(" ")}
-                        fill="none"
-                        stroke="#ef4444"
-                        strokeWidth="1"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    )}
+                              {/* Cost Bar */}
+                              <div className="flex-1 flex flex-col items-center">
+                                <div
+                                  className="w-full bg-orange-500 rounded-t transition-all hover:opacity-80"
+                                  style={{ height: `${costHeight}%` }}
+                                  title={`Cost: Rs. ${Math.round(data.cost)}`}
+                                ></div>
+                              </div>
 
-                    {/* Cost line */}
-                    {salesData.length > 0 && (
-                      <polyline
-                        points={salesData
-                          .map((data, index) => {
-                            const maxSales = Math.max(...salesData.map((d) => d.sales));
-                            const x = (index / (salesData.length - 1)) * 100;
-                            const y = (1 - data.cost / maxSales) * 256;
-                            return `${x},${y}`;
-                          })
-                          .join(" ")}
-                        fill="none"
-                        stroke="#f59e0b"
-                        strokeWidth="1"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    )}
+                              {/* Profit Bar */}
+                              <div className="flex-1 flex flex-col items-center">
+                                <div
+                                  className="w-full bg-green-500 rounded-t transition-all hover:opacity-80"
+                                  style={{ height: `${profitHeight}%` }}
+                                  title={`Profit: Rs. ${Math.round(data.profit)}`}
+                                ></div>
+                              </div>
+                            </div>
 
-                    {/* Profit line */}
-                    {salesData.length > 0 && (
-                      <polyline
-                        points={salesData
-                          .map((data, index) => {
-                            const maxSales = Math.max(...salesData.map((d) => d.sales));
-                            const x = (index / (salesData.length - 1)) * 100;
-                            const y = (1 - data.profit / maxSales) * 256;
-                            return `${x},${y}`;
-                          })
-                          .join(" ")}
-                        fill="none"
-                        stroke="#10b981"
-                        strokeWidth="1"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    )}
-
-                    {/* Sales data points */}
-                    {salesData.map((data, index) => {
-                      const maxSales = Math.max(...salesData.map((d) => d.sales));
-                      const x = (index / (salesData.length - 1)) * 100;
-                      const y = (1 - data.sales / maxSales) * 256;
-                      return (
-                        <circle
-                          key={`sales-point-${index}`}
-                          cx={x}
-                          cy={y}
-                          r="3"
-                          fill="#ef4444"
-                          stroke="#1f2937"
-                          strokeWidth="1"
-                        />
-                      );
-                    })}
-
-                    {/* Cost data points */}
-                    {salesData.map((data, index) => {
-                      const maxSales = Math.max(...salesData.map((d) => d.sales));
-                      const x = (index / (salesData.length - 1)) * 100;
-                      const y = (1 - data.cost / maxSales) * 256;
-                      return (
-                        <circle
-                          key={`cost-point-${index}`}
-                          cx={x}
-                          cy={y}
-                          r="3"
-                          fill="#f59e0b"
-                          stroke="#1f2937"
-                          strokeWidth="1"
-                        />
-                      );
-                    })}
-
-                    {/* Profit data points */}
-                    {salesData.map((data, index) => {
-                      const maxSales = Math.max(...salesData.map((d) => d.sales));
-                      const x = (index / (salesData.length - 1)) * 100;
-                      const y = (1 - data.profit / maxSales) * 256;
-                      return (
-                        <circle
-                          key={`profit-point-${index}`}
-                          cx={x}
-                          cy={y}
-                          r="3"
-                          fill="#10b981"
-                          stroke="#1f2937"
-                          strokeWidth="1"
-                        />
-                      );
-                    })}
-                  </svg>
+                            {/* Date Label */}
+                            <span className="text-xs text-gray-400 font-medium mt-2">
+                              {new Date(data.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-center w-full text-gray-400">
+                      No data available
+                    </div>
+                  )}
                 </div>
 
                 {/* Legend */}
-                <div className="flex gap-6 justify-center mt-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                    <span className="text-gray-300">Sales Revenue</span>
+                <div className="flex gap-8 justify-center mt-6 text-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-3 h-3 rounded bg-blue-500 shadow-md"></div>
+                    <span className="text-gray-300 font-medium">Sales Revenue</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                    <span className="text-gray-300">Cost of Goods</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-3 h-3 rounded bg-orange-500 shadow-md"></div>
+                    <span className="text-gray-300 font-medium">Cost of Goods</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span className="text-gray-300">Profit</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-3 h-3 rounded bg-green-500 shadow-md"></div>
+                    <span className="text-gray-300 font-medium">Profit</span>
                   </div>
                 </div>
               </div>
@@ -437,6 +361,8 @@ const AnalyticsPage: React.FC = () => {
                     <th className="text-left py-2 px-2 text-gray-400">Product</th>
                     <th className="text-center py-2 px-2 text-gray-400">Units</th>
                     <th className="text-right py-2 px-2 text-gray-400">Revenue</th>
+                    <th className="text-right py-2 px-2 text-gray-400">Total Cost</th>
+                    <th className="text-right py-2 px-2 text-gray-400">Profit</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -452,6 +378,12 @@ const AnalyticsPage: React.FC = () => {
                       <td className="py-3 px-2 text-center text-gray-300">{item.unitsSold}</td>
                       <td className="py-3 px-2 text-right text-green-400 font-semibold">
                         Rs. {Math.round(item.revenue).toLocaleString()}
+                      </td>
+                      <td className="py-3 px-2 text-right text-orange-400 font-semibold">
+                        Rs. {Math.round(item.totalCost).toLocaleString()}
+                      </td>
+                      <td className="py-3 px-2 text-right font-semibold" style={{ color: item.profit >= 0 ? '#60a5fa' : '#ef4444' }}>
+                        Rs. {Math.round(item.profit).toLocaleString()}
                       </td>
                     </tr>
                   ))}

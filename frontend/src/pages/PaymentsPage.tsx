@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useShop } from "../context/ShopContext";
 import {
   getShopPayments,
@@ -52,8 +52,15 @@ const PaymentsPage: React.FC = () => {
     notes: "",
   });
 
+  // Use ref to prevent duplicate requests in strict mode
+  const loadDataRef = useRef(false);
+
   // Load payments and summary
   useEffect(() => {
+    // Prevent duplicate requests in React Strict Mode
+    if (loadDataRef.current) return;
+    loadDataRef.current = true;
+
     const loadData = async () => {
       try {
         setLoading(true);

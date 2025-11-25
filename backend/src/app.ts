@@ -18,11 +18,18 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limiting
+// Rate limiting - disabled in development, enabled in production
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: config.rateLimit.max,
   message: 'Too many requests from this IP, please try again later.',
+  skip: (req) => {
+    // Skip rate limiting for health check
+    if (req.path === '/health') return true;
+    // Skip rate limiting in development mode
+    if (process.env.NODE_ENV === 'development') return true;
+    return false;
+  },
 });
 app.use(limiter);
 

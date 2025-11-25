@@ -563,6 +563,11 @@ const CustomersPage: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, customer_id: e.target.value })
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && formData.customer_id.trim()) {
+                      (document.querySelector('input[placeholder*="Mobile"]') as HTMLInputElement)?.focus();
+                    }
+                  }}
                   disabled={isEditMode}
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 />
@@ -580,6 +585,11 @@ const CustomersPage: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, mobile: e.target.value })
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && formData.mobile.trim()) {
+                      (document.querySelector('input[placeholder*="customer@example.com"]') as HTMLInputElement)?.focus();
+                    }
+                  }}
                   disabled={isEditMode}
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 />
@@ -597,6 +607,11 @@ const CustomersPage: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSaveCustomer();
+                    }
+                  }}
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                 />
               </div>

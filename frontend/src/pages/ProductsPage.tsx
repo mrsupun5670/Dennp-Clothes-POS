@@ -39,6 +39,14 @@ const ProductsPage: React.FC = () => {
   const [newCategory, setNewCategory] = useState("");
   const [newCategorySizeType, setNewCategorySizeType] = useState("alphabetic");
   const [isEditMode, setIsEditMode] = useState(false);
+
+  // Modal-specific error/success messages
+  const [sizeModalMessage, setSizeModalMessage] = useState("");
+  const [sizeModalMessageType, setSizeModalMessageType] = useState<"error" | "success" | "">("");
+  const [colorModalMessage, setColorModalMessage] = useState("");
+  const [colorModalMessageType, setColorModalMessageType] = useState<"error" | "success" | "">("");
+  const [categoryModalMessage, setCategoryModalMessage] = useState("");
+  const [categoryModalMessageType, setCategoryModalMessageType] = useState<"error" | "success" | "">("");
   const [formData, setFormData] = useState({
     code: "",
     name: "",
@@ -582,12 +590,16 @@ const ProductsPage: React.FC = () => {
   const handleAddSize = async () => {
     const trimmedSize = newSize.trim();
     if (!trimmedSize) {
-      showNotification("Size name is required", "error");
+      setSizeModalMessage("Size name is required");
+      setSizeModalMessageType("error");
+      setTimeout(() => { setSizeModalMessage(""); setSizeModalMessageType(""); }, 3000);
       return;
     }
 
     if (getAllSizes().some((s) => s.toLowerCase() === trimmedSize.toLowerCase())) {
-      showNotification(`Size "${trimmedSize}" already exists.`, "error");
+      setSizeModalMessage(`Size "${trimmedSize}" already exists`);
+      setSizeModalMessageType("error");
+      setTimeout(() => { setSizeModalMessage(""); setSizeModalMessageType(""); }, 3000);
       return;
     }
 
@@ -597,7 +609,9 @@ const ProductsPage: React.FC = () => {
         (c) => c.category_id.toString() === selectedCategory
       );
       if (!selectedCat) {
-        showNotification("Category not found", "error");
+        setSizeModalMessage("Category not found");
+        setSizeModalMessageType("error");
+        setTimeout(() => { setSizeModalMessage(""); setSizeModalMessageType(""); }, 3000);
         return;
       }
 
@@ -612,15 +626,24 @@ const ProductsPage: React.FC = () => {
       });
       const result = await response.json();
       if (result.success) {
-        showNotification(`Size "${trimmedSize}" added successfully`, "success");
-        setNewSize("");
-        setShowAddSizeModal(false);
+        setSizeModalMessage(`Size "${trimmedSize}" added successfully`);
+        setSizeModalMessageType("success");
+        setTimeout(() => {
+          setNewSize("");
+          setShowAddSizeModal(false);
+          setSizeModalMessage("");
+          setSizeModalMessageType("");
+        }, 1500);
         await refetchCategorySizes();
       } else {
-        showNotification(result.error || "Failed to add size", "error");
+        setSizeModalMessage(result.error || "Failed to add size");
+        setSizeModalMessageType("error");
+        setTimeout(() => { setSizeModalMessage(""); setSizeModalMessageType(""); }, 3000);
       }
     } catch (error) {
-      showNotification("Error adding size", "error");
+      setSizeModalMessage("Error adding size");
+      setSizeModalMessageType("error");
+      setTimeout(() => { setSizeModalMessage(""); setSizeModalMessageType(""); }, 3000);
     }
   };
 
@@ -628,12 +651,16 @@ const ProductsPage: React.FC = () => {
   const handleAddColor = async () => {
     const trimmedColor = newColor.trim();
     if (!trimmedColor) {
-      showNotification("Color name is required", "error");
+      setColorModalMessage("Color name is required");
+      setColorModalMessageType("error");
+      setTimeout(() => { setColorModalMessage(""); setColorModalMessageType(""); }, 3000);
       return;
     }
 
     if (getAllColors().some((c) => c.toLowerCase() === trimmedColor.toLowerCase())) {
-      showNotification(`Color "${trimmedColor}" already exists.`, "error");
+      setColorModalMessage(`Color "${trimmedColor}" already exists`);
+      setColorModalMessageType("error");
+      setTimeout(() => { setColorModalMessage(""); setColorModalMessageType(""); }, 3000);
       return;
     }
 
@@ -649,15 +676,24 @@ const ProductsPage: React.FC = () => {
       });
       const result = await response.json();
       if (result.success) {
-        showNotification(`Color "${trimmedColor}" added successfully`, "success");
-        setNewColor("");
-        setShowAddColorModal(false);
+        setColorModalMessage(`Color "${trimmedColor}" added successfully`);
+        setColorModalMessageType("success");
+        setTimeout(() => {
+          setNewColor("");
+          setShowAddColorModal(false);
+          setColorModalMessage("");
+          setColorModalMessageType("");
+        }, 1500);
         await refetchColors();
       } else {
-        showNotification(result.error || "Failed to add color", "error");
+        setColorModalMessage(result.error || "Failed to add color");
+        setColorModalMessageType("error");
+        setTimeout(() => { setColorModalMessage(""); setColorModalMessageType(""); }, 3000);
       }
     } catch (error) {
-      showNotification("Error adding color", "error");
+      setColorModalMessage("Error adding color");
+      setColorModalMessageType("error");
+      setTimeout(() => { setColorModalMessage(""); setColorModalMessageType(""); }, 3000);
     }
   };
 
@@ -665,7 +701,9 @@ const ProductsPage: React.FC = () => {
   const handleAddCategory = async () => {
     const trimmedCategory = newCategory.trim();
     if (!trimmedCategory) {
-      showNotification("Category name is required", "error");
+      setCategoryModalMessage("Category name is required");
+      setCategoryModalMessageType("error");
+      setTimeout(() => { setCategoryModalMessage(""); setCategoryModalMessageType(""); }, 3000);
       return;
     }
 
@@ -687,16 +725,25 @@ const ProductsPage: React.FC = () => {
       });
       const result = await response.json();
       if (result.success) {
-        showNotification(`Category "${trimmedCategory}" added successfully`, "success");
-        setNewCategory("");
-        setNewCategorySizeType("alphabetic");
-        setShowAddCategoryModal(false);
+        setCategoryModalMessage(`Category "${trimmedCategory}" added successfully`);
+        setCategoryModalMessageType("success");
+        setTimeout(() => {
+          setNewCategory("");
+          setNewCategorySizeType("alphabetic");
+          setShowAddCategoryModal(false);
+          setCategoryModalMessage("");
+          setCategoryModalMessageType("");
+        }, 1500);
         await refetchCategories();
       } else {
-        showNotification(result.error || "Failed to add category", "error");
+        setCategoryModalMessage(result.error || "Failed to add category");
+        setCategoryModalMessageType("error");
+        setTimeout(() => { setCategoryModalMessage(""); setCategoryModalMessageType(""); }, 3000);
       }
     } catch (error) {
-      showNotification("Error adding category", "error");
+      setCategoryModalMessage("Error adding category");
+      setCategoryModalMessageType("error");
+      setTimeout(() => { setCategoryModalMessage(""); setCategoryModalMessageType(""); }, 3000);
     }
   };
 
@@ -1326,6 +1373,15 @@ const ProductsPage: React.FC = () => {
                           }}
                         />
                       </div>
+                      {sizeModalMessage && (
+                        <div className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                          sizeModalMessageType === "error"
+                            ? "bg-red-600/20 text-red-300 border-red-600/50"
+                            : "bg-green-600/20 text-green-300 border-green-600/50"
+                        }`}>
+                          {sizeModalMessage}
+                        </div>
+                      )}
                       <div className="flex gap-3">
                         <button
                           onClick={handleAddSize}
@@ -1381,6 +1437,15 @@ const ProductsPage: React.FC = () => {
                           }}
                         />
                       </div>
+                      {colorModalMessage && (
+                        <div className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                          colorModalMessageType === "error"
+                            ? "bg-red-600/20 text-red-300 border-red-600/50"
+                            : "bg-green-600/20 text-green-300 border-green-600/50"
+                        }`}>
+                          {colorModalMessage}
+                        </div>
+                      )}
                       <div className="flex gap-3">
                         <button
                           onClick={handleAddColor}
@@ -1451,6 +1516,15 @@ const ProductsPage: React.FC = () => {
                           <option value="other">Other</option>
                         </select>
                       </div>
+                      {categoryModalMessage && (
+                        <div className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                          categoryModalMessageType === "error"
+                            ? "bg-red-600/20 text-red-300 border-red-600/50"
+                            : "bg-green-600/20 text-green-300 border-green-600/50"
+                        }`}>
+                          {categoryModalMessage}
+                        </div>
+                      )}
                       <div className="flex gap-3">
                         <button
                           onClick={handleAddCategory}

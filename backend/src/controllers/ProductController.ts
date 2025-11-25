@@ -179,11 +179,11 @@ class ProductController {
         return;
       }
 
-      if (!sku || !product_name || !category_id || !retail_price) {
+      if (!product_name || !category_id || retail_price === undefined || retail_price === null) {
         res.status(400).json({
           success: false,
           error:
-            "Missing required fields: sku, product_name, category_id, retail_price",
+            "Missing required fields: product_name, category_id, retail_price",
         });
         return;
       }

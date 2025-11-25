@@ -87,6 +87,27 @@ class CustomerModel {
   }
 
   /**
+   * Create new customer with specific customer_id
+   */
+  async createCustomerWithId(shopId: number, customerId: number, customerData: Omit<Customer, 'customer_id' | 'created_at' | 'orders_count' | 'total_spent' | 'shop_id'>): Promise<number> {
+    try {
+      const { first_name, last_name, mobile, email, customer_status } = customerData;
+
+      await query(
+        `INSERT INTO customers (customer_id, shop_id, first_name, last_name, mobile, email, customer_status, orders_count, total_spent)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)`,
+        [customerId, shopId, first_name, last_name, mobile, email || null, customer_status]
+      );
+
+      logger.info('Customer created successfully with specific ID', { customerId, shopId, mobile });
+      return customerId;
+    } catch (error) {
+      logger.error('Error creating customer with ID:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Update customer
    */
   async updateCustomer(customerId: number, shopId: number, customerData: Partial<Omit<Customer, 'customer_id' | 'created_at' | 'orders_count' | 'total_spent' | 'shop_id'>>): Promise<boolean> {

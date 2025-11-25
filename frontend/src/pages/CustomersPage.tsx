@@ -30,6 +30,7 @@ const CustomersPage: React.FC = () => {
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({
+    customer_id: "",
     mobile: "",
     email: "",
   });
@@ -109,6 +110,7 @@ const CustomersPage: React.FC = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          customer_id: parseInt(formData.customer_id),
           shop_id: shopId,
           mobile: formData.mobile,
           email: formData.email || null,
@@ -198,7 +200,7 @@ const CustomersPage: React.FC = () => {
 
   const handleAddClick = () => {
     setIsEditMode(false);
-    setFormData({ mobile: "", email: "" });
+    setFormData({ customer_id: "", mobile: "", email: "" });
     setShowAddModal(true);
   };
 
@@ -218,11 +220,21 @@ const CustomersPage: React.FC = () => {
     setShowAddModal(false);
     setIsEditMode(false);
     setSelectedCustomerId(null);
-    setFormData({ mobile: "", email: "" });
+    setFormData({ customer_id: "", mobile: "", email: "" });
   };
 
   const handleSaveCustomer = () => {
     // Validation
+    if (!formData.customer_id.trim()) {
+      showNotification("Customer ID is required", "error");
+      return;
+    }
+
+    if (isNaN(parseInt(formData.customer_id))) {
+      showNotification("Customer ID must be a valid number", "error");
+      return;
+    }
+
     if (!formData.mobile.trim()) {
       showNotification("Mobile number is required", "error");
       return;
@@ -539,6 +551,23 @@ const CustomersPage: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-6 space-y-5">
+              {/* Customer ID */}
+              <div>
+                <label className="block text-sm font-semibold text-red-400 mb-2">
+                  Customer ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g., 1001"
+                  value={formData.customer_id}
+                  onChange={(e) =>
+                    setFormData({ ...formData, customer_id: e.target.value })
+                  }
+                  disabled={isEditMode}
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+
               {/* Mobile Number */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-2">

@@ -118,13 +118,21 @@ class CustomerController {
   }
 
   /**
-   * POST /customers (body: { shop_id, mobile, email }) - Create new customer
+   * POST /customers (body: { customer_id, shop_id, mobile, email }) - Create new customer
    */
   async createCustomer(req: Request, res: Response): Promise<void> {
     try {
-      const { shop_id, mobile, email } = req.body;
+      const { customer_id, shop_id, mobile, email } = req.body;
 
       // Validation
+      if (!customer_id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: customer_id',
+        });
+        return;
+      }
+
       if (!shop_id) {
         res.status(400).json({
           success: false,
@@ -145,7 +153,7 @@ class CustomerController {
       const defaultFirstName = `Customer`;
       const defaultLastName = mobile;
 
-      const customerId = await CustomerModel.createCustomer(shop_id, {
+      const customerId = await CustomerModel.createCustomerWithId(shop_id, customer_id, {
         first_name: defaultFirstName,
         last_name: defaultLastName,
         mobile,

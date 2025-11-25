@@ -285,6 +285,12 @@ const ProductsPage: React.FC = () => {
     ...customColors,
   ];
 
+  // Get color hex code by name (for color picker display)
+  const getColorHexCode = (colorName: string): string | null => {
+    const color = dbColors?.find((c) => c.color_name === colorName);
+    return color?.hex_code || null;
+  };
+
   const showNotification = (message: string, type: "error" | "success") => {
     setNotificationMessage(message);
     setNotificationType(type);
@@ -508,7 +514,7 @@ const ProductsPage: React.FC = () => {
       );
 
       // Refresh all dependent lists
-      await Promise.all([refetchProducts(), refetchColors(), refetchSizes()]);
+      await Promise.all([refetchProducts(), refetchColors(), refetchSizes(), refetchCategories(), refetchCategorySizes()]);
 
       handleCloseModal();
     } catch (error: any) {
@@ -592,20 +598,40 @@ const ProductsPage: React.FC = () => {
     }
   };
 
-  // Add custom color
-  const handleAddColor = () => {
+  // Add custom color - Save to database
+  const handleAddColor = async () => {
     const trimmedColor = newColor.trim();
-    if (
-      trimmedColor &&
-      !getAllColors().some(
-        (c) => c.toLowerCase() === trimmedColor.toLowerCase()
-      )
-    ) {
-      setCustomColors([...customColors, trimmedColor]);
-      setNewColor("");
-      setShowAddColorModal(false);
-    } else if (trimmedColor) {
+    if (!trimmedColor) {
+      showNotification("Color name is required", "error");
+      return;
+    }
+
+    if (getAllColors().some((c) => c.toLowerCase() === trimmedColor.toLowerCase())) {
       showNotification(`Color "${trimmedColor}" already exists.`, "error");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/colors`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop_id: shopId,
+          color_name: trimmedColor,
+          hex_code: null,
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        showNotification(`Color "${trimmedColor}" added successfully`, "success");
+        setNewColor("");
+        setShowAddColorModal(false);
+        await refetchColors();
+      } else {
+        showNotification(result.error || "Failed to add color", "error");
+      }
+    } catch (error) {
+      showNotification("Error adding color", "error");
     }
   };
 

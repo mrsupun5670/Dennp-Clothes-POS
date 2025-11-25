@@ -145,9 +145,9 @@ class CategoryModel {
          c.shop_id,
          c.category_name,
          c.size_type_id,
-         st.Size_type_name
+         st.size_type_name
          FROM categories c
-         LEFT JOIN size_type st ON c.size_type_id = st.size_type_id
+         LEFT JOIN size_types st ON c.size_type_id = st.size_type_id
          WHERE c.category_id = ? AND c.shop_id = ?`,
         [categoryId, shopId]
       );

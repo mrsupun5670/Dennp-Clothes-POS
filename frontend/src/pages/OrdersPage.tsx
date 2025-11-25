@@ -191,7 +191,7 @@ const OrdersPage: React.FC = () => {
 
   const totalOrders = filteredOrders.length;
   const totalValue = filteredOrders.reduce(
-    (sum, order) => sum + order.total_amount,
+    (sum, order) => sum + parseFloat(String(order.total_amount)),
     0
   );
 
@@ -320,7 +320,7 @@ const OrdersPage: React.FC = () => {
 
     if (amount > (selectedOrder?.remaining_amount || 0)) {
       setPaymentMessage(
-        `❌ Amount cannot exceed remaining balance (Rs. ${selectedOrder?.remaining_amount.toFixed(2)})`
+        `❌ Amount cannot exceed remaining balance (Rs. ${parseFloat(String(selectedOrder?.remaining_amount || 0)).toFixed(2)})`
       );
       return;
     }
@@ -573,7 +573,7 @@ const OrdersPage: React.FC = () => {
                       {new Date(order.order_date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right text-red-400 font-semibold">
-                      {order.total_amount.toFixed(2)}
+                      {parseFloat(String(order.total_amount)).toFixed(2)}
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -722,10 +722,10 @@ const OrdersPage: React.FC = () => {
                                 {item.quantity}
                               </td>
                               <td className="px-4 py-3 text-right text-gray-400">
-                                {item.sold_price.toFixed(2)}
+                                {parseFloat(String(item.sold_price)).toFixed(2)}
                               </td>
                               <td className="px-4 py-3 text-right text-red-400 font-semibold">
-                                {item.total_price.toFixed(2)}
+                                {parseFloat(String(item.total_price)).toFixed(2)}
                               </td>
                             </tr>
                           ))}
@@ -734,7 +734,7 @@ const OrdersPage: React.FC = () => {
                               Subtotal:
                             </td>
                             <td className="px-4 py-3 text-right text-red-400">
-                              Rs. {selectedOrder.total_amount.toFixed(2)}
+                              Rs. {parseFloat(String(selectedOrder.total_amount)).toFixed(2)}
                             </td>
                           </tr>
                         </tbody>
@@ -754,7 +754,7 @@ const OrdersPage: React.FC = () => {
                   <div className="flex justify-between items-center pb-3 border-b border-gray-600">
                     <p className="text-gray-300">Order Subtotal:</p>
                     <p className="text-gray-100 font-semibold">
-                      Rs. {selectedOrder.total_amount.toFixed(2)}
+                      Rs. {parseFloat(String(selectedOrder.total_amount)).toFixed(2)}
                     </p>
                   </div>
 
@@ -763,7 +763,7 @@ const OrdersPage: React.FC = () => {
                     <div className="flex justify-between items-center pb-3 border-b border-gray-600">
                       <p className="text-gray-300">Delivery Charge:</p>
                       <p className="text-gray-100 font-semibold">
-                        Rs. {selectedOrder.delivery_charge.toFixed(2)}
+                        Rs. {parseFloat(String(selectedOrder.delivery_charge)).toFixed(2)}
                       </p>
                     </div>
                   ) : null}
@@ -774,7 +774,7 @@ const OrdersPage: React.FC = () => {
                       Grand Total (Amount Due):
                     </p>
                     <p className="text-red-400 font-bold text-xl">
-                      Rs. {((selectedOrder.total_amount + (selectedOrder.delivery_charge || 0))).toFixed(2)}
+                      Rs. {((parseFloat(String(selectedOrder.total_amount)) + (parseFloat(String(selectedOrder.delivery_charge)) || 0))).toFixed(2)}
                     </p>
                   </div>
 
@@ -785,13 +785,13 @@ const OrdersPage: React.FC = () => {
                         Advance Paid
                       </p>
                       <p className="text-green-400 font-bold text-lg">
-                        Rs. {selectedOrder.advance_paid.toFixed(2)}
+                        Rs. {parseFloat(String(selectedOrder.advance_paid)).toFixed(2)}
                       </p>
                     </div>
                     <div>
                       {(() => {
-                        const grandTotal = selectedOrder.total_amount + (selectedOrder.delivery_charge || 0);
-                        const balanceToPay = Math.max(0, grandTotal - selectedOrder.total_paid);
+                        const grandTotal = parseFloat(String(selectedOrder.total_amount)) + (parseFloat(String(selectedOrder.delivery_charge)) || 0);
+                        const balanceToPay = Math.max(0, grandTotal - parseFloat(String(selectedOrder.total_paid)));
                         return (
                           <>
                             <p className="text-xs text-gray-400 font-semibold mb-1">

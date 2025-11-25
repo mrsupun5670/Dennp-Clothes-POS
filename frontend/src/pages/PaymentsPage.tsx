@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useShop } from "../context/ShopContext";
-import { useQuery } from "../hooks/useQuery";
 import {
   getShopPayments,
   createPayment,
@@ -17,8 +16,8 @@ interface Notification {
 }
 
 const PaymentsPage: React.FC = () => {
-  const { currentShop } = useShop();
-  const shopId = currentShop?.shop_id || 1;
+  const { shopId: contextShopId } = useShop();
+  const shopId = contextShopId || 1;
 
   const [payments, setPayments] = useState<Payment[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
@@ -44,10 +43,12 @@ const PaymentsPage: React.FC = () => {
     payment_amount: "",
     payment_date: new Date().toISOString().split("T")[0],
     payment_time: new Date().toTimeString().slice(0, 5),
-    payment_method: "cash" as const,
+    payment_method: "cash" as "cash" | "online_transfer" | "bank_deposit",
+    bank_name: "",
+    branch_name: "",
     bank_account_id: "",
     transaction_id: "",
-    payment_status: "completed" as const,
+    payment_status: "completed" as "completed" | "pending" | "failed" | "refunded",
     notes: "",
   });
 
@@ -58,13 +59,18 @@ const PaymentsPage: React.FC = () => {
         setLoading(true);
 
         // Load payments and summary
-        const [paymentsData, summaryData] = await Promise.all([
-          getShopPayments(shopId),
-          getPaymentSummary(shopId),
-        ]).catch(() => [[], { total_count: 0, total_amount: 0, completed_count: 0 }]);
-
-        setPayments(paymentsData || []);
-        setSummary(summaryData || { total_count: 0, total_amount: 0, completed_count: 0 });
+        try {
+          const [paymentsData, summaryData] = await Promise.all([
+            getShopPayments(shopId),
+            getPaymentSummary(shopId),
+          ]);
+          setPayments(paymentsData || []);
+          setSummary(summaryData || { total_count: 0, total_amount: 0, completed_count: 0 });
+        } catch (error) {
+          console.error("Error fetching payments or summary:", error);
+          setPayments([]);
+          setSummary({ total_count: 0, total_amount: 0, completed_count: 0 });
+        }
 
         // Load bank accounts separately (optional, won't crash if fails)
         try {
@@ -158,6 +164,8 @@ const PaymentsPage: React.FC = () => {
         payment_date: payment.payment_date,
         payment_time: payment.payment_time || "",
         payment_method: payment.payment_method,
+        bank_name: payment.bank_name || "",
+        branch_name: payment.branch_name || "",
         bank_account_id: payment.bank_account_id?.toString() || "",
         transaction_id: payment.transaction_id || "",
         payment_status: payment.payment_status,
@@ -172,6 +180,8 @@ const PaymentsPage: React.FC = () => {
         payment_date: new Date().toISOString().split("T")[0],
         payment_time: new Date().toTimeString().slice(0, 5),
         payment_method: "cash",
+        bank_name: "",
+        branch_name: "",
         bank_account_id: "",
         transaction_id: "",
         payment_status: "completed",
@@ -199,6 +209,8 @@ const PaymentsPage: React.FC = () => {
           payment_date: formData.payment_date,
           payment_time: formData.payment_time || undefined,
           payment_method: formData.payment_method,
+          bank_name: formData.bank_name || undefined,
+          branch_name: formData.branch_name || undefined,
           bank_account_id: formData.bank_account_id
             ? parseInt(formData.bank_account_id)
             : undefined,
@@ -217,6 +229,8 @@ const PaymentsPage: React.FC = () => {
           payment_date: formData.payment_date,
           payment_time: formData.payment_time || undefined,
           payment_method: formData.payment_method,
+          bank_name: formData.bank_name || undefined,
+          branch_name: formData.branch_name || undefined,
           bank_account_id: formData.bank_account_id
             ? parseInt(formData.bank_account_id)
             : undefined,
@@ -244,10 +258,8 @@ const PaymentsPage: React.FC = () => {
   const getPaymentMethodBadgeColor = (method: string) => {
     const colors: Record<string, string> = {
       cash: "bg-green-600 text-white",
-      card: "bg-blue-600 text-white",
-      online: "bg-purple-600 text-white",
-      check: "bg-orange-600 text-white",
-      bank_transfer: "bg-indigo-600 text-white",
+      online_transfer: "bg-blue-600 text-white",
+      bank_deposit: "bg-purple-600 text-white",
     };
     return colors[method] || "bg-gray-600 text-white";
   };
@@ -331,7 +343,7 @@ const PaymentsPage: React.FC = () => {
                 TOTAL AMOUNT
               </p>
               <p className="text-3xl font-bold text-green-300">
-                Rs. {(summary?.total_amount || 0).toFixed(2)}
+                Rs. {(parseFloat(String(summary?.total_amount)) || 0).toFixed(2)}
               </p>
             </div>
             <div className="text-3xl text-green-400">💰</div>
@@ -389,10 +401,8 @@ const PaymentsPage: React.FC = () => {
           >
             <option value="all">All Methods</option>
             <option value="cash">Cash</option>
-            <option value="card">Card</option>
-            <option value="online">Online</option>
-            <option value="check">Check</option>
-            <option value="bank_transfer">Bank Transfer</option>
+            <option value="online_transfer">Online Transfer</option>
+            <option value="bank_deposit">Bank Deposit</option>
           </select>
         </div>
 
@@ -489,7 +499,7 @@ const PaymentsPage: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right text-green-400 font-bold">
-                      Rs. {(payment?.payment_amount || 0).toFixed(2)}
+                      Rs. {(parseFloat(String(payment?.payment_amount)) || 0).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-gray-400 text-xs">
                       <div>{payment.payment_date}</div>
@@ -672,14 +682,12 @@ const PaymentsPage: React.FC = () => {
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
                   >
                     <option value="cash">Cash</option>
-                    <option value="card">Card</option>
-                    <option value="online">Online</option>
-                    <option value="check">Check</option>
-                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="online_transfer">Online Transfer</option>
+                    <option value="bank_deposit">Bank Deposit</option>
                   </select>
                 </div>
 
-                {formData.payment_method === "bank_transfer" && (
+                {(formData.payment_method === "online_transfer" || formData.payment_method === "bank_deposit") && (
                   <div>
                     <label className="block text-sm font-semibold text-red-400 mb-2">
                       Bank Account
@@ -704,6 +712,40 @@ const PaymentsPage: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* Bank Name and Branch Name */}
+              {(formData.payment_method === "online_transfer" || formData.payment_method === "bank_deposit") && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-red-400 mb-2">
+                      Bank Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.bank_name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, bank_name: e.target.value })
+                      }
+                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                      placeholder="e.g., Commercial Bank"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-red-400 mb-2">
+                      Branch Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.branch_name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, branch_name: e.target.value })
+                      }
+                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                      placeholder="e.g., Colombo Main"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Transaction ID */}
               <div>

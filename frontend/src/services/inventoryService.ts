@@ -7,7 +7,7 @@ export interface InventoryItem {
   item_name: string;
   quantity_in_stock: number;
   updated_at: string;
-  unit_cost: number;
+  unit_cost: number | string;
 }
 
 /**

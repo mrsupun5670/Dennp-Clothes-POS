@@ -5,10 +5,10 @@ export interface BankAccount {
   bank_account_id: number;
   shop_id: number;
   bank_name: string;
+  branch_name?: string;
   account_number: string;
   account_holder_name: string;
   account_type: 'checking' | 'savings' | 'business';
-  branch_code?: string;
   ifsc_code?: string;
   initial_balance: number;
   current_balance: number;
@@ -67,10 +67,10 @@ export const getBankAccountById = async (
 export const createBankAccount = async (
   shopId: number,
   bankName: string,
+  branchName: string | null,
   accountNumber: string,
   accountHolderName: string,
   accountType: 'checking' | 'savings' | 'business',
-  branchCode: string | null,
   ifscCode: string | null,
   initialBalance: number
 ): Promise<{ bank_account_id: number }> => {
@@ -78,10 +78,10 @@ export const createBankAccount = async (
     const response = await axios.post(`${API_URL}/bank-accounts`, {
       shop_id: shopId,
       bank_name: bankName,
+      branch_name: branchName,
       account_number: accountNumber,
       account_holder_name: accountHolderName,
       account_type: accountType,
-      branch_code: branchCode,
       ifsc_code: ifscCode,
       initial_balance: initialBalance,
     });

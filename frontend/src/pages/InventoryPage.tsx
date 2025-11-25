@@ -68,7 +68,7 @@ const InventoryPage: React.FC = () => {
 
   const totalItems = filteredMaterials.length;
   const totalValue = filteredMaterials.reduce(
-    (sum, item) => sum + item.quantity_in_stock * item.unit_cost,
+    (sum, item) => sum + item.quantity_in_stock * parseFloat(String(item.unit_cost)),
     0
   );
 
@@ -83,8 +83,8 @@ const InventoryPage: React.FC = () => {
     setSelectedItemId(item.inventory_id);
     setFormData({
       name: item.item_name,
-      qty: item.quantity_in_stock.toString(),
-      unitCost: item.unit_cost.toString(),
+      qty: String(item.quantity_in_stock),
+      unitCost: String(item.unit_cost),
     });
     setShowAddModal(true);
   };
@@ -276,10 +276,10 @@ const InventoryPage: React.FC = () => {
                       {item.quantity_in_stock.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-right text-gray-300 font-semibold">
-                      {item.unit_cost.toFixed(2)}
+                      {parseFloat(String(item.unit_cost)).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-right text-red-400 font-semibold">
-                      {(item.quantity_in_stock * item.unit_cost).toFixed(2)}
+                      {(item.quantity_in_stock * parseFloat(String(item.unit_cost))).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-gray-400 text-sm">
                       {new Date(item.updated_at).toLocaleDateString()}

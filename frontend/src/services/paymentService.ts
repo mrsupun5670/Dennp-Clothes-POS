@@ -9,7 +9,9 @@ export interface Payment {
   payment_amount: number;
   payment_date: string;
   payment_time?: string;
-  payment_method: 'cash' | 'card' | 'online' | 'check' | 'bank_transfer';
+  payment_method: 'cash' | 'online_transfer' | 'bank_deposit';
+  bank_name?: string;
+  branch_name?: string;
   bank_account_id?: number;
   transaction_id?: string;
   payment_status: 'completed' | 'pending' | 'failed' | 'refunded';

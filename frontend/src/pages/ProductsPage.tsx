@@ -566,11 +566,11 @@ const ProductsPage: React.FC = () => {
       name: p.product_name,
       colors: p.colors?.map((c: any) => c.color_name).join(", ") || "N/A",
       sizes: p.sizes?.map((s: any) => s.size_name).join(", ") || "N/A",
-      cost: p.product_cost || 0,
-      printCost: p.print_cost || 0,
+      cost: parseFloat(p.product_cost) || 0,
+      printCost: parseFloat(p.print_cost) || 0,
       qty: p.total_stock || 0, // Assuming API returns total stock as 'total_stock'
-      retailPrice: p.retail_price,
-      wholesalePrice: p.wholesale_price || 0,
+      retailPrice: parseFloat(p.retail_price) || 0,
+      wholesalePrice: parseFloat(p.wholesale_price) || 0,
       category_id: p.category_id,
     }));
 

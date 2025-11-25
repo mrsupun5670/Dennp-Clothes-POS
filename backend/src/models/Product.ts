@@ -519,10 +519,10 @@ class ProductModel {
   async getProductSizes(productId: number, shopId: number): Promise<any[]> {
     try {
       const results = await query(
-        `SELECT s.size_id, s.size_name, st.Size_type_name as size_type
+        `SELECT s.size_id, s.size_name, st.size_type_name as size_type
          FROM product_sizes ps
          JOIN sizes s ON ps.size_id = s.size_id
-         JOIN size_type st ON s.size_type_id = st.size_type_id
+         JOIN size_types st ON s.size_type_id = st.size_type_id
          JOIN products p ON ps.product_id = p.product_id
          WHERE ps.product_id = ? AND p.shop_id = ?
          ORDER BY s.size_name ASC`,

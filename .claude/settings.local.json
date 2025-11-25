@@ -24,7 +24,18 @@
       "Bash(move /y \"C:\\Users\\LENOVO\\Documents\\ElectronProjects\\Dennp-Clothes-POS\\frontend\\src\\pages\\PaymentsPage.tsx.tmp\" \"C:\\Users\\LENOVO\\Documents\\ElectronProjects\\Dennp-Clothes-POS\\frontend\\src\\pages\\PaymentsPage.tsx\")",
       "Bash(npx tsc:*)",
       "Bash(timeout 10 npm run dev:*)",
-      "Bash(timeout 15 npm run dev:*)"
+      "Bash(timeout 15 npm run dev:*)",
+      "Bash(timeout 5 bash:*)",
+      "Bash(python3:*)",
+      "Bash(cat:*)",
+      "Bash(timeout 3 bash:*)",
+      "Bash(node load-sample-data.js:*)",
+      "Bash(pwsh -c:*)",
+      "Bash(wmic process where name=''node.exe'' get ProcessId,CommandLine)",
+      "Bash(wmic process where \"name=''node.exe''\" get ProcessId)",
+      "Bash(node check-payments.js:*)",
+      "Bash(node check-bank-accounts.js:*)",
+      "Bash(node check-schema.js:*)"
     ],
     "deny": [],
     "ask": []

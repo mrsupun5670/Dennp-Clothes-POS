@@ -14,7 +14,9 @@ export interface Payment {
   payment_amount: number;
   payment_date: string;
   payment_time?: string;
-  payment_method: 'cash' | 'card' | 'online' | 'check' | 'bank_transfer';
+  payment_method: 'cash' | 'online_transfer' | 'bank_deposit';
+  bank_name?: string;
+  branch_name?: string;
   bank_account_id?: number;
   transaction_id?: string;
   payment_status: 'completed' | 'pending' | 'failed' | 'refunded';
@@ -28,8 +30,9 @@ class PaymentModel {
   async getShopPayments(shopId: number): Promise<Payment[]> {
     try {
       const results = await query('SELECT * FROM payments WHERE shop_id = ? ORDER BY payment_date DESC, payment_time DESC', [shopId]);
-      logger.info('Retrieved payments for shop', { shopId, count: (results as any[]).length });
-      return results as Payment[];
+      const paymentsList = results as Payment[];
+      logger.info(`Retrieved ${paymentsList.length} payments for shop ${shopId}`, { shopId, count: paymentsList.length });
+      return paymentsList;
     } catch (error) {
       logger.error('Error fetching shop payments:', error);
       throw error;
@@ -62,9 +65,9 @@ class PaymentModel {
   async createPayment(shopId: number, paymentData: any): Promise<number> {
     try {
       const results = await query(
-        `INSERT INTO payments (shop_id, order_id, customer_id, payment_amount, payment_date, payment_time, payment_method, bank_account_id, transaction_id, payment_status, notes, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [shopId, paymentData.order_id || null, paymentData.customer_id || null, paymentData.payment_amount, paymentData.payment_date, paymentData.payment_time || null, paymentData.payment_method, paymentData.bank_account_id || null, paymentData.transaction_id || null, paymentData.payment_status || 'completed', paymentData.notes || null, paymentData.created_by || null]
+        `INSERT INTO payments (shop_id, order_id, customer_id, payment_amount, payment_date, payment_time, payment_method, bank_name, branch_name, bank_account_id, transaction_id, payment_status, notes, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [shopId, paymentData.order_id || null, paymentData.customer_id || null, paymentData.payment_amount, paymentData.payment_date, paymentData.payment_time || null, paymentData.payment_method, paymentData.bank_name || null, paymentData.branch_name || null, paymentData.bank_account_id || null, paymentData.transaction_id || null, paymentData.payment_status || 'completed', paymentData.notes || null, paymentData.created_by || null]
       );
 
       const paymentId = (results as any).insertId;
@@ -86,7 +89,7 @@ class PaymentModel {
 
       const fields: string[] = [];
       const values: any[] = [];
-      const updateableFields = ['payment_status', 'notes', 'payment_amount', 'payment_method', 'transaction_id'];
+      const updateableFields = ['payment_status', 'notes', 'payment_amount', 'payment_method', 'bank_name', 'branch_name', 'bank_account_id', 'transaction_id'];
 
       for (const field of updateableFields) {
         if (field in updateData) {
@@ -134,9 +137,14 @@ class PaymentModel {
 
   async getPaymentSummary(shopId: number): Promise<any> {
     try {
-      const results = await query(`SELECT COUNT(*) as total_count, SUM(payment_amount) as total_amount, COUNT(CASE WHEN payment_status = 'completed' THEN 1 END) as completed_count FROM payments WHERE shop_id = ? AND payment_status = 'completed'`, [shopId]);
+      const results = await query(`SELECT COUNT(*) as total_count, COALESCE(SUM(payment_amount), 0) as total_amount, COUNT(CASE WHEN payment_status = 'completed' THEN 1 END) as completed_count FROM payments WHERE shop_id = ?`, [shopId]);
       logger.debug('Retrieved payment summary', { shopId });
-      return (results as any[])[0] || { total_count: 0, total_amount: 0, completed_count: 0 };
+      const summary = (results as any[])[0] || { total_count: 0, total_amount: 0, completed_count: 0 };
+      return {
+        total_count: summary.total_count || 0,
+        total_amount: summary.total_amount || 0,
+        completed_count: summary.completed_count || 0
+      };
     } catch (error) {
       logger.error('Error fetching payment summary:', error);
       throw error;

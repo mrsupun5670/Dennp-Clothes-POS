@@ -10,10 +10,10 @@ export interface BankAccount {
   bank_account_id: number;
   shop_id: number;
   bank_name: string;
+  branch_name?: string;
   account_number: string;
   account_holder_name: string;
   account_type: "checking" | "savings" | "business";
-  branch_code?: string;
   ifsc_code?: string;
   initial_balance: number;
   current_balance: number;
@@ -91,24 +91,24 @@ class BankAccountModel {
   async createBankAccount(
     shopId: number,
     bankName: string,
+    branchName: string | null,
     accountNumber: string,
     accountHolderName: string,
     accountType: "checking" | "savings" | "business",
-    branchCode: string | null,
     ifscCode: string | null,
     initialBalance: number
   ): Promise<number> {
     try {
       const results = await query(
-        `INSERT INTO bank_accounts (shop_id, bank_name, account_number, account_holder_name, account_type, branch_code, ifsc_code, initial_balance, current_balance, status)
+        `INSERT INTO bank_accounts (shop_id, bank_name, branch_name, account_number, account_holder_name, account_type, ifsc_code, initial_balance, current_balance, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
         [
           shopId,
           bankName,
+          branchName || null,
           accountNumber,
           accountHolderName,
           accountType,
-          branchCode || null,
           ifscCode || null,
           initialBalance,
           initialBalance,
@@ -159,10 +159,10 @@ class BankAccountModel {
         "bank_account_id" | "shop_id" | "created_at" | "updated_at"
       >)[] = [
         "bank_name",
+        "branch_name",
         "account_number",
         "account_holder_name",
         "account_type",
-        "branch_code",
         "ifsc_code",
         "current_balance",
         "status",

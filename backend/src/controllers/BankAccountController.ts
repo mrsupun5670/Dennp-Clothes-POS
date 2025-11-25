@@ -88,10 +88,10 @@ class BankAccountController {
       const {
         shop_id,
         bank_name,
+        branch_name,
         account_number,
         account_holder_name,
         account_type,
-        branch_code,
         ifsc_code,
         initial_balance,
       } = req.body;
@@ -128,10 +128,10 @@ class BankAccountController {
       const accountId = await BankAccountModel.createBankAccount(
         shop_id,
         bank_name,
+        branch_name || null,
         account_number,
         account_holder_name,
         account_type,
-        branch_code || null,
         ifsc_code || null,
         initial_balance
       );

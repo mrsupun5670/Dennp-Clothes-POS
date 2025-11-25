@@ -7,7 +7,7 @@
 
 -- ============================================================================
 -- 1. BANK ACCOUNTS - Add realistic bank details for each shop
--- ============================================================================
+-- ================================================================= ===========
 INSERT INTO `bank_accounts`
 (`bank_account_id`, `shop_id`, `bank_name`, `branch_name`, `account_number`, `account_holder_name`, `account_type`, `ifsc_code`, `initial_balance`, `current_balance`, `status`, `created_at`, `updated_at`)
 VALUES

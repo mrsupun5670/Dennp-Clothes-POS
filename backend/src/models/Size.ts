@@ -15,7 +15,7 @@ export interface Size {
 
 export interface SizeType {
   size_type_id: number;
-  Size_type_name: string;
+  size_type_name: string;
 }
 
 class SizeModel {
@@ -143,7 +143,7 @@ class SizeModel {
    */
   async getAllSizeTypes(): Promise<SizeType[]> {
     try {
-      const results = await query('SELECT * FROM size_type ORDER BY Size_type_name ASC');
+      const results = await query('SELECT * FROM size_types ORDER BY size_type_name ASC');
       logger.info('Retrieved all size types', { count: (results as any[]).length });
       return results as SizeType[];
     } catch (error) {
@@ -157,7 +157,7 @@ class SizeModel {
    */
   async getSizeTypeById(sizeTypeId: number): Promise<SizeType | null> {
     try {
-      const results = await query('SELECT * FROM size_type WHERE size_type_id = ?', [sizeTypeId]);
+      const results = await query('SELECT * FROM size_types WHERE size_type_id = ?', [sizeTypeId]);
       const sizeType = (results as SizeType[])[0] || null;
       logger.debug('Retrieved size type by ID', { sizeTypeId });
       return sizeType;
@@ -173,11 +173,11 @@ class SizeModel {
   async getSizesWithType(shopId: number): Promise<any[]> {
     try {
       const results = await query(
-        `SELECT s.size_id, s.shop_id, s.size_name, s.size_type_id, st.Size_type_name
+        `SELECT s.size_id, s.shop_id, s.size_name, s.size_type_id, st.size_type_name
          FROM sizes s
-         JOIN size_type st ON s.size_type_id = st.size_type_id
+         JOIN size_types st ON s.size_type_id = st.size_type_id
          WHERE s.shop_id = ?
-         ORDER BY st.Size_type_name ASC, s.size_name ASC`,
+         ORDER BY st.size_type_name ASC, s.size_name ASC`,
         [shopId]
       );
 

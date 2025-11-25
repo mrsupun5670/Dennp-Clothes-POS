@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   updateProductStock,
   clearProductStock,
@@ -54,6 +54,11 @@ const ProductsPage: React.FC = () => {
   const [notificationType, setNotificationType] = useState<
     "error" | "success" | ""
   >("");
+
+  // --- REFS FOR AUTO-FOCUS ---
+  const sizeInputRef = useRef<HTMLInputElement>(null);
+  const colorInputRef = useRef<HTMLInputElement>(null);
+  const categoryInputRef = useRef<HTMLInputElement>(null);
 
   // --- DATA FETCHING (useQuery Hooks) ---
   const { data: dbProducts, refetch: refetchProducts } = useQuery<any[]>(
@@ -147,6 +152,27 @@ const ProductsPage: React.FC = () => {
       setSelectedCategory(dbCategories[0].category_id.toString());
     }
   }, [dbCategories]);
+
+  // Auto-focus size input when modal opens
+  useEffect(() => {
+    if (showAddSizeModal && sizeInputRef.current) {
+      setTimeout(() => sizeInputRef.current?.focus(), 0);
+    }
+  }, [showAddSizeModal]);
+
+  // Auto-focus color input when modal opens
+  useEffect(() => {
+    if (showAddColorModal && colorInputRef.current) {
+      setTimeout(() => colorInputRef.current?.focus(), 0);
+    }
+  }, [showAddColorModal]);
+
+  // Auto-focus category input when modal opens
+  useEffect(() => {
+    if (showAddCategoryModal && categoryInputRef.current) {
+      setTimeout(() => categoryInputRef.current?.focus(), 0);
+    }
+  }, [showAddCategoryModal]);
 
   // --- HELPER FUNCTIONS ---
 
@@ -1289,6 +1315,7 @@ const ProductsPage: React.FC = () => {
                           Enter Size
                         </label>
                         <input
+                          ref={sizeInputRef}
                           type="text"
                           placeholder="e.g., M, L, 40, etc."
                           value={newSize}
@@ -1343,6 +1370,7 @@ const ProductsPage: React.FC = () => {
                           Enter Color
                         </label>
                         <input
+                          ref={colorInputRef}
                           type="text"
                           placeholder="e.g., Black, Navy Blue, etc."
                           value={newColor}
@@ -1398,11 +1426,15 @@ const ProductsPage: React.FC = () => {
                           Category Name
                         </label>
                         <input
+                          ref={categoryInputRef}
                           type="text"
                           placeholder="e.g., T-Shirts, Pants, etc."
                           value={newCategory}
                           onChange={(e) => setNewCategory(e.target.value)}
                           className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                          onKeyPress={(e) => {
+                            if (e.key === "Enter") handleAddCategory();
+                          }}
                         />
                       </div>
                       <div>

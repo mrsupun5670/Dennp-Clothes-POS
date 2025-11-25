@@ -61,6 +61,11 @@ const ReportsPage: React.FC = () => {
 
   // Load data from API
   useEffect(() => {
+    // Reset ref when dependencies change to allow new requests
+    loadDataRef.current = false;
+  }, [shopId, timePeriod]);
+
+  useEffect(() => {
     // Prevent duplicate requests in React Strict Mode
     if (loadDataRef.current) return;
     loadDataRef.current = true;

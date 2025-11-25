@@ -37,10 +37,9 @@ const ProductsPage: React.FC = () => {
   const [newSize, setNewSize] = useState("");
   const [newColor, setNewColor] = useState("");
   const [newCategory, setNewCategory] = useState("");
-  const [newCategorySizeType, setNewCategorySizeType] = useState("numerical");
+  const [newCategorySizeType, setNewCategorySizeType] = useState("alphabetic");
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({
-    product_id: "",
     code: "",
     name: "",
     costPrice: "",
@@ -155,7 +154,6 @@ const ProductsPage: React.FC = () => {
     setIsEditMode(false);
     setSelectedProductId(null); // Clear selected ID for "Add"
     setFormData({
-      product_id: "",
       code: "",
       name: "",
       costPrice: "",
@@ -170,7 +168,6 @@ const ProductsPage: React.FC = () => {
     setIsEditMode(false);
     setSelectedProductId(null); // Clear selected ID on close
     setFormData({
-      product_id: "",
       code: "",
       name: "",
       costPrice: "",
@@ -286,16 +283,6 @@ const ProductsPage: React.FC = () => {
    */
   const handleSaveProduct = async () => {
     // === SYNCHRONOUS VALIDATION ===
-    if (!isEditMode) {
-      if (!formData.product_id.trim()) {
-        showNotification("Product ID is required", "error");
-        return;
-      }
-      if (isNaN(parseInt(formData.product_id))) {
-        showNotification("Product ID must be a valid number", "error");
-        return;
-      }
-    }
     if (!formData.code.trim()) {
       showNotification("Product Code is required", "error");
       return;
@@ -378,18 +365,13 @@ const ProductsPage: React.FC = () => {
         }
         productId = selectedProductId;
       } else {
-        // Create new product with product_id
-        const productPayload = {
-          ...basePayload,
-          product_id: parseInt(formData.product_id),
-        };
-
+        // Create new product
         const createResponse = await fetch(
           `${API_URL}/products`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(productPayload),
+            body: JSON.stringify(basePayload),
           }
         );
         const createResult = await createResponse.json();
@@ -588,20 +570,26 @@ const ProductsPage: React.FC = () => {
     }
 
     try {
+      const sizeTypeMap: { [key: string]: number } = {
+        "alphabetic": 2,
+        "numerical": 1,
+        "other": 3,
+      };
+
       const response = await fetch(`${API_URL}/categories`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           shop_id: shopId,
           category_name: trimmedCategory,
-          size_type_id: newCategorySizeType === "numerical" ? 1 : newCategorySizeType === "letter" ? 2 : 3,
+          size_type_id: sizeTypeMap[newCategorySizeType] || 1,
         }),
       });
       const result = await response.json();
       if (result.success) {
         showNotification(`Category "${trimmedCategory}" added successfully`, "success");
         setNewCategory("");
-        setNewCategorySizeType("numerical");
+        setNewCategorySizeType("alphabetic");
         setShowAddCategoryModal(false);
         await refetchCategories();
       } else {
@@ -896,34 +884,8 @@ const ProductsPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Row 1: Product ID, Code & Category */}
-              <div className="grid grid-cols-3 gap-3">
-                {/* Product ID */}
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Product ID <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g., 1001"
-                    value={formData.product_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, product_id: e.target.value })
-                    }
-                    disabled={isEditMode}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const codeInput = document.querySelector(
-                          'input[placeholder="e.g., TSB-001"]'
-                        ) as HTMLInputElement;
-                        if (codeInput) codeInput.focus();
-                      }
-                    }}
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-
+              {/* Row 1: Product Code & Category */}
+              <div className="grid grid-cols-2 gap-3">
                 {/* Product Code */}
                 <div>
                   <label className="block text-sm font-semibold text-red-400 mb-2">
@@ -1356,7 +1318,7 @@ const ProductsPage: React.FC = () => {
                         onClick={() => {
                           setShowAddCategoryModal(false);
                           setNewCategory("");
-                          setNewCategorySizeType("numerical");
+                          setNewCategorySizeType("alphabetic");
                         }}
                         className="text-white hover:text-red-200 transition-colors text-xl"
                       >
@@ -1385,8 +1347,8 @@ const ProductsPage: React.FC = () => {
                           onChange={(e) => setNewCategorySizeType(e.target.value)}
                           className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
                         >
+                          <option value="alphabetic">Alphabetic (e.g., S, M, L, XL, ...)</option>
                           <option value="numerical">Numerical (e.g., 1, 2, 3, ...)</option>
-                          <option value="letter">Letter (e.g., S, M, L, XL, ...)</option>
                           <option value="other">Other</option>
                         </select>
                       </div>
@@ -1401,7 +1363,7 @@ const ProductsPage: React.FC = () => {
                           onClick={() => {
                             setShowAddCategoryModal(false);
                             setNewCategory("");
-                            setNewCategorySizeType("numerical");
+                            setNewCategorySizeType("alphabetic");
                           }}
                           className="flex-1 bg-gray-700 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
                         >

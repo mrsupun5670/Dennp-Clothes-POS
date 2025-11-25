@@ -433,13 +433,17 @@ const ProductsPage: React.FC = () => {
         }
         productId = selectedProductId;
       } else {
-        // Create new product
+        // Create new product - send as sku with null values for auto-increment
+        const createPayload = {
+          ...basePayload,
+          sku: null, // Keep SKU as null
+        };
         const createResponse = await fetch(
           `${API_URL}/products`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(basePayload),
+            body: JSON.stringify(createPayload),
           }
         );
         const createResult = await createResponse.json();
@@ -536,7 +540,7 @@ const ProductsPage: React.FC = () => {
 
         if (productId && sizeId && colorId && row.qty > 0) {
           try {
-            await updateProductStock(productId, sizeId, colorId, row.qty);
+            await updateProductStock(productId, sizeId, colorId, row.qty, shopId);
           } catch (error) {
             console.error("Failed to update stock for a row:", {
               productId,

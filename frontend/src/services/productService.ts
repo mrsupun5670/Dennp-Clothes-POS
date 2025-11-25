@@ -15,10 +15,12 @@ export const updateProductStock = async (
   productId: number,
   sizeId: number,
   colorId: number,
-  quantity: number
+  quantity: number,
+  shopId: number
 ) => {
   try {
     await axios.post(`${API_URL}/products/stock`, {
+      shop_id: shopId,
       productId,
       sizeId,
       colorId,

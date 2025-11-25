@@ -33,8 +33,11 @@ const ProductsPage: React.FC = () => {
   const [customColors, setCustomColors] = useState<string[]>([]);
   const [showAddSizeModal, setShowAddSizeModal] = useState(false);
   const [showAddColorModal, setShowAddColorModal] = useState(false);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [newSize, setNewSize] = useState("");
   const [newColor, setNewColor] = useState("");
+  const [newCategory, setNewCategory] = useState("");
+  const [newCategorySizeType, setNewCategorySizeType] = useState("numerical");
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({
     product_id: "",
@@ -576,6 +579,39 @@ const ProductsPage: React.FC = () => {
     }
   };
 
+  // Add custom category
+  const handleAddCategory = async () => {
+    const trimmedCategory = newCategory.trim();
+    if (!trimmedCategory) {
+      showNotification("Category name is required", "error");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/categories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop_id: shopId,
+          category_name: trimmedCategory,
+          size_type_id: newCategorySizeType === "numerical" ? 1 : newCategorySizeType === "letter" ? 2 : 3,
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        showNotification(`Category "${trimmedCategory}" added successfully`, "success");
+        setNewCategory("");
+        setNewCategorySizeType("numerical");
+        setShowAddCategoryModal(false);
+        await refetchCategories();
+      } else {
+        showNotification(result.error || "Failed to add category", "error");
+      }
+    } catch (error) {
+      showNotification("Error adding category", "error");
+    }
+  };
+
   // Filter and sort products (using total_stock property from API for qty)
   const filteredAndSortedProducts = useMemo(() => {
     const productsToFilter = (dbProducts || []).map((p: any) => ({
@@ -860,34 +896,34 @@ const ProductsPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Row 0: Product ID */}
-              <div>
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Product ID <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  placeholder="e.g., 1001"
-                  value={formData.product_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, product_id: e.target.value })
-                  }
-                  disabled={isEditMode}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const codeInput = document.querySelector(
-                        'input[placeholder="e.g., TSB-001"]'
-                      ) as HTMLInputElement;
-                      if (codeInput) codeInput.focus();
+              {/* Row 1: Product ID, Code & Category */}
+              <div className="grid grid-cols-3 gap-3">
+                {/* Product ID */}
+                <div>
+                  <label className="block text-sm font-semibold text-red-400 mb-2">
+                    Product ID <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="e.g., 1001"
+                    value={formData.product_id}
+                    onChange={(e) =>
+                      setFormData({ ...formData, product_id: e.target.value })
                     }
-                  }}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
+                    disabled={isEditMode}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const codeInput = document.querySelector(
+                          'input[placeholder="e.g., TSB-001"]'
+                        ) as HTMLInputElement;
+                        if (codeInput) codeInput.focus();
+                      }
+                    }}
+                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
 
-              {/* Row 1: Product Code & Category */}
-              <div className="grid grid-cols-2 gap-3">
                 {/* Product Code */}
                 <div>
                   <label className="block text-sm font-semibold text-red-400 mb-2">
@@ -921,7 +957,14 @@ const ProductsPage: React.FC = () => {
                   </label>
                   <select
                     value={selectedCategory}
-                    onChange={(e) => handleCategoryChange(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "add_category") {
+                        setShowAddCategoryModal(true);
+                      } else {
+                        handleCategoryChange(value);
+                      }
+                    }}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
                   >
                     {(dbCategories || []).map((cat) => (
@@ -929,6 +972,7 @@ const ProductsPage: React.FC = () => {
                         {cat.category_name}
                       </option>
                     ))}
+                    <option value="add_category">+ Add Category</option>
                   </select>
                 </div>
               </div>
@@ -949,7 +993,7 @@ const ProductsPage: React.FC = () => {
                     if (e.key === "Enter") {
                       e.preventDefault();
                       const costInput = document.querySelector(
-                        'input[placeholder="0.00"][type="number"]'
+                        'input[data-field="costPrice"]'
                       ) as HTMLInputElement;
                       if (costInput) costInput.focus();
                     }
@@ -1291,6 +1335,73 @@ const ProductsPage: React.FC = () => {
                           onClick={() => {
                             setShowAddColorModal(false);
                             setNewColor("");
+                          }}
+                          className="flex-1 bg-gray-700 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Mini-Modal for Adding Custom Category */}
+              {showAddCategoryModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                  <div className="bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-sm">
+                    <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-4 border-b border-red-600 flex justify-between items-center">
+                      <h3 className="text-lg font-bold">Add New Category</h3>
+                      <button
+                        onClick={() => {
+                          setShowAddCategoryModal(false);
+                          setNewCategory("");
+                          setNewCategorySizeType("numerical");
+                        }}
+                        className="text-white hover:text-red-200 transition-colors text-xl"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="p-4 space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-red-400 mb-2">
+                          Category Name
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g., T-Shirts, Pants, etc."
+                          value={newCategory}
+                          onChange={(e) => setNewCategory(e.target.value)}
+                          className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-red-400 mb-2">
+                          Size Type
+                        </label>
+                        <select
+                          value={newCategorySizeType}
+                          onChange={(e) => setNewCategorySizeType(e.target.value)}
+                          className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
+                        >
+                          <option value="numerical">Numerical (e.g., 1, 2, 3, ...)</option>
+                          <option value="letter">Letter (e.g., S, M, L, XL, ...)</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleAddCategory}
+                          className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                        >
+                          Add Category
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowAddCategoryModal(false);
+                            setNewCategory("");
+                            setNewCategorySizeType("numerical");
                           }}
                           className="flex-1 bg-gray-700 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
                         >

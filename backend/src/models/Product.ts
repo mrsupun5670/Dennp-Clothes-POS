@@ -7,9 +7,8 @@ import { query } from "../config/database";
 import { logger } from "../utils/logger";
 
 export interface Product {
-  product_id: number;
+  product_id: string;
   shop_id: number;
-  sku: string;
   product_name: string;
   category_id: number;
   description?: string;
@@ -113,73 +112,18 @@ class ProductModel {
   }
 
   /**
-   * Create new product
+   * Create new product with specific product_id (using product code)
    */
   async createProduct(
     shopId: number,
+    productId: string,
     productData: Omit<
       Product,
       "product_id" | "created_at" | "updated_at" | "shop_id"
     >
-  ): Promise<number> {
+  ): Promise<string> {
     try {
       const {
-        sku,
-        product_name,
-        category_id,
-        description,
-        product_cost,
-        print_cost,
-        retail_price,
-        wholesale_price,
-        product_status,
-      } = productData;
-
-      const results = await query(
-        `INSERT INTO products (shop_id, sku, product_name, category_id, description, product_cost, print_cost, retail_price, wholesale_price, product_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          shopId,
-          sku,
-          product_name,
-          category_id,
-          description || null,
-          product_cost,
-          print_cost,
-          retail_price,
-          wholesale_price || null,
-          product_status,
-        ]
-      );
-
-      const productId = (results as any).insertId;
-      logger.info("Product created successfully", {
-        productId,
-        shopId,
-        sku,
-        product_name,
-      });
-      return productId;
-    } catch (error) {
-      logger.error("Error creating product:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create new product with specific product_id
-   */
-  async createProductWithId(
-    shopId: number,
-    productId: number,
-    productData: Omit<
-      Product,
-      "product_id" | "created_at" | "updated_at" | "shop_id"
-    >
-  ): Promise<number> {
-    try {
-      const {
-        sku,
         product_name,
         category_id,
         description,
@@ -191,12 +135,11 @@ class ProductModel {
       } = productData;
 
       await query(
-        `INSERT INTO products (product_id, shop_id, sku, product_name, category_id, description, product_cost, print_cost, retail_price, wholesale_price, product_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO products (product_id, shop_id, product_name, category_id, description, product_cost, print_cost, retail_price, wholesale_price, product_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           productId,
           shopId,
-          sku,
           product_name,
           category_id,
           description || null,
@@ -208,18 +151,18 @@ class ProductModel {
         ]
       );
 
-      logger.info("Product created with specific ID", {
+      logger.info("Product created successfully", {
         productId,
         shopId,
-        sku,
         product_name,
       });
       return productId;
     } catch (error) {
-      logger.error("Error creating product with ID:", error);
+      logger.error("Error creating product:", error);
       throw error;
     }
   }
+
 
   /**
    * Update product
@@ -252,7 +195,6 @@ class ProductModel {
         Product,
         "product_id" | "created_at" | "updated_at" | "shop_id"
       >)[] = [
-        "sku",
         "product_name",
         "category_id",
         "description",

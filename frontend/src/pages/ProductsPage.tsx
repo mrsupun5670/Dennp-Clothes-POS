@@ -404,7 +404,6 @@ const ProductsPage: React.FC = () => {
       // 1. Prepare Product Payload and Get/Update Product ID
       const basePayload = {
         shop_id: shopId,
-        sku: formData.code,
         product_name: formData.name,
         category_id: parseInt(selectedCategory),
         description: "",
@@ -415,7 +414,7 @@ const ProductsPage: React.FC = () => {
         product_status: "active",
       };
 
-      let productId: number;
+      let productId: string;
 
       if (isEditMode && selectedProductId) {
         // Update existing product
@@ -433,10 +432,10 @@ const ProductsPage: React.FC = () => {
         }
         productId = selectedProductId;
       } else {
-        // Create new product - send as sku with null values for auto-increment
+        // Create new product with product_code as product_id
         const createPayload = {
           ...basePayload,
-          sku: null, // Keep SKU as null
+          product_id: formData.code, // Use product code as product_id
         };
         const createResponse = await fetch(
           `${API_URL}/products`,

@@ -159,7 +159,6 @@ class ProductController {
       const {
         shop_id,
         product_id,
-        sku,
         product_name,
         category_id,
         description,
@@ -179,44 +178,26 @@ class ProductController {
         return;
       }
 
-      if (!product_name || !category_id || retail_price === undefined || retail_price === null) {
+      if (!product_id || !product_name || !category_id || retail_price === undefined || retail_price === null) {
         res.status(400).json({
           success: false,
           error:
-            "Missing required fields: product_name, category_id, retail_price",
+            "Missing required fields: product_id, product_name, category_id, retail_price",
         });
         return;
       }
 
-      let productIdResult: number;
-
-      if (product_id) {
-        // Create product with specific product_id
-        productIdResult = await ProductModel.createProductWithId(shop_id, product_id, {
-          sku,
-          product_name,
-          category_id,
-          description,
-          product_cost: product_cost || 0,
-          print_cost: print_cost || 0,
-          retail_price,
-          wholesale_price,
-          product_status: product_status || "active",
-        });
-      } else {
-        // Create product with auto-generated product_id
-        productIdResult = await ProductModel.createProduct(shop_id, {
-          sku,
-          product_name,
-          category_id,
-          description,
-          product_cost: product_cost || 0,
-          print_cost: print_cost || 0,
-          retail_price,
-          wholesale_price,
-          product_status: product_status || "active",
-        });
-      }
+      // Create product with product_id (product code)
+      const productIdResult = await ProductModel.createProduct(shop_id, product_id, {
+        product_name,
+        category_id,
+        description,
+        product_cost: product_cost || 0,
+        print_cost: print_cost || 0,
+        retail_price,
+        wholesale_price,
+        product_status: product_status || "active",
+      });
 
       res.status(201).json({
         success: true,

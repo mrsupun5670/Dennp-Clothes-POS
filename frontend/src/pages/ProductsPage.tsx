@@ -1097,9 +1097,14 @@ const ProductsPage: React.FC = () => {
                             </label>
                             <select
                               value={row.size}
-                              onChange={(e) =>
-                                updateStockRow(row.id, "size", e.target.value)
-                              }
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === "add_size") {
+                                  setShowAddSizeModal(true);
+                                } else {
+                                  updateStockRow(row.id, "size", value);
+                                }
+                              }}
                               className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
                             >
                               <option value="">Select Size</option>
@@ -1108,6 +1113,7 @@ const ProductsPage: React.FC = () => {
                                   {size}
                                 </option>
                               ))}
+                              <option value="add_size">+ Add Size</option>
                             </select>
                           </div>
 
@@ -1118,9 +1124,14 @@ const ProductsPage: React.FC = () => {
                             </label>
                             <select
                               value={row.color}
-                              onChange={(e) =>
-                                updateStockRow(row.id, "color", e.target.value)
-                              }
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === "add_color") {
+                                  setShowAddColorModal(true);
+                                } else {
+                                  updateStockRow(row.id, "color", value);
+                                }
+                              }}
                               className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
                             >
                               <option value="">Select Color</option>
@@ -1129,6 +1140,7 @@ const ProductsPage: React.FC = () => {
                                   {color}
                                 </option>
                               ))}
+                              <option value="add_color">+ Add Color</option>
                             </select>
                           </div>
 
@@ -1170,25 +1182,6 @@ const ProductsPage: React.FC = () => {
                       ))}
                     </div>
                   )}
-                </div>
-                <div className="flex gap-2">
-                  {/* Add Size Button */}
-                  <button
-                    onClick={() => setShowAddSizeModal(true)}
-                    className="px-3 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg hover:border-red-500 hover:text-red-400 transition-colors font-semibold"
-                    title="Add custom size"
-                  >
-                    + Add Custom Size
-                  </button>
-
-                  {/* Add Color Button */}
-                  <button
-                    onClick={() => setShowAddColorModal(true)}
-                    className="px-3 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg hover:border-red-500 hover:text-red-400 transition-colors font-semibold"
-                    title="Add custom color"
-                  >
-                    + Add Custom Color
-                  </button>
                 </div>
 
                 {/* Add Row Button */}

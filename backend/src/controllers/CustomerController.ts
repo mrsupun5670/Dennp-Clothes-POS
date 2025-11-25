@@ -118,11 +118,11 @@ class CustomerController {
   }
 
   /**
-   * POST /customers (body: { shop_id, first_name, last_name, mobile, email, customer_status }) - Create new customer
+   * POST /customers (body: { shop_id, mobile, email }) - Create new customer
    */
   async createCustomer(req: Request, res: Response): Promise<void> {
     try {
-      const { shop_id, first_name, last_name, mobile, email, customer_status } = req.body;
+      const { shop_id, mobile, email } = req.body;
 
       // Validation
       if (!shop_id) {
@@ -133,20 +133,24 @@ class CustomerController {
         return;
       }
 
-      if (!first_name || !last_name || !mobile) {
+      if (!mobile) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: first_name, last_name, mobile',
+          error: 'Missing required field: mobile',
         });
         return;
       }
 
+      // Generate default first and last names from mobile (for backward compatibility with database schema)
+      const defaultFirstName = `Customer`;
+      const defaultLastName = mobile;
+
       const customerId = await CustomerModel.createCustomer(shop_id, {
-        first_name,
-        last_name,
+        first_name: defaultFirstName,
+        last_name: defaultLastName,
         mobile,
         email,
-        customer_status: customer_status || 'active',
+        customer_status: 'active',
       });
 
       res.status(201).json({

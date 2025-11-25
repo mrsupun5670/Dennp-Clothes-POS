@@ -30,10 +30,8 @@ const CustomersPage: React.FC = () => {
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
     mobile: "",
+    email: "",
   });
   // Backend state
   const [isLoading, setIsLoading] = useState(false);
@@ -112,11 +110,8 @@ const CustomersPage: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           shop_id: shopId,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
           mobile: formData.mobile,
           email: formData.email || null,
-          customer_status: "active",
         }),
       });
 
@@ -203,7 +198,7 @@ const CustomersPage: React.FC = () => {
 
   const handleAddClick = () => {
     setIsEditMode(false);
-    setFormData({ first_name: "", last_name: "", email: "", mobile: "" });
+    setFormData({ mobile: "", email: "" });
     setShowAddModal(true);
   };
 
@@ -223,19 +218,11 @@ const CustomersPage: React.FC = () => {
     setShowAddModal(false);
     setIsEditMode(false);
     setSelectedCustomerId(null);
-    setFormData({ first_name: "", last_name: "", email: "", mobile: "" });
+    setFormData({ mobile: "", email: "" });
   };
 
   const handleSaveCustomer = () => {
     // Validation
-    if (!formData.first_name.trim()) {
-      showNotification("First name is required", "error");
-      return;
-    }
-    if (!formData.last_name.trim()) {
-      showNotification("Last name is required", "error");
-      return;
-    }
     if (!formData.mobile.trim()) {
       showNotification("Mobile number is required", "error");
       return;
@@ -552,38 +539,6 @@ const CustomersPage: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-6 space-y-5">
-              {/* First Name and Last Name */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    First Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., John"
-                    value={formData.first_name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, first_name: e.target.value })
-                    }
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Last Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Doe"
-                    value={formData.last_name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, last_name: e.target.value })
-                    }
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
               {/* Mobile Number */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-2">

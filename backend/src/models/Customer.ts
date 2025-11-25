@@ -91,12 +91,12 @@ class CustomerModel {
    */
   async createCustomerWithId(shopId: number, customerId: number, customerData: Omit<Customer, 'customer_id' | 'created_at' | 'orders_count' | 'total_spent' | 'shop_id'>): Promise<number> {
     try {
-      const { first_name, last_name, mobile, email, customer_status } = customerData;
+      const { mobile, email } = customerData;
 
       await query(
-        `INSERT INTO customers (customer_id, shop_id, first_name, last_name, mobile, email, customer_status, orders_count, total_spent)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)`,
-        [customerId, shopId, first_name, last_name, mobile, email || null, customer_status]
+        `INSERT INTO customers (customer_id, shop_id, mobile, email)
+         VALUES (?, ?, ?, ?)`,
+        [customerId, shopId, mobile, email || null]
       );
 
       logger.info('Customer created successfully with specific ID', { customerId, shopId, mobile });

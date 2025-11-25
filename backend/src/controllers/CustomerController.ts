@@ -149,13 +149,9 @@ class CustomerController {
         return;
       }
 
-      // Generate default first and last names from mobile (for backward compatibility with database schema)
-      const defaultFirstName = `Customer`;
-      const defaultLastName = mobile;
-
       const customerId = await CustomerModel.createCustomerWithId(shop_id, customer_id, {
-        first_name: defaultFirstName,
-        last_name: defaultLastName,
+        first_name: '',
+        last_name: '',
         mobile,
         email,
         customer_status: 'active',

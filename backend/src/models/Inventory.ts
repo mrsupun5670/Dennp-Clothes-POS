@@ -74,6 +74,29 @@ class InventoryModel {
   }
 
   /**
+   * Add new inventory item with specific inventory_id
+   */
+  async addInventoryItemWithId(
+    inventoryId: number,
+    shopId: number,
+    itemName: string,
+    quantityInStock: number,
+    unitCost: number
+  ): Promise<{ inventory_id: number }> {
+    try {
+      await query(
+        'INSERT INTO shop_inventory (inventory_id, shop_id, item_name, quantity_in_stock, unit_cost, updated_at) VALUES (?, ?, ?, ?, ?, NOW())',
+        [inventoryId, shopId, itemName, quantityInStock, unitCost]
+      );
+      logger.info('Added new inventory item with specific ID', { inventoryId, shopId, itemName });
+      return { inventory_id: inventoryId };
+    } catch (error) {
+      logger.error('Error adding inventory item with ID:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Update inventory item
    */
   async updateInventoryItem(

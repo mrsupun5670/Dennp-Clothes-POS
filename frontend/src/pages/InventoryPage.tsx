@@ -18,6 +18,7 @@ const InventoryPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
+    inventory_id: "",
     name: "",
     qty: "",
     unitCost: "",
@@ -81,7 +82,7 @@ const InventoryPage: React.FC = () => {
 
   const handleAddClick = () => {
     setIsEditMode(false);
-    setFormData({ name: "", qty: "", unitCost: "" });
+    setFormData({ inventory_id: "", name: "", qty: "", unitCost: "" });
     setShowAddModal(true);
   };
 
@@ -100,12 +101,22 @@ const InventoryPage: React.FC = () => {
     setShowAddModal(false);
     setIsEditMode(false);
     setSelectedItemId(null);
-    setFormData({ name: "", qty: "", unitCost: "" });
+    setFormData({ inventory_id: "", name: "", qty: "", unitCost: "" });
   };
 
   const handleSaveItem = async () => {
     const qty = parseFloat(formData.qty as string) || 0;
     const unitCost = parseFloat(formData.unitCost as string) || 0;
+
+    if (!formData.inventory_id.trim()) {
+      alert("Please enter inventory ID");
+      return;
+    }
+
+    if (isNaN(parseInt(formData.inventory_id))) {
+      alert("Inventory ID must be a valid number");
+      return;
+    }
 
     if (!formData.name.trim()) {
       alert("Please enter item name");
@@ -140,7 +151,7 @@ const InventoryPage: React.FC = () => {
           alert("No shop selected");
           return;
         }
-        const result = await addInventoryItem(shopId, formData.name, qty, unitCost);
+        const result = await addInventoryItem(shopId, parseInt(formData.inventory_id), formData.name, qty, unitCost);
         const newItem: InventoryItem = {
           inventory_id: result.inventory_id,
           shop_id: shopId,
@@ -318,6 +329,28 @@ const InventoryPage: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-6 space-y-5">
+              {/* Inventory ID */}
+              <div>
+                <label className="block text-sm font-semibold text-red-400 mb-2">
+                  Inventory ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g., 1001"
+                  value={formData.inventory_id}
+                  onChange={(e) =>
+                    setFormData({ ...formData, inventory_id: e.target.value })
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && formData.inventory_id.trim()) {
+                      (document.querySelector('input[placeholder*="POS Thermal"]') as HTMLInputElement)?.focus();
+                    }
+                  }}
+                  disabled={isEditMode}
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+
               {/* Item Name */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-2">
@@ -330,6 +363,11 @@ const InventoryPage: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && formData.name.trim()) {
+                      (document.querySelector('input[type="number"][placeholder="0.00"]:first-of-type') as HTMLInputElement)?.focus();
+                    }
+                  }}
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                 />
               </div>
@@ -351,6 +389,11 @@ const InventoryPage: React.FC = () => {
                         qty: e.target.value,
                       });
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && formData.qty.trim()) {
+                        (document.querySelector('input[type="number"][placeholder="0.00"]:last-of-type') as HTMLInputElement)?.focus();
+                      }
+                    }}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                   />
                 </div>
@@ -368,6 +411,11 @@ const InventoryPage: React.FC = () => {
                         ...formData,
                         unitCost: e.target.value,
                       });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveItem();
+                      }
                     }}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                   />

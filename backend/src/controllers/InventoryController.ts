@@ -76,25 +76,26 @@ class InventoryController {
   }
 
   /**
-   * POST /inventory - Add new inventory item
+   * POST /inventory - Add new inventory item with specific inventory_id
    */
   async addInventoryItem(req: Request, res: Response): Promise<void> {
     try {
-      const { shopId, itemName, quantityInStock, unitCost } = req.body;
+      const { inventory_id, shop_id, item_name, quantity_in_stock, unit_cost } = req.body;
 
-      if (!shopId || !itemName || quantityInStock === undefined || unitCost === undefined) {
+      if (!inventory_id || !shop_id || !item_name || quantity_in_stock === undefined || unit_cost === undefined) {
         res.status(400).json({
           success: false,
-          message: 'Missing required fields: shopId, itemName, quantityInStock, unitCost',
+          message: 'Missing required fields: inventory_id, shop_id, item_name, quantity_in_stock, unit_cost',
         });
         return;
       }
 
-      const result = await InventoryModel.addInventoryItem(
-        shopId,
-        itemName,
-        Number(quantityInStock),
-        Number(unitCost)
+      const result = await InventoryModel.addInventoryItemWithId(
+        inventory_id,
+        shop_id,
+        item_name,
+        Number(quantity_in_stock),
+        Number(unit_cost)
       );
 
       res.status(201).json({

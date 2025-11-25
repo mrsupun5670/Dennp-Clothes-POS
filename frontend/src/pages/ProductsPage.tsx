@@ -37,6 +37,7 @@ const ProductsPage: React.FC = () => {
   const [newColor, setNewColor] = useState("");
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({
+    product_id: "",
     code: "",
     name: "",
     costPrice: "",
@@ -151,6 +152,7 @@ const ProductsPage: React.FC = () => {
     setIsEditMode(false);
     setSelectedProductId(null); // Clear selected ID for "Add"
     setFormData({
+      product_id: "",
       code: "",
       name: "",
       costPrice: "",
@@ -165,6 +167,7 @@ const ProductsPage: React.FC = () => {
     setIsEditMode(false);
     setSelectedProductId(null); // Clear selected ID on close
     setFormData({
+      product_id: "",
       code: "",
       name: "",
       costPrice: "",
@@ -280,6 +283,16 @@ const ProductsPage: React.FC = () => {
    */
   const handleSaveProduct = async () => {
     // === SYNCHRONOUS VALIDATION ===
+    if (!isEditMode) {
+      if (!formData.product_id.trim()) {
+        showNotification("Product ID is required", "error");
+        return;
+      }
+      if (isNaN(parseInt(formData.product_id))) {
+        showNotification("Product ID must be a valid number", "error");
+        return;
+      }
+    }
     if (!formData.code.trim()) {
       showNotification("Product Code is required", "error");
       return;
@@ -331,7 +344,7 @@ const ProductsPage: React.FC = () => {
 
     try {
       // 1. Prepare Product Payload and Get/Update Product ID
-      const productPayload = {
+      const basePayload = {
         shop_id: shopId,
         sku: formData.code,
         product_name: formData.name,
@@ -353,7 +366,7 @@ const ProductsPage: React.FC = () => {
           {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(productPayload),
+            body: JSON.stringify(basePayload),
           }
         );
         const updateResult = await updateResponse.json();
@@ -362,9 +375,14 @@ const ProductsPage: React.FC = () => {
         }
         productId = selectedProductId;
       } else {
-        // Create new product
+        // Create new product with product_id
+        const productPayload = {
+          ...basePayload,
+          product_id: parseInt(formData.product_id),
+        };
+
         const createResponse = await fetch(
-          "${API_URL}/products",
+          `${API_URL}/products`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -396,7 +414,7 @@ const ProductsPage: React.FC = () => {
         let colorId = colorIdMap.get(colorName);
         if (!colorId) {
           const colorResponse = await fetch(
-            "${API_URL}/colors",
+            `${API_URL}/colors`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -425,7 +443,7 @@ const ProductsPage: React.FC = () => {
         let sizeId = sizeIdMap.get(sizeName);
         if (!sizeId) {
           const sizeResponse = await fetch(
-            "${API_URL}/sizes",
+            `${API_URL}/sizes`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -842,6 +860,32 @@ const ProductsPage: React.FC = () => {
                 </div>
               )}
 
+              {/* Row 0: Product ID */}
+              <div>
+                <label className="block text-sm font-semibold text-red-400 mb-2">
+                  Product ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g., 1001"
+                  value={formData.product_id}
+                  onChange={(e) =>
+                    setFormData({ ...formData, product_id: e.target.value })
+                  }
+                  disabled={isEditMode}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const codeInput = document.querySelector(
+                        'input[placeholder="e.g., TSB-001"]'
+                      ) as HTMLInputElement;
+                      if (codeInput) codeInput.focus();
+                    }
+                  }}
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+
               {/* Row 1: Product Code & Category */}
               <div className="grid grid-cols-2 gap-3">
                 {/* Product Code */}
@@ -857,6 +901,15 @@ const ProductsPage: React.FC = () => {
                       setFormData({ ...formData, code: e.target.value })
                     }
                     disabled={isEditMode}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const nameInput = document.querySelector(
+                          'input[placeholder="e.g., Blue T-Shirt"]'
+                        ) as HTMLInputElement;
+                        if (nameInput) nameInput.focus();
+                      }
+                    }}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
@@ -892,6 +945,15 @@ const ProductsPage: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const costInput = document.querySelector(
+                        'input[placeholder="0.00"][type="number"]'
+                      ) as HTMLInputElement;
+                      if (costInput) costInput.focus();
+                    }
+                  }}
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                 />
               </div>
@@ -906,9 +968,19 @@ const ProductsPage: React.FC = () => {
                     type="number"
                     step="0.01"
                     placeholder="0.00"
+                    data-field="costPrice"
                     value={formData.costPrice}
                     onChange={(e) => {
                       setFormData({ ...formData, costPrice: e.target.value });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const printInput = document.querySelector(
+                          'input[data-field="printCost"]'
+                        ) as HTMLInputElement;
+                        if (printInput) printInput.focus();
+                      }
                     }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
@@ -921,9 +993,19 @@ const ProductsPage: React.FC = () => {
                     type="number"
                     step="0.01"
                     placeholder="0.00"
+                    data-field="printCost"
                     value={formData.printCost}
                     onChange={(e) => {
                       setFormData({ ...formData, printCost: e.target.value });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const retailInput = document.querySelector(
+                          'input[data-field="retailPrice"]'
+                        ) as HTMLInputElement;
+                        if (retailInput) retailInput.focus();
+                      }
                     }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
@@ -936,9 +1018,19 @@ const ProductsPage: React.FC = () => {
                     type="number"
                     step="0.01"
                     placeholder="0.00"
+                    data-field="retailPrice"
                     value={formData.retailPrice}
                     onChange={(e) => {
                       setFormData({ ...formData, retailPrice: e.target.value });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const wholesaleInput = document.querySelector(
+                          'input[data-field="wholesalePrice"]'
+                        ) as HTMLInputElement;
+                        if (wholesaleInput) wholesaleInput.focus();
+                      }
                     }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
@@ -952,12 +1044,19 @@ const ProductsPage: React.FC = () => {
                     type="number"
                     step="0.01"
                     placeholder="0.00"
+                    data-field="wholesalePrice"
                     value={formData.wholesalePrice}
                     onChange={(e) => {
                       setFormData({
                         ...formData,
                         wholesalePrice: e.target.value,
                       });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSaveProduct();
+                      }
                     }}
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />

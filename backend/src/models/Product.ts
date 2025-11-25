@@ -167,6 +167,61 @@ class ProductModel {
   }
 
   /**
+   * Create new product with specific product_id
+   */
+  async createProductWithId(
+    shopId: number,
+    productId: number,
+    productData: Omit<
+      Product,
+      "product_id" | "created_at" | "updated_at" | "shop_id"
+    >
+  ): Promise<number> {
+    try {
+      const {
+        sku,
+        product_name,
+        category_id,
+        description,
+        product_cost,
+        print_cost,
+        retail_price,
+        wholesale_price,
+        product_status,
+      } = productData;
+
+      await query(
+        `INSERT INTO products (product_id, shop_id, sku, product_name, category_id, description, product_cost, print_cost, retail_price, wholesale_price, product_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          productId,
+          shopId,
+          sku,
+          product_name,
+          category_id,
+          description || null,
+          product_cost,
+          print_cost,
+          retail_price,
+          wholesale_price || null,
+          product_status,
+        ]
+      );
+
+      logger.info("Product created with specific ID", {
+        productId,
+        shopId,
+        sku,
+        product_name,
+      });
+      return productId;
+    } catch (error) {
+      logger.error("Error creating product with ID:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Update product
    */
   async updateProduct(

@@ -158,6 +158,7 @@ class ProductController {
     try {
       const {
         shop_id,
+        product_id,
         sku,
         product_name,
         category_id,
@@ -187,21 +188,39 @@ class ProductController {
         return;
       }
 
-      const productId = await ProductModel.createProduct(shop_id, {
-        sku,
-        product_name,
-        category_id,
-        description,
-        product_cost: product_cost || 0,
-        print_cost: print_cost || 0,
-        retail_price,
-        wholesale_price,
-        product_status: product_status || "active",
-      });
+      let productIdResult: number;
+
+      if (product_id) {
+        // Create product with specific product_id
+        productIdResult = await ProductModel.createProductWithId(shop_id, product_id, {
+          sku,
+          product_name,
+          category_id,
+          description,
+          product_cost: product_cost || 0,
+          print_cost: print_cost || 0,
+          retail_price,
+          wholesale_price,
+          product_status: product_status || "active",
+        });
+      } else {
+        // Create product with auto-generated product_id
+        productIdResult = await ProductModel.createProduct(shop_id, {
+          sku,
+          product_name,
+          category_id,
+          description,
+          product_cost: product_cost || 0,
+          print_cost: print_cost || 0,
+          retail_price,
+          wholesale_price,
+          product_status: product_status || "active",
+        });
+      }
 
       res.status(201).json({
         success: true,
-        data: { product_id: productId },
+        data: { product_id: productIdResult },
         message: "Product created successfully",
       });
     } catch (error: any) {

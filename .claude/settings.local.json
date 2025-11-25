@@ -53,7 +53,8 @@
       "Bash(timeout 15 npm start)",
       "Bash(cmd /c \"wmic process where name=''node.exe'' get ProcessId,CommandLine\")",
       "Bash(cmd /c \"taskkill /IM node.exe /F /T 2>&1\")",
-      "Bash(cmd /c \"wmic process where name=''node.exe'' delete /nointeractive 2>&1\")"
+      "Bash(cmd /c \"wmic process where name=''node.exe'' delete /nointeractive 2>&1\")",
+      "Bash(timeout 2 bash:*)"
     ],
     "deny": [],
     "ask": []

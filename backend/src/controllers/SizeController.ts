@@ -283,6 +283,38 @@ class SizeController {
       });
     }
   }
+
+  /**
+   * GET /sizes/by-category/:categoryId?shop_id=1 - Get sizes by category
+   */
+  async getSizesByCategory(req: Request, res: Response): Promise<void> {
+    try {
+      const { categoryId } = req.params;
+      const shopId = Number(req.query.shop_id);
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: 'shop_id is required',
+        });
+        return;
+      }
+
+      const sizes = await SizeModel.getSizesByCategory(Number(categoryId), shopId);
+
+      res.json({
+        success: true,
+        data: sizes,
+        message: `Retrieved ${sizes.length} sizes for category`,
+      });
+    } catch (error: any) {
+      logger.error('Error in getSizesByCategory:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch sizes',
+        details: error.message,
+      });
+    }
+  }
 }
 
 export default new SizeController();

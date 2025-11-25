@@ -188,6 +188,26 @@ class SizeModel {
       throw error;
     }
   }
+
+  /**
+   * Get sizes by category (using category's size_type_id)
+   */
+  async getSizesByCategory(categoryId: number, shopId: number): Promise<Size[]> {
+    try {
+      const results = await query(
+        `SELECT s.* FROM sizes s
+         JOIN categories c ON s.size_type_id = c.size_type_id
+         WHERE c.category_id = ? AND c.shop_id = ? AND s.shop_id = ?
+         ORDER BY s.size_name ASC`,
+        [categoryId, shopId, shopId]
+      );
+      logger.debug('Retrieved sizes by category', { categoryId, shopId, count: (results as any[]).length });
+      return results as Size[];
+    } catch (error) {
+      logger.error('Error fetching sizes by category:', error);
+      throw error;
+    }
+  }
 }
 
 export default new SizeModel();

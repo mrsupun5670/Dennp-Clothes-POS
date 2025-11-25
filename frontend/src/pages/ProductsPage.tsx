@@ -124,6 +124,23 @@ const ProductsPage: React.FC = () => {
     { enabled: shopId !== null }
   );
 
+  const { data: categorySizes, refetch: refetchCategorySizes } = useQuery<any[]>(
+    ["categorySizes", selectedCategory, shopId],
+    async () => {
+      if (!shopId || !selectedCategory) {
+        throw new Error("Shop ID and Category ID are required");
+      }
+      const response = await fetch(`${API_URL}/sizes/by-category/${selectedCategory}?shop_id=${shopId}`);
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "Failed to fetch category sizes");
+      }
+    },
+    { enabled: shopId !== null && selectedCategory !== null }
+  );
+
   // --- SIDE EFFECTS (useEffect) ---
   useEffect(() => {
     if (dbCategories && dbCategories.length > 0) {
@@ -256,9 +273,9 @@ const ProductsPage: React.FC = () => {
     setCustomColors([]);
   };
 
-  // Get all available sizes (predefined + custom)
+  // Get all available sizes for the selected category (predefined + custom)
   const getAllSizes = () => [
-    ...(dbSizes?.map((s) => s.size_name) || []),
+    ...(categorySizes?.map((s) => s.size_name) || []),
     ...customSizes,
   ];
 
@@ -529,18 +546,49 @@ const ProductsPage: React.FC = () => {
     });
   };
 
-  // Add custom size
-  const handleAddSize = () => {
+  // Add custom size - Save to database with category's size type
+  const handleAddSize = async () => {
     const trimmedSize = newSize.trim();
-    if (
-      trimmedSize &&
-      !getAllSizes().some((s) => s.toLowerCase() === trimmedSize.toLowerCase())
-    ) {
-      setCustomSizes([...customSizes, trimmedSize]);
-      setNewSize("");
-      setShowAddSizeModal(false);
-    } else if (trimmedSize) {
+    if (!trimmedSize) {
+      showNotification("Size name is required", "error");
+      return;
+    }
+
+    if (getAllSizes().some((s) => s.toLowerCase() === trimmedSize.toLowerCase())) {
       showNotification(`Size "${trimmedSize}" already exists.`, "error");
+      return;
+    }
+
+    try {
+      // Get the size_type_id from the selected category
+      const selectedCat = dbCategories?.find(
+        (c) => c.category_id.toString() === selectedCategory
+      );
+      if (!selectedCat) {
+        showNotification("Category not found", "error");
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/sizes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop_id: shopId,
+          size_name: trimmedSize,
+          size_type_id: selectedCat.size_type_id,
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        showNotification(`Size "${trimmedSize}" added successfully`, "success");
+        setNewSize("");
+        setShowAddSizeModal(false);
+        await refetchCategorySizes();
+      } else {
+        showNotification(result.error || "Failed to add size", "error");
+      }
+    } catch (error) {
+      showNotification("Error adding size", "error");
     }
   };
 

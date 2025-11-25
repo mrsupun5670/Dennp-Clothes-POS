@@ -12,6 +12,7 @@ const router = Router();
 router.get('/', SizeController.getAllSizes.bind(SizeController));
 router.get('/types', SizeController.getAllSizeTypes.bind(SizeController));
 router.get('/with-type', SizeController.getSizesWithType.bind(SizeController));
+router.get('/by-category/:categoryId', SizeController.getSizesByCategory.bind(SizeController));
 router.get('/type/:sizeTypeId', SizeController.getSizesByType.bind(SizeController));
 router.get('/:id', SizeController.getSizeById.bind(SizeController));
 

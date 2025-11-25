@@ -348,6 +348,17 @@ const ProductsPage: React.FC = () => {
       showNotification("Product Name is required", "error");
       return;
     }
+
+    // Check for duplicate product code (only if creating new product)
+    if (!isEditMode && dbProducts) {
+      const trimmedCode = formData.code.trim().toLowerCase();
+      const isDuplicate = dbProducts.some((p: any) => p.sku.toLowerCase() === trimmedCode);
+      if (isDuplicate) {
+        showNotification("A product with this code already exists.", "error");
+        return;
+      }
+    }
+
     const cost = parseFloat(formData.costPrice);
     const printCost = parseFloat(formData.printCost || "0");
     const retailPrice = parseFloat(formData.retailPrice);

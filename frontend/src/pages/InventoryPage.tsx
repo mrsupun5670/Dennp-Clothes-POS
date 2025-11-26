@@ -60,7 +60,7 @@ const InventoryPage: React.FC = () => {
     loadInventory();
   }, [shopId]);
 
-  // Filter materials based on search
+  // Filter and sort materials based on search (newest first)
   const filteredMaterials = useMemo(() => {
     let result = [...rawMaterials];
 
@@ -70,6 +70,13 @@ const InventoryPage: React.FC = () => {
         item.item_name.toLowerCase().includes(query)
       );
     }
+
+    // Sort by updated_at (newest first)
+    result.sort((a, b) => {
+      const dateA = new Date(a.updated_at).getTime();
+      const dateB = new Date(b.updated_at).getTime();
+      return dateB - dateA; // Descending order (newest first)
+    });
 
     return result;
   }, [searchQuery, rawMaterials]);
@@ -90,6 +97,7 @@ const InventoryPage: React.FC = () => {
     setIsEditMode(true);
     setSelectedItemId(item.inventory_id);
     setFormData({
+      inventory_id: String(item.inventory_id),
       name: item.item_name,
       qty: String(item.quantity_in_stock),
       unitCost: String(item.unit_cost),
@@ -130,7 +138,7 @@ const InventoryPage: React.FC = () => {
 
     try {
       if (isEditMode && selectedItemId !== null) {
-        // Update existing item
+        // Update existing item with correct field names (camelCase as expected by backend)
         await updateInventoryItem(selectedItemId, formData.name, qty, unitCost);
         setRawMaterials(
           rawMaterials.map((item) =>
@@ -145,6 +153,7 @@ const InventoryPage: React.FC = () => {
               : item
           )
         );
+        alert("Inventory item updated successfully!");
       } else {
         // Add new item
         if (!shopId) {
@@ -160,7 +169,8 @@ const InventoryPage: React.FC = () => {
           unit_cost: unitCost,
           updated_at: new Date().toISOString(),
         };
-        setRawMaterials([...rawMaterials, newItem]);
+        setRawMaterials([newItem, ...rawMaterials]);
+        alert("Inventory item added successfully!");
       }
       handleCloseModal();
     } catch (err) {

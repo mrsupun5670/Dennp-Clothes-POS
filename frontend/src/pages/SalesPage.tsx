@@ -604,6 +604,13 @@ const SalesPage: React.FC = () => {
     return typeof price === 'number' ? price : 0;
   };
 
+  // Helper function to safely get wholesale price for display
+  const getWholesalePrice = (product: Product): number => {
+    if (!product) return 0;
+    const price = (product.wholesale_price as number) || (product.wholesalePrice as number) || 0;
+    return typeof price === 'number' ? price : 0;
+  };
+
   // Filtered data
   const filteredCustomers = useMemo(() => {
     return customers;
@@ -1065,7 +1072,7 @@ const SalesPage: React.FC = () => {
                             ID: {product.product_id || product.id} - {product.name}
                           </div>
                           <div className="text-xs text-gray-400">
-                            Wholesale: Rs. {((product.wholesale_price as number) || (product.wholesalePrice as number) || 0).toFixed(2)}
+                            Wholesale: Rs. {getWholesalePrice(product).toFixed(2)}
                           </div>
                         </button>
                       ))

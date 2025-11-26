@@ -24,6 +24,14 @@ const InventoryPage: React.FC = () => {
     unitCost: "",
   });
 
+  // Modal-specific error/success messages
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalMessageType, setModalMessageType] = useState<"error" | "success" | "">("");
+
+  // Page-level success/error notifications
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [notificationType, setNotificationType] = useState<"error" | "success" | "">("");
+
   // Inventory items from API
   const [rawMaterials, setRawMaterials] = useState<InventoryItem[]>([]);
 
@@ -110,29 +118,39 @@ const InventoryPage: React.FC = () => {
     setIsEditMode(false);
     setSelectedItemId(null);
     setFormData({ inventory_id: "", name: "", qty: "", unitCost: "" });
+    setModalMessage("");
+    setModalMessageType("");
   };
 
   const handleSaveItem = async () => {
     const qty = parseFloat(formData.qty as string) || 0;
     const unitCost = parseFloat(formData.unitCost as string) || 0;
 
+    // Clear previous messages
+    setModalMessage("");
+    setModalMessageType("");
+
     if (!formData.inventory_id.trim()) {
-      alert("Please enter inventory ID");
+      setModalMessage("Please enter inventory ID");
+      setModalMessageType("error");
       return;
     }
 
     if (isNaN(parseInt(formData.inventory_id))) {
-      alert("Inventory ID must be a valid number");
+      setModalMessage("Inventory ID must be a valid number");
+      setModalMessageType("error");
       return;
     }
 
     if (!formData.name.trim()) {
-      alert("Please enter item name");
+      setModalMessage("Please enter item name");
+      setModalMessageType("error");
       return;
     }
 
     if (qty < 0 || unitCost < 0) {
-      alert("Quantity and unit cost must be positive");
+      setModalMessage("Quantity and unit cost must be positive");
+      setModalMessageType("error");
       return;
     }
 
@@ -153,11 +171,25 @@ const InventoryPage: React.FC = () => {
               : item
           )
         );
-        alert("Inventory item updated successfully!");
+        setModalMessage("Inventory item updated successfully!");
+        setModalMessageType("success");
+
+        // Close modal after 1.5 seconds
+        setTimeout(() => {
+          handleCloseModal();
+          // Show notification on main page
+          setNotificationMessage("Inventory item updated successfully!");
+          setNotificationType("success");
+          setTimeout(() => {
+            setNotificationMessage("");
+            setNotificationType("");
+          }, 3000);
+        }, 1500);
       } else {
         // Add new item
         if (!shopId) {
-          alert("No shop selected");
+          setModalMessage("No shop selected");
+          setModalMessageType("error");
           return;
         }
         const result = await addInventoryItem(shopId, parseInt(formData.inventory_id), formData.name, qty, unitCost);
@@ -170,12 +202,25 @@ const InventoryPage: React.FC = () => {
           updated_at: new Date().toISOString(),
         };
         setRawMaterials([newItem, ...rawMaterials]);
-        alert("Inventory item added successfully!");
+        setModalMessage("Inventory item added successfully!");
+        setModalMessageType("success");
+
+        // Close modal after 1.5 seconds
+        setTimeout(() => {
+          handleCloseModal();
+          // Show notification on main page
+          setNotificationMessage("Inventory item added successfully!");
+          setNotificationType("success");
+          setTimeout(() => {
+            setNotificationMessage("");
+            setNotificationType("");
+          }, 3000);
+        }, 1500);
       }
-      handleCloseModal();
     } catch (err) {
       console.error("Failed to save item:", err);
-      alert("Failed to save inventory item");
+      setModalMessage("Failed to save inventory item");
+      setModalMessageType("error");
     }
   };
 
@@ -185,6 +230,20 @@ const InventoryPage: React.FC = () => {
       {error && (
         <div className="bg-red-900/20 border border-red-600 text-red-400 p-4 rounded-lg">
           {error}
+        </div>
+      )}
+
+      {/* Notification Messages */}
+      {notificationMessage && (
+        <div
+          className={`p-4 rounded-lg border-2 transition-all duration-300 ${
+            notificationType === "success"
+              ? "bg-green-900/20 border-green-600 text-green-400"
+              : "bg-red-900/20 border-red-600 text-red-400"
+          }`}
+        >
+          {notificationType === "success" ? "✓ " : "✕ "}
+          {notificationMessage}
         </div>
       )}
 
@@ -339,6 +398,20 @@ const InventoryPage: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-6 space-y-5">
+              {/* Modal Messages */}
+              {modalMessage && (
+                <div
+                  className={`p-3 rounded-lg border-2 ${
+                    modalMessageType === "success"
+                      ? "bg-green-900/20 border-green-600 text-green-400"
+                      : "bg-red-900/20 border-red-600 text-red-400"
+                  }`}
+                >
+                  {modalMessageType === "success" ? "✓ " : "✕ "}
+                  {modalMessage}
+                </div>
+              )}
+
               {/* Inventory ID */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-2">

@@ -39,7 +39,7 @@ class ProductController {
   }
 
   /**
-   * GET /products/:id?shop_id=1 - Get product by ID
+   * GET /products/:id?shop_id=1 - Get product by ID (product code)
    */
   async getProductById(req: Request, res: Response): Promise<void> {
     try {
@@ -53,7 +53,7 @@ class ProductController {
         return;
       }
 
-      const product = await ProductModel.getProductById(Number(id), shopId);
+      const product = await ProductModel.getProductById(id, shopId);
 
       if (!product) {
         res.status(404).json({
@@ -152,7 +152,8 @@ class ProductController {
   }
 
   /**
-   * POST /products (body: { shop_id, ... }) - Create new product
+   * POST /products (body: { shop_id, product_id, product_name, ..., stock?: [...] }) - Create new product with optional stock
+   * stock array format: [{ sizeId: number, colorId: number, quantity: number }, ...]
    */
   async createProduct(req: Request, res: Response): Promise<void> {
     try {
@@ -167,6 +168,7 @@ class ProductController {
         retail_price,
         wholesale_price,
         product_status,
+        stock,
       } = req.body;
 
       // Validation
@@ -188,16 +190,21 @@ class ProductController {
       }
 
       // Create product with product_id (product code)
-      const productIdResult = await ProductModel.createProduct(shop_id, product_id, {
-        product_name,
-        category_id,
-        description,
-        product_cost: product_cost || 0,
-        print_cost: print_cost || 0,
-        retail_price,
-        wholesale_price,
-        product_status: product_status || "active",
-      });
+      const productIdResult = await ProductModel.createProduct(
+        shop_id,
+        product_id,
+        {
+          product_name,
+          category_id,
+          description,
+          product_cost: product_cost || 0,
+          print_cost: print_cost || 0,
+          retail_price,
+          wholesale_price,
+          product_status: product_status || "active",
+        },
+        stock // Pass stock data if provided
+      );
 
       res.status(201).json({
         success: true,
@@ -206,6 +213,16 @@ class ProductController {
       });
     } catch (error: any) {
       logger.error("Error in createProduct:", error);
+
+      // Handle duplicate key errors (409 Conflict)
+      if ((error as any).statusCode === 409 || (error as any).isDuplicate) {
+        res.status(409).json({
+          success: false,
+          error: error.message || "Product with this code or name already exists",
+        });
+        return;
+      }
+
       res.status(500).json({
         success: false,
         error: "Failed to create product",
@@ -215,12 +232,13 @@ class ProductController {
   }
 
   /**
-   * PUT /products/:id (body: { shop_id, ... }) - Update product
+   * PUT /products/:id (body: { shop_id, ..., stock?: [...] }) - Update product with optional stock data
+   * stock array format: [{ sizeId: number, colorId: number, quantity: number }, ...]
    */
   async updateProduct(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { shop_id, ...updateData } = req.body;
+      const { shop_id, stock, ...updateData } = req.body;
 
       if (!shop_id) {
         res.status(400).json({
@@ -230,7 +248,12 @@ class ProductController {
         return;
       }
 
-      const success = await ProductModel.updateProduct(Number(id), shop_id, updateData);
+      const success = await ProductModel.updateProduct(
+        id,
+        shop_id,
+        updateData,
+        stock // Pass stock data if provided
+      );
 
       if (!success) {
         res.status(404).json({
@@ -255,7 +278,7 @@ class ProductController {
   }
 
   /**
-   * DELETE /products/:id?shop_id=1 - Delete product (soft delete)
+   * DELETE /products/:id?shop_id=1 - Delete product (soft delete) (id is product code)
    */
   async deleteProduct(req: Request, res: Response): Promise<void> {
     try {
@@ -270,7 +293,7 @@ class ProductController {
         return;
       }
 
-      const success = await ProductModel.deleteProduct(Number(id), shopId);
+      const success = await ProductModel.deleteProduct(id, shopId);
 
       if (!success) {
         res.status(404).json({
@@ -394,7 +417,7 @@ class ProductController {
         return;
       }
 
-      const prices = await ProductModel.getProductPrices(Number(id), shopId);
+      const prices = await ProductModel.getProductPrices(id, shopId);
 
       if (!prices) {
         res.status(404).json({
@@ -434,7 +457,7 @@ class ProductController {
         return;
       }
 
-      const product = await ProductModel.getProductWithDetails(Number(id), shopId);
+      const product = await ProductModel.getProductWithDetails(id, shopId);
 
       if (!product) {
         res.status(404).json({
@@ -474,7 +497,7 @@ class ProductController {
         return;
       }
 
-      const colors = await ProductModel.getProductColors(Number(id), shopId);
+      const colors = await ProductModel.getProductColors(id, shopId);
 
       res.json({
         success: true,
@@ -516,7 +539,7 @@ class ProductController {
       }
 
       const productColorId = await ProductModel.addProductColor(
-        Number(id),
+        id,
         color_id,
         shop_id
       );
@@ -553,7 +576,7 @@ class ProductController {
       }
 
       const success = await ProductModel.removeProductColor(
-        Number(id),
+        id,
         Number(colorId),
         shopId
       );
@@ -596,7 +619,7 @@ class ProductController {
         return;
       }
 
-      const sizes = await ProductModel.getProductSizes(Number(id), shopId);
+      const sizes = await ProductModel.getProductSizes(id, shopId);
 
       res.json({
         success: true,
@@ -638,7 +661,7 @@ class ProductController {
       }
 
       const productSizeId = await ProductModel.addProductSize(
-        Number(id),
+        id,
         size_id,
         shop_id
       );
@@ -675,7 +698,7 @@ class ProductController {
       }
 
       const success = await ProductModel.removeProductSize(
-        Number(id),
+        id,
         Number(sizeId),
         shopId
       );
@@ -732,7 +755,7 @@ class ProductController {
       }
 
       const success = await ProductModel.updateProductStock(
-        Number(productId),
+        productId,
         Number(sizeId),
         Number(colorId),
         Number(quantity),
@@ -762,6 +785,39 @@ class ProductController {
   }
 
   /**
+   * GET /products/:id/stock?shop_id=1 - Get product stock with color and size details
+   */
+  async getProductStockDetails(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const shopId = Number(req.query.shop_id);
+
+      if (!shopId) {
+        res.status(400).json({
+          success: false,
+          error: "shop_id is required",
+        });
+        return;
+      }
+
+      const stockDetails = await ProductModel.getProductStockDetails(id, shopId);
+
+      res.json({
+        success: true,
+        data: stockDetails,
+        message: `Retrieved ${stockDetails.length} stock entries`,
+      });
+    } catch (error: any) {
+      logger.error("Error in getProductStockDetails:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch stock details",
+        details: error.message,
+      });
+    }
+  }
+
+  /**
    * DELETE /products/:id/stock?shop_id=1 - Clear all stock for a product
    */
   async clearProductStock(req: Request, res: Response): Promise<void> {
@@ -777,7 +833,7 @@ class ProductController {
         return;
       }
 
-      const success = await ProductModel.clearProductStock(Number(id), shopId);
+      const success = await ProductModel.clearProductStock(id, shopId);
 
       if (!success) {
         res.status(500).json({

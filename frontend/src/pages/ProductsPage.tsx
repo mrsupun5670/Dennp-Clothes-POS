@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   updateProductStock,
   clearProductStock,
+  getProductStockDetails,
 } from "../services/productService";
 import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
@@ -16,11 +17,11 @@ const ProductsPage: React.FC = () => {
   const { shopId } = useShop();
 
   // --- STATE DECLARATIONS ---
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
     null
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<string>("name");
+  const [sortBy, setSortBy] = useState<string>("date"); // Default: newest first
   const [stockFilter, setStockFilter] = useState<string>("all");
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   // Default to a placeholder category ID (1)
@@ -62,6 +63,11 @@ const ProductsPage: React.FC = () => {
   const [notificationType, setNotificationType] = useState<
     "error" | "success" | ""
   >("");
+
+  // Stock details state - map of productId -> stock details
+  const [productStockDetailsMap, setProductStockDetailsMap] = useState<
+    Map<string, any[]>
+  >(new Map());
 
   // --- REFS FOR AUTO-FOCUS ---
   const sizeInputRef = useRef<HTMLInputElement>(null);
@@ -182,11 +188,39 @@ const ProductsPage: React.FC = () => {
     }
   }, [showAddCategoryModal]);
 
+  // Fetch stock details for all products when products load
+  useEffect(() => {
+    if (dbProducts && shopId && dbProducts.length > 0) {
+      const fetchAllStockDetails = async () => {
+        try {
+          const newMap = new Map<string, any[]>();
+
+          for (const product of dbProducts) {
+            try {
+              const stockData = await getProductStockDetails(product.product_id, shopId);
+              newMap.set(product.product_id, stockData || []);
+            } catch (error) {
+              console.error(`Failed to fetch stock for product ${product.product_id}:`, error);
+              // Set empty array as fallback
+              newMap.set(product.product_id, []);
+            }
+          }
+
+          setProductStockDetailsMap(newMap);
+        } catch (error) {
+          console.error("Error fetching all stock details:", error);
+        }
+      };
+
+      fetchAllStockDetails();
+    }
+  }, [dbProducts, shopId]);
+
   // --- HELPER FUNCTIONS ---
 
   const handleResetFilters = () => {
     setSearchQuery("");
-    setSortBy("name");
+    setSortBy("date"); // Reset to default: date (newest first)
     setStockFilter("all");
   };
 
@@ -235,13 +269,11 @@ const ProductsPage: React.FC = () => {
   };
 
   /**
-   * FIX: Now sets selectedProductId correctly and uses the category ID from the product.
-   * NOTE: The stock logic remains heuristic as the full variant data is not provided
-   * in the original `dbProducts` map structure (it only sums the total qty).
+   * Edit product - now uses actual stock details from shop_product_stock table
    */
   const handleEditProduct = (product: any) => {
     setIsEditMode(true);
-    setSelectedProductId(product.id); // FIX: Set the selected ID here
+    setSelectedProductId(product.id);
     setShowAddProductModal(true);
     setSelectedCategory(
       product.category_id
@@ -259,15 +291,7 @@ const ProductsPage: React.FC = () => {
         : "",
     });
 
-    const sizes = (product.sizes || "")
-      .split(",")
-      .map((s: string) => s.trim())
-      .filter((s) => s);
-    const colors = (product.colors || "")
-      .split(",")
-      .map((c: string) => c.trim())
-      .filter((c) => c);
-
+    // Build stock rows from actual stockDetails
     const newStockRows: {
       id: number;
       size: string;
@@ -276,27 +300,19 @@ const ProductsPage: React.FC = () => {
     }[] = [];
     let rowId = 1;
 
-    // Distribute total quantity (product.qty) proportionally across all existing variants
-    const totalVariants = sizes.length * colors.length;
-    const qtyPerVariant =
-      totalVariants > 0 ? Math.floor(product.qty / totalVariants) : 0;
-    let remainder = totalVariants > 0 ? product.qty % totalVariants : 0;
-
-    colors.forEach((color: string) => {
-      sizes.forEach((size: string) => {
-        const extraQty = remainder > 0 ? 1 : 0;
+    if (product.stockDetails && product.stockDetails.length > 0) {
+      // Use actual stock details
+      product.stockDetails.forEach((stock: any) => {
         newStockRows.push({
           id: rowId,
-          size: size,
-          color: color,
-          qty: qtyPerVariant + extraQty,
+          size: stock.size_name || "",
+          color: stock.color_name || "",
+          qty: stock.stock_qty,
         });
-        if (remainder > 0) remainder--;
         rowId++;
       });
-    });
-
-    if (newStockRows.length === 0) {
+    } else {
+      // No stock details available - add empty row
       newStockRows.push({ id: 1, size: "", color: "", qty: 0 });
       rowId = 2;
     }
@@ -340,8 +356,15 @@ const ProductsPage: React.FC = () => {
    */
   const handleSaveProduct = async () => {
     // === SYNCHRONOUS VALIDATION ===
-    if (!formData.code.trim()) {
+    const productCode = String(formData.code).trim();
+    if (!productCode) {
       showNotification("Product Code is required", "error");
+      return;
+    }
+
+    // Validate that product code is numeric only
+    if (!/^\d+$/.test(productCode)) {
+      showNotification("Product Code must be numeric only (integers)", "error");
       return;
     }
     if (!formData.name.trim()) {
@@ -349,12 +372,21 @@ const ProductsPage: React.FC = () => {
       return;
     }
 
-    // Check for duplicate product code (only if creating new product)
+    // Check for duplicate product code and product name (only if creating new product)
     if (!isEditMode && dbProducts) {
-      const trimmedCode = formData.code.trim().toLowerCase();
-      const isDuplicate = dbProducts.some((p: any) => p.sku.toLowerCase() === trimmedCode);
-      if (isDuplicate) {
+      const productNameTrim = formData.name.trim().toLowerCase();
+
+      // Check for duplicate product code
+      const duplicateCode = dbProducts.some((p: any) => p.product_id?.toString() === productCode);
+      if (duplicateCode) {
         showNotification("A product with this code already exists.", "error");
+        return;
+      }
+
+      // Check for duplicate product name
+      const duplicateName = dbProducts.some((p: any) => p.product_name?.toLowerCase() === productNameTrim);
+      if (duplicateName) {
+        showNotification("A product with this name already exists.", "error");
         return;
       }
     }
@@ -401,58 +433,7 @@ const ProductsPage: React.FC = () => {
     setIsSaving(true);
 
     try {
-      // 1. Prepare Product Payload and Get/Update Product ID
-      const basePayload = {
-        shop_id: shopId,
-        product_name: formData.name,
-        category_id: parseInt(selectedCategory),
-        description: "",
-        product_cost: cost,
-        print_cost: printCost,
-        retail_price: retailPrice,
-        wholesale_price: wholesalePrice || null,
-        product_status: "active",
-      };
-
-      let productId: string;
-
-      if (isEditMode && selectedProductId) {
-        // Update existing product
-        const updateResponse = await fetch(
-          `${API_URL}/products/${selectedProductId}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(basePayload),
-          }
-        );
-        const updateResult = await updateResponse.json();
-        if (!updateResult.success) {
-          throw new Error(updateResult.error || "Failed to update product");
-        }
-        productId = selectedProductId;
-      } else {
-        // Create new product with product_code as product_id
-        const createPayload = {
-          ...basePayload,
-          product_id: formData.code, // Use product code as product_id
-        };
-        const createResponse = await fetch(
-          `${API_URL}/products`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(createPayload),
-          }
-        );
-        const createResult = await createResponse.json();
-        if (!createResult.success || !createResult.data.product_id) {
-          throw new Error(createResult.error || "Failed to create product");
-        }
-        productId = createResult.data.product_id;
-      }
-
-      // 2. Process Colors and Sizes (Ensure existence and retrieve IDs)
+      // 0. Build color and size ID maps first (needed for both create and update)
       const uniqueColors = stockRows
         .map((row) => row.color)
         .filter((c, i, a) => a.indexOf(c) === i);
@@ -465,6 +446,9 @@ const ProductsPage: React.FC = () => {
 
       dbColors?.forEach((c) => colorIdMap.set(c.color_name, c.color_id));
       dbSizes?.forEach((s) => sizeIdMap.set(s.size_name, s.size_id));
+
+      // 1. Process Colors and Sizes FIRST (Ensure existence and retrieve IDs)
+      // This ensures all color and size IDs are available before building stock payload
 
       for (const colorName of uniqueColors) {
         let colorId = colorIdMap.get(colorName);
@@ -482,16 +466,6 @@ const ProductsPage: React.FC = () => {
             colorId = colorResult.data.color_id;
             colorIdMap.set(colorName, colorId);
           }
-        }
-        if (colorId) {
-          await fetch(
-            `${API_URL}/products/${productId}/colors`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ color_id: colorId }),
-            }
-          );
         }
       }
 
@@ -512,6 +486,104 @@ const ProductsPage: React.FC = () => {
             sizeIdMap.set(sizeName, sizeId);
           }
         }
+      }
+
+      // 2. Build stock payload with resolved color/size IDs
+      const stockPayload: Array<{ sizeId: number; colorId: number; quantity: number }> = [];
+
+      for (const row of stockRows) {
+        if (row.size && row.color && row.qty > 0) {
+          const colorId = colorIdMap.get(row.color);
+          const sizeId = sizeIdMap.get(row.size);
+          if (colorId && sizeId) {
+            stockPayload.push({
+              colorId,
+              sizeId,
+              quantity: row.qty,
+            });
+          }
+        }
+      }
+
+      // 3. Prepare Product Payload with stock data
+      const basePayload = {
+        shop_id: shopId,
+        product_name: formData.name,
+        category_id: parseInt(selectedCategory),
+        description: "",
+        product_cost: cost,
+        print_cost: printCost,
+        retail_price: retailPrice,
+        wholesale_price: wholesalePrice || null,
+        product_status: "active",
+      };
+
+      let productId: string;
+
+      if (isEditMode && selectedProductId) {
+        // Update existing product (with stock data)
+        const updatePayload = {
+          ...basePayload,
+          stock: stockPayload, // Include stock data
+        };
+        const updateResponse = await fetch(
+          `${API_URL}/products/${selectedProductId}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updatePayload),
+          }
+        );
+        const updateResult = await updateResponse.json();
+        if (!updateResult.success) {
+          throw new Error(updateResult.error || "Failed to update product");
+        }
+        productId = selectedProductId;
+      } else {
+        // Create new product with product_code as product_id (with stock data)
+        const createPayload = {
+          ...basePayload,
+          product_id: productCode, // Use product code as product_id (numeric string)
+          stock: stockPayload, // Include stock data
+        };
+        const createResponse = await fetch(
+          `${API_URL}/products`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(createPayload),
+          }
+        );
+        const createResult = await createResponse.json();
+
+        // Handle duplicate product code or name (409 Conflict)
+        if (createResponse.status === 409) {
+          throw new Error(createResult.error || "Product with this code or name already exists");
+        }
+
+        if (!createResult.success || !createResult.data.product_id) {
+          throw new Error(createResult.error || "Failed to create product");
+        }
+        productId = createResult.data.product_id;
+      }
+
+      // 4. Link colors and sizes to product (if not already linked)
+      for (const colorName of uniqueColors) {
+        const colorId = colorIdMap.get(colorName);
+        if (colorId) {
+          await fetch(
+            `${API_URL}/products/${productId}/colors`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ color_id: colorId }),
+            }
+          );
+        }
+      }
+
+      for (const sizeName of uniqueSizes) {
+        const sizeId = sizeIdMap.get(sizeName);
         if (sizeId) {
           await fetch(
             `${API_URL}/products/${productId}/sizes`,
@@ -521,34 +593,6 @@ const ProductsPage: React.FC = () => {
               body: JSON.stringify({ size_id: sizeId }),
             }
           );
-        }
-      }
-
-      // 3. Clear existing stock and Update new stock
-      if (isEditMode) {
-        try {
-          await clearProductStock(productId);
-        } catch (error) {
-          console.error("Failed to clear product stock:", error);
-        }
-      }
-
-      for (const row of stockRows) {
-        const sizeId = sizeIdMap.get(row.size);
-        const colorId = colorIdMap.get(row.color);
-
-        if (productId && sizeId && colorId && row.qty > 0) {
-          try {
-            await updateProductStock(productId, sizeId, colorId, row.qty, shopId);
-          } catch (error) {
-            console.error("Failed to update stock for a row:", {
-              productId,
-              sizeId,
-              colorId,
-              error,
-            });
-            showNotification("Some stock entries failed to save.", "error");
-          }
         }
       }
 
@@ -763,19 +807,53 @@ const ProductsPage: React.FC = () => {
 
   // Filter and sort products (using total_stock property from API for qty)
   const filteredAndSortedProducts = useMemo(() => {
-    const productsToFilter = (dbProducts || []).map((p: any) => ({
-      id: p.product_id,
-      code: p.sku,
-      name: p.product_name,
-      colors: p.colors?.map((c: any) => c.color_name).join(", ") || "N/A",
-      sizes: p.sizes?.map((s: any) => s.size_name).join(", ") || "N/A",
-      cost: parseFloat(p.product_cost) || 0,
-      printCost: parseFloat(p.print_cost) || 0,
-      qty: p.total_stock || 0, // Assuming API returns total stock as 'total_stock'
-      retailPrice: parseFloat(p.retail_price) || 0,
-      wholesalePrice: parseFloat(p.wholesale_price) || 0,
-      category_id: p.category_id,
-    }));
+    const productsToFilter = (dbProducts || []).map((p: any) => {
+      // Get stock details for this product
+      const stockDetails = productStockDetailsMap.get(p.product_id) || [];
+
+      // Build color and size display with quantities
+      const colorMap = new Map<string, number>();
+      const sizeMap = new Map<string, number>();
+
+      stockDetails.forEach((stock: any) => {
+        if (stock.color_name) {
+          const existing = colorMap.get(stock.color_name) || 0;
+          colorMap.set(stock.color_name, existing + stock.stock_qty);
+        }
+        if (stock.size_name) {
+          const existing = sizeMap.get(stock.size_name) || 0;
+          sizeMap.set(stock.size_name, existing + stock.stock_qty);
+        }
+      });
+
+      const colorDisplay = Array.from(colorMap.entries())
+        .map(([name, qty]) => `${name} (${qty})`)
+        .join(", ");
+
+      const sizeDisplay = Array.from(sizeMap.entries())
+        .map(([name, qty]) => `${name} (${qty})`)
+        .join(", ");
+
+      // Fallback to original colors/sizes if no stock details
+      const finalColors = colorDisplay || (p.colors?.map((c: any) => c.color_name).join(", ") || "N/A");
+      const finalSizes = sizeDisplay || (p.sizes?.map((s: any) => s.size_name).join(", ") || "N/A");
+
+      return {
+        id: p.product_id,
+        code: p.product_id, // Use product_id (product code) instead of SKU
+        name: p.product_name,
+        colors: finalColors, // Now includes quantities from stock or fallback to product colors
+        sizes: finalSizes, // Now includes quantities from stock or fallback to product sizes
+        stockDetails: stockDetails, // Store full details for edit modal
+        cost: parseFloat(p.product_cost) || 0,
+        printCost: parseFloat(p.print_cost) || 0,
+        qty: p.total_stock || 0, // Assuming API returns total stock as 'total_stock'
+        retailPrice: parseFloat(p.retail_price) || 0,
+        wholesalePrice: parseFloat(p.wholesale_price) || 0,
+        category_id: p.category_id,
+        createdAt: new Date(p.created_at), // Add created_at for date sorting
+      };
+    });
 
     let result = [...productsToFilter];
 
@@ -783,9 +861,8 @@ const ProductsPage: React.FC = () => {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (product) =>
-          product.code.toLowerCase().includes(query) ||
-          product.name.toLowerCase().includes(query) ||
-          product.colors.toLowerCase().includes(query)
+          String(product.code).includes(query) ||
+          product.name.toLowerCase().includes(query)
       );
     }
 
@@ -797,10 +874,19 @@ const ProductsPage: React.FC = () => {
       result = result.filter((p) => p.qty > 0);
     }
 
-    if (sortBy === "name") {
+    // Apply sorting based on sortBy value
+    if (sortBy === "date") {
+      // Newest first (latest inserted at top)
+      result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    } else if (sortBy === "name") {
       result.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === "code") {
-      result.sort((a, b) => a.code.localeCompare(b.code));
+      // Sort numeric codes as numbers, not strings
+      result.sort((a, b) => {
+        const codeA = parseInt(String(a.code), 10) || 0;
+        const codeB = parseInt(String(b.code), 10) || 0;
+        return codeA - codeB;
+      });
     } else if (sortBy === "price-high") {
       result.sort((a, b) => b.retailPrice - a.retailPrice);
     } else if (sortBy === "price-low") {
@@ -814,7 +900,7 @@ const ProductsPage: React.FC = () => {
     }
 
     return result;
-  }, [searchQuery, sortBy, stockFilter, dbProducts]);
+  }, [searchQuery, sortBy, stockFilter, dbProducts, productStockDetailsMap]);
 
   // --- RENDER (JSX) ---
   return (
@@ -887,6 +973,7 @@ const ProductsPage: React.FC = () => {
             onChange={(e) => setSortBy(e.target.value)}
             className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
           >
+            <option value="date">Date (Newest First)</option>
             <option value="name">Name (A-Z)</option>
             <option value="code">Product Code</option>
             <option value="price-high">Retail Price (High to Low)</option>
@@ -1050,15 +1137,17 @@ const ProductsPage: React.FC = () => {
                 {/* Product Code */}
                 <div>
                   <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Product Code <span className="text-red-500">*</span>
+                    Product Code (Numeric) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g., TSB-001"
+                    placeholder="e.g., 1001"
                     value={formData.code}
-                    onChange={(e) =>
-                      setFormData({ ...formData, code: e.target.value })
-                    }
+                    onChange={(e) => {
+                      // Only allow digits
+                      const value = e.target.value.replace(/\D/g, "");
+                      setFormData({ ...formData, code: value });
+                    }}
                     disabled={isEditMode}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {

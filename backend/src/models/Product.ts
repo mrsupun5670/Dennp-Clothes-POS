@@ -50,9 +50,10 @@ class ProductModel {
 
   /**
    * Get product by ID (with shop validation)
+   * Note: product_id is now the product code (VARCHAR)
    */
   async getProductById(
-    productId: number,
+    productId: string,
     shopId: number
   ): Promise<Product | null> {
     try {
@@ -113,6 +114,7 @@ class ProductModel {
 
   /**
    * Create new product with specific product_id (using product code)
+   * Also inserts initial stock entries for all color/size combinations if provided
    */
   async createProduct(
     shopId: number,
@@ -120,7 +122,8 @@ class ProductModel {
     productData: Omit<
       Product,
       "product_id" | "created_at" | "updated_at" | "shop_id"
-    >
+    >,
+    stockData?: Array<{ sizeId: number; colorId: number; quantity: number }>
   ): Promise<string> {
     try {
       const {
@@ -134,7 +137,39 @@ class ProductModel {
         product_status,
       } = productData;
 
-      await query(
+      // Step 0: Check for duplicates before inserting
+      // Check if product_id already exists for this shop
+      const duplicateCodeResult = await query(
+        "SELECT product_id FROM products WHERE product_id = ? AND shop_id = ?",
+        [productId, shopId]
+      );
+      if ((duplicateCodeResult as any[]).length > 0) {
+        const error = new Error(`Product with code ${productId} already exists`);
+        (error as any).statusCode = 409;
+        (error as any).isDuplicate = true;
+        throw error;
+      }
+
+      // Check if product_name already exists for this shop
+      const duplicateNameResult = await query(
+        "SELECT product_id FROM products WHERE product_name = ? AND shop_id = ?",
+        [product_name, shopId]
+      );
+      if ((duplicateNameResult as any[]).length > 0) {
+        const error = new Error(`Product with name "${product_name}" already exists`);
+        (error as any).statusCode = 409;
+        (error as any).isDuplicate = true;
+        throw error;
+      }
+
+      // Step 1: Insert product first
+      logger.info("Inserting product into products table", {
+        productId,
+        shopId,
+        product_name,
+      });
+
+      const productResult = await query(
         `INSERT INTO products (product_id, shop_id, product_name, category_id, description, product_cost, print_cost, retail_price, wholesale_price, product_status)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -151,6 +186,52 @@ class ProductModel {
         ]
       );
 
+      logger.info("Product inserted successfully", {
+        productId,
+        shopId,
+        affectedRows: (productResult as any).affectedRows,
+      });
+
+      // Step 2: Insert stock data if provided (ONLY after product is inserted)
+      if (stockData && stockData.length > 0) {
+        logger.info("Starting to insert stock data", {
+          productId,
+          shopId,
+          stockCount: stockData.length,
+        });
+
+        for (const stock of stockData) {
+          try {
+            await query(
+              `INSERT INTO shop_product_stock (shop_id, product_id, size_id, color_id, stock_qty, created_at)
+               VALUES (?, ?, ?, ?, ?, NOW())`,
+              [shopId, productId, stock.sizeId, stock.colorId, stock.quantity]
+            );
+            logger.debug("Stock entry inserted", {
+              productId,
+              shopId,
+              sizeId: stock.sizeId,
+              colorId: stock.colorId,
+              quantity: stock.quantity,
+            });
+          } catch (stockError) {
+            logger.error("Error inserting stock entry", {
+              productId,
+              shopId,
+              stock,
+              error: stockError,
+            });
+            throw stockError;
+          }
+        }
+
+        logger.info("All stock entries created for product", {
+          productId,
+          shopId,
+          stockCount: stockData.length,
+        });
+      }
+
       logger.info("Product created successfully", {
         productId,
         shopId,
@@ -165,14 +246,16 @@ class ProductModel {
 
 
   /**
-   * Update product
+   * Update product with optional stock data
+   * Accepts stockData to update shop_product_stock table along with product details
    */
   async updateProduct(
-    productId: number,
+    productId: string,
     shopId: number,
     productData: Partial<
       Omit<Product, "product_id" | "created_at" | "updated_at" | "shop_id">
-    >
+    >,
+    stockData?: Array<{ sizeId: number; colorId: number; quantity: number }>
   ): Promise<boolean> {
     try {
       // Verify ownership first
@@ -188,6 +271,7 @@ class ProductModel {
         return false;
       }
 
+      // Update product details
       const fields: string[] = [];
       const values: any[] = [];
 
@@ -212,24 +296,55 @@ class ProductModel {
         }
       }
 
-      if (fields.length === 0) return false;
+      if (fields.length === 0 && (!stockData || stockData.length === 0)) {
+        logger.warn("No product or stock data to update", { productId, shopId });
+        return false;
+      }
 
-      fields.push("updated_at = NOW()");
-      values.push(productId);
-      values.push(shopId);
+      // Update product if there are product fields to update
+      if (fields.length > 0) {
+        fields.push("updated_at = NOW()");
+        values.push(productId);
+        values.push(shopId);
 
-      const results = await query(
-        `UPDATE products SET ${fields.join(", ")} WHERE product_id = ? AND shop_id = ?`,
-        values
-      );
-      const affectedRows = (results as any).affectedRows;
+        const results = await query(
+          `UPDATE products SET ${fields.join(", ")} WHERE product_id = ? AND shop_id = ?`,
+          values
+        );
+        const affectedRows = (results as any).affectedRows;
 
-      logger.info("Product updated successfully", {
-        productId,
-        shopId,
-        affectedRows,
-      });
-      return affectedRows > 0;
+        logger.info("Product details updated", {
+          productId,
+          shopId,
+          affectedRows,
+        });
+      }
+
+      // Update stock if provided
+      if (stockData && stockData.length > 0) {
+        // First, clear existing stock for this product
+        await query(
+          "DELETE FROM shop_product_stock WHERE product_id = ? AND shop_id = ?",
+          [productId, shopId]
+        );
+
+        // Then insert new stock entries
+        for (const stock of stockData) {
+          await query(
+            `INSERT INTO shop_product_stock (shop_id, product_id, size_id, color_id, stock_qty, created_at)
+             VALUES (?, ?, ?, ?, ?, NOW())`,
+            [shopId, productId, stock.sizeId, stock.colorId, stock.quantity]
+          );
+        }
+
+        logger.info("Product stock updated", {
+          productId,
+          shopId,
+          stockCount: stockData.length,
+        });
+      }
+
+      return true;
     } catch (error) {
       logger.error("Error updating product:", error);
       throw error;
@@ -239,7 +354,7 @@ class ProductModel {
   /**
    * Delete product (soft delete by changing status)
    */
-  async deleteProduct(productId: number, shopId: number): Promise<boolean> {
+  async deleteProduct(productId: string, shopId: number): Promise<boolean> {
     try {
       const results = await query(
         'UPDATE products SET product_status = "discontinued", updated_at = NOW() WHERE product_id = ? AND shop_id = ?',
@@ -318,7 +433,7 @@ class ProductModel {
    * Get product prices for pricing
    */
   async getProductPrices(
-    productId: number,
+    productId: string,
     shopId: number
   ): Promise<{
     product_cost: number;
@@ -345,7 +460,7 @@ class ProductModel {
    * Add color to product
    */
   async addProductColor(
-    productId: number,
+    productId: string,
     colorId: number,
     shopId: number
   ): Promise<number> {
@@ -382,7 +497,7 @@ class ProductModel {
    * Remove color from product
    */
   async removeProductColor(
-    productId: number,
+    productId: string,
     colorId: number,
     shopId: number
   ): Promise<boolean> {
@@ -417,7 +532,7 @@ class ProductModel {
   /**
    * Get all colors for a product
    */
-  async getProductColors(productId: number, shopId: number): Promise<any[]> {
+  async getProductColors(productId: string, shopId: number): Promise<any[]> {
     try {
       const results = await query(
         `SELECT c.color_id, c.color_name, c.hex_code
@@ -445,7 +560,7 @@ class ProductModel {
    * Add size to product
    */
   async addProductSize(
-    productId: number,
+    productId: string,
     sizeId: number,
     shopId: number
   ): Promise<number> {
@@ -482,7 +597,7 @@ class ProductModel {
    * Remove size from product
    */
   async removeProductSize(
-    productId: number,
+    productId: string,
     sizeId: number,
     shopId: number
   ): Promise<boolean> {
@@ -513,7 +628,7 @@ class ProductModel {
   /**
    * Get all sizes for a product
    */
-  async getProductSizes(productId: number, shopId: number): Promise<any[]> {
+  async getProductSizes(productId: string, shopId: number): Promise<any[]> {
     try {
       const results = await query(
         `SELECT s.size_id, s.size_name, st.size_type_name as size_type
@@ -541,7 +656,7 @@ class ProductModel {
   /**
    * Get total stock quantity for a product
    */
-  async getProductStock(productId: number, shopId: number): Promise<number> {
+  async getProductStock(productId: string, shopId: number): Promise<number> {
     try {
       const results = await query(
         "SELECT SUM(stock_qty) as total_stock FROM shop_product_stock WHERE product_id = ? AND shop_id = ?",
@@ -564,7 +679,7 @@ class ProductModel {
    * Update stock quantity for a product variant
    */
   async updateProductStock(
-    productId: number,
+    productId: string,
     sizeId: number,
     colorId: number,
     quantity: number,
@@ -597,7 +712,7 @@ class ProductModel {
   /**
    * Clear all stock entries for a product
    */
-  async clearProductStock(productId: number, shopId: number): Promise<boolean> {
+  async clearProductStock(productId: string, shopId: number): Promise<boolean> {
     try {
       const results = await query(
         "DELETE FROM shop_product_stock WHERE product_id = ? AND shop_id = ?",
@@ -618,9 +733,50 @@ class ProductModel {
   }
 
   /**
+   * Get product stock details with color and size information
+   */
+  async getProductStockDetails(
+    productId: string,
+    shopId: number
+  ): Promise<any[]> {
+    try {
+      const results = await query(
+        `SELECT
+          sps.stock_id,
+          sps.product_id,
+          sps.size_id,
+          sps.color_id,
+          sps.stock_qty,
+          sps.created_at,
+          sps.updated_at,
+          c.color_id,
+          c.color_name,
+          s.size_id,
+          s.size_name
+        FROM shop_product_stock sps
+        LEFT JOIN colors c ON sps.color_id = c.color_id
+        LEFT JOIN sizes s ON sps.size_id = s.size_id
+        WHERE sps.product_id = ? AND sps.shop_id = ?
+        ORDER BY c.color_name ASC, s.size_name ASC`,
+        [productId, shopId]
+      );
+
+      logger.debug("Retrieved product stock details", {
+        productId,
+        shopId,
+        count: (results as any[]).length,
+      });
+      return results as any[];
+    } catch (error) {
+      logger.error("Error fetching product stock details:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Get product with all details (colors, sizes, category)
    */
-  async getProductWithDetails(productId: number, shopId: number): Promise<any> {
+  async getProductWithDetails(productId: string, shopId: number): Promise<any> {
     try {
       const product = await this.getProductById(productId, shopId);
       if (!product) return null;

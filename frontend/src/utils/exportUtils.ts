@@ -34,7 +34,7 @@ export const saveAsPDF = async (
 ) => {
   try {
     // Get export path from environment variable or use default
-    const exportBasePath = import.meta.env.VITE_EXPORT_IMAGES_PATH || 'DennepPOS_Exports';
+    const exportBasePath = (import.meta as any).env?.VITE_EXPORT_IMAGES_PATH || 'DennepPOS_Exports';
 
     // Create a hidden container div that won't cause visual disruption
     const hiddenContainer = document.createElement('div');
@@ -140,7 +140,8 @@ export const saveAsPDF = async (
     // Save file using Tauri API
     const filePath = `${dirPath}/${pdfFileName}`;
     await writeFile(
-      { path: filePath, contents: uint8Array },
+      filePath,
+      new TextDecoder().decode(uint8Array),
       { dir: BaseDirectory.Download }
     );
 

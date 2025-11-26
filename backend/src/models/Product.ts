@@ -537,11 +537,11 @@ class ProductModel {
       const results = await query(
         `SELECT c.color_id, c.color_name, c.hex_code
          FROM product_colors pc
-         JOIN colors c ON pc.color_id = c.color_id
+         JOIN colors c ON pc.color_id = c.color_id AND c.shop_id = ?
          JOIN products p ON pc.product_id = p.product_id
          WHERE pc.product_id = ? AND p.shop_id = ?
          ORDER BY c.color_name ASC`,
-        [productId, shopId]
+        [shopId, productId, shopId]
       );
 
       logger.debug("Retrieved product colors", {
@@ -633,12 +633,12 @@ class ProductModel {
       const results = await query(
         `SELECT s.size_id, s.size_name, st.size_type_name as size_type
          FROM product_sizes ps
-         JOIN sizes s ON ps.size_id = s.size_id
+         JOIN sizes s ON ps.size_id = s.size_id AND s.shop_id = ?
          JOIN size_types st ON s.size_type_id = st.size_type_id
          JOIN products p ON ps.product_id = p.product_id
          WHERE ps.product_id = ? AND p.shop_id = ?
          ORDER BY s.size_name ASC`,
-        [productId, shopId]
+        [shopId, productId, shopId]
       );
 
       logger.debug("Retrieved product sizes", {
@@ -754,8 +754,8 @@ class ProductModel {
           s.size_id,
           s.size_name
         FROM shop_product_stock sps
-        LEFT JOIN colors c ON sps.color_id = c.color_id
-        LEFT JOIN sizes s ON sps.size_id = s.size_id
+        LEFT JOIN colors c ON sps.color_id = c.color_id AND c.shop_id = sps.shop_id
+        LEFT JOIN sizes s ON sps.size_id = s.size_id AND s.shop_id = sps.shop_id
         WHERE sps.product_id = ? AND sps.shop_id = ?
         ORDER BY c.color_name ASC, s.size_name ASC`,
         [productId, shopId]

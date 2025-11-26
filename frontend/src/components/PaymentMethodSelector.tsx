@@ -60,18 +60,18 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Payment Method Selection */}
+      {/* Payment Method Selection - Horizontal Layout */}
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-red-400">
           Payment Method <span className="text-red-500">*</span>
         </label>
 
-        {/* Radio Buttons */}
-        <div className="space-y-2">
+        {/* Radio Buttons - Side by Side */}
+        <div className="grid grid-cols-2 gap-3">
           {/* Cash Option */}
           <div
             onClick={() => onPaymentMethodChange("cash")}
-            className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+            className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
               paymentMethod === "cash"
                 ? "bg-green-900/30 border-green-600/50"
                 : "bg-gray-700/50 border-gray-600"
@@ -88,16 +88,15 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                 <div className="w-2 h-2 bg-white rounded-full" />
               )}
             </div>
-            <label className="text-sm text-gray-200 cursor-pointer flex-1">
+            <label className="text-sm text-gray-200 cursor-pointer text-center">
               💵 Cash Payment
             </label>
-            <span className="text-xs text-gray-400">Immediate payment</span>
           </div>
 
           {/* Bank Option */}
           <div
             onClick={() => onPaymentMethodChange("bank")}
-            className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+            className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
               paymentMethod === "bank"
                 ? "bg-blue-900/30 border-blue-600/50"
                 : "bg-gray-700/50 border-gray-600"
@@ -114,49 +113,11 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                 <div className="w-2 h-2 bg-white rounded-full" />
               )}
             </div>
-            <label className="text-sm text-gray-200 cursor-pointer flex-1">
-              🏦 Bank/Online Transfer
+            <label className="text-sm text-gray-200 cursor-pointer text-center">
+              🏦 Bank/Online
             </label>
-            <span className="text-xs text-gray-400">Verify & add later</span>
           </div>
         </div>
-      </div>
-
-      {/* Amount to Pay Display */}
-      <div className="bg-gray-700/30 border border-gray-600 rounded-lg p-3 space-y-2">
-        {/* Show total order amount */}
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-400">Order Total:</span>
-          <span className="text-lg font-bold text-gray-200">Rs. {totalAmount.toFixed(2)}</span>
-        </div>
-
-        {/* Show previously paid amount when editing */}
-        {isEditingOrder && previouslyPaidAmount > 0 && (
-          <div className="flex justify-between items-center border-t border-gray-600 pt-2">
-            <span className="text-sm text-gray-400">Previously Paid:</span>
-            <span className="text-lg font-semibold text-green-400">Rs. {previouslyPaidAmount.toFixed(2)}</span>
-          </div>
-        )}
-
-        {/* Show balance payable for edit mode or amount to pay for new orders */}
-        {isEditingOrder && (
-          <div className="flex justify-between items-center border-t border-gray-600 pt-2">
-            <span className="text-sm text-gray-400">Balance Payable:</span>
-            <span className={`text-lg font-bold ${balancePayable === 0 ? "text-green-400" : "text-red-400"}`}>
-              Rs. {Math.max(0, totalAmount - previouslyPaidAmount).toFixed(2)}
-            </span>
-          </div>
-        )}
-
-        {paidAmountNum > 0 && (
-          <>
-            <div className="flex justify-between items-center border-t border-gray-600 pt-2">
-              <span className="text-sm text-gray-400">Now Paying:</span>
-              <span className="text-lg font-semibold text-gray-200">Rs. {paidAmountNum.toFixed(2)}</span>
-            </div>
-            {getBalanceDisplay()}
-          </>
-        )}
       </div>
 
       {/* Bank Section - Show Bank Details Button */}

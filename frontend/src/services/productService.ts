@@ -50,3 +50,55 @@ export const getProductStockDetails = async (productId: number, shopId: number) 
     throw error;
   }
 };
+
+/**
+ * Get all products for a shop
+ */
+export const getShopProducts = async (shopId: number) => {
+  try {
+    const response = await axios.get(`${API_URL}/products?shop_id=${shopId}`);
+    return response.data.data || [];
+  } catch (error) {
+    console.error('Error fetching shop products:', error);
+    throw error;
+  }
+};
+
+/**
+ * Search products by code or name for a shop
+ */
+export const searchProducts = async (shopId: number, searchTerm: string) => {
+  try {
+    const response = await axios.get(`${API_URL}/products/search?shop_id=${shopId}&q=${encodeURIComponent(searchTerm)}`);
+    return response.data.data || [];
+  } catch (error) {
+    console.error('Error searching products:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get product colors for a specific product
+ */
+export const getProductColors = async (productId: string, shopId: number) => {
+  try {
+    const response = await axios.get(`${API_URL}/products/${productId}/colors?shop_id=${shopId}`);
+    return response.data.data || [];
+  } catch (error) {
+    console.error('Error fetching product colors:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get product sizes for a specific product
+ */
+export const getProductSizes = async (productId: string, shopId: number) => {
+  try {
+    const response = await axios.get(`${API_URL}/products/${productId}/sizes?shop_id=${shopId}`);
+    return response.data.data || [];
+  } catch (error) {
+    console.error('Error fetching product sizes:', error);
+    throw error;
+  }
+};

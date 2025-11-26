@@ -240,6 +240,7 @@ const CustomersPage: React.FC = () => {
     setIsEditMode(true);
     setSelectedCustomerId(customer.customer_id);
     setFormData({
+      customer_id: customer.customer_id.toString(),
       first_name: customer.first_name,
       last_name: customer.last_name,
       email: customer.email || "",

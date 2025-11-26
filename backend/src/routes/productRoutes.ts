@@ -20,6 +20,7 @@ router.get('/:id/details', ProductController.getProductWithDetails.bind(ProductC
 router.get('/:id/prices', ProductController.getProductPrices.bind(ProductController));
 router.get('/:id/colors', ProductController.getProductColors.bind(ProductController));
 router.get('/:id/sizes', ProductController.getProductSizes.bind(ProductController));
+router.get('/:id/stock', ProductController.getProductStockDetails.bind(ProductController));
 
 // GET routes - Single product (must be last)
 router.get('/:id', ProductController.getProductById.bind(ProductController));

@@ -55,7 +55,9 @@
       "Bash(cmd /c \"taskkill /IM node.exe /F /T 2>&1\")",
       "Bash(cmd /c \"wmic process where name=''node.exe'' delete /nointeractive 2>&1\")",
       "Bash(timeout 2 bash:*)",
-      "Bash(BashOutput 466840)"
+      "Bash(BashOutput 466840)",
+      "Bash(timeout:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

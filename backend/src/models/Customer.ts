@@ -205,8 +205,8 @@ class CustomerModel {
     try {
       const searchPattern = `%${searchTerm}%`;
       const results = await query(
-        'SELECT * FROM customers WHERE shop_id = ? AND (first_name LIKE ? OR last_name LIKE ? OR mobile LIKE ?) AND customer_status = "active" ORDER BY first_name ASC',
-        [shopId, searchPattern, searchPattern, searchPattern]
+        'SELECT * FROM customers WHERE shop_id = ? AND (customer_name LIKE ? OR mobile LIKE ?) ORDER BY customer_name ASC',
+        [shopId, searchPattern, searchPattern]
       );
 
       logger.debug('Searched customers', { shopId, searchTerm, count: (results as any[]).length });

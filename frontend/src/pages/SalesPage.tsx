@@ -25,18 +25,23 @@ interface Customer {
 interface Product {
   id?: string;
   product_id?: number;
-  code: string;
-  name: string;
+  code?: string;
+  sku?: string | null;
+  name?: string;
+  product_name?: string;
   retailPrice?: number;
-  retail_price?: number;
+  retail_price?: number | string;
   wholesalePrice?: number;
-  wholesale_price?: number;
+  wholesale_price?: number | string;
   costPrice?: number;
   cost_price?: number;
   sizesByCategory?: { [key: string]: string[] };
   colorsByCategory?: { [key: string]: string[] };
   category?: string;
   product_category?: string;
+  colors?: Array<{ color_id: number; color_name: string; hex_code: string }>;
+  sizes?: Array<{ size_id: number; size_name: string; size_type: string }>;
+  stock?: string | number;
 }
 
 interface CartItem {
@@ -563,8 +568,8 @@ const SalesPage: React.FC = () => {
     const query = productSearch.toLowerCase();
     const localFiltered = allProducts.filter(
       (product) =>
-        (product.name && product.name.toLowerCase().includes(query)) ||
-        (product.code && product.code.toLowerCase().includes(query))
+        ((product.name || product.product_name) && (product.name || product.product_name)!.toLowerCase().includes(query)) ||
+        ((product.code || product.sku) && (product.code || product.sku)!.toLowerCase().includes(query))
     );
 
     setProducts(localFiltered);
@@ -590,25 +595,32 @@ const SalesPage: React.FC = () => {
     return () => clearTimeout(searchTimer);
   }, [productSearch, shopId, allProducts]);
 
+  // Helper function to safely convert price to number
+  const parsePrice = (price: any): number => {
+    if (typeof price === 'number') return price;
+    if (typeof price === 'string') return parseFloat(price) || 0;
+    return 0;
+  };
+
   // Helper function to get price based on customer type
   const getProductPrice = (product: Product): number => {
     if (!product) return 0;
 
     let price = 0;
     if (customerTypeFilter === "wholesale") {
-      price = (product.wholesale_price as number) || (product.wholesalePrice as number) || 0;
+      price = parsePrice(product.wholesale_price) || parsePrice(product.wholesalePrice) || 0;
     } else {
-      price = (product.retail_price as number) || (product.retailPrice as number) || 0;
+      price = parsePrice(product.retail_price) || parsePrice(product.retailPrice) || 0;
     }
 
-    return typeof price === 'number' ? price : 0;
+    return typeof price === 'number' && !isNaN(price) ? price : 0;
   };
 
   // Helper function to safely get wholesale price for display
   const getWholesalePrice = (product: Product): number => {
     if (!product) return 0;
-    const price = (product.wholesale_price as number) || (product.wholesalePrice as number) || 0;
-    return typeof price === 'number' ? price : 0;
+    const price = parsePrice(product.wholesale_price) || parsePrice(product.wholesalePrice) || 0;
+    return typeof price === 'number' && !isNaN(price) ? price : 0;
   };
 
   // Filtered data
@@ -657,8 +669,8 @@ const SalesPage: React.FC = () => {
 
     const cartItem: CartItem = {
       id: `${selectedProduct.id || selectedProduct.product_id}-${selectedSize}-${selectedColor}-${Date.now()}`,
-      productCode: selectedProduct.code,
-      productName: selectedProduct.name,
+      productCode: selectedProduct.code || selectedProduct.sku || "",
+      productName: selectedProduct.name || selectedProduct.product_name || "",
       size: selectedSize,
       color: selectedColor,
       quantity: parseInt(selectedQty),
@@ -1069,7 +1081,7 @@ const SalesPage: React.FC = () => {
                           className="w-full text-left px-4 py-2 hover:bg-red-900/40 border-b border-gray-600/50 text-sm"
                         >
                           <div className="font-medium text-gray-100">
-                            {product.name}
+                            {product.name || product.product_name}
                           </div>
                           <div className="text-xs text-gray-400">
                             {customerTypeFilter === "wholesale" ? "Wholesale" : "Retail"}: Rs. {getProductPrice(product).toFixed(2)}
@@ -1087,8 +1099,8 @@ const SalesPage: React.FC = () => {
                 <div className="flex-1 overflow-y-auto min-h-0">
                   <div className="bg-gray-700/50 border border-red-600/30 rounded-lg p-4 space-y-3">
                     <div>
-                      <p className="font-semibold text-gray-100">{selectedProduct.name}</p>
-                      <p className="text-xs text-gray-400 mt-1">{selectedProduct.code}</p>
+                      <p className="font-semibold text-gray-100">{selectedProduct.name || selectedProduct.product_name}</p>
+                      <p className="text-xs text-gray-400 mt-1">{selectedProduct.code || selectedProduct.sku}</p>
                     </div>
 
                     {/* Size Selection Dropdown */}

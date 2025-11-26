@@ -31,6 +31,8 @@ const CustomersPage: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({
     customer_id: "",
+    first_name: "",
+    last_name: "",
     mobile: "",
     email: "",
   });
@@ -127,10 +129,11 @@ const CustomersPage: React.FC = () => {
       const result = await response.json();
       if (result.success) {
         setModalSuccessMessage("Customer created successfully!");
+        await refetchCustomers();
         setTimeout(() => {
-          refetchCustomers();
           handleCloseModal();
-        }, 1000);
+          setIsLoading(false);
+        }, 500);
       } else {
         // Check if it's a duplicate mobile number error
         const errorMessage = result.error || "Failed to create customer";
@@ -175,10 +178,11 @@ const CustomersPage: React.FC = () => {
       const result = await response.json();
       if (result.success) {
         setModalSuccessMessage("Customer updated successfully!");
+        await refetchCustomers();
         setTimeout(() => {
-          refetchCustomers();
           handleCloseModal();
-        }, 1000);
+          setIsLoading(false);
+        }, 500);
       } else {
         // Check if it's a duplicate mobile number error
         const errorMessage = result.error || "Failed to update customer";
@@ -225,7 +229,10 @@ const CustomersPage: React.FC = () => {
 
   const handleAddClick = () => {
     setIsEditMode(false);
-    setFormData({ customer_id: "", mobile: "", email: "" });
+    setSelectedCustomerId(null);
+    setFormData({ customer_id: "", first_name: "", last_name: "", mobile: "", email: "" });
+    setModalErrorMessage("");
+    setModalSuccessMessage("");
     setShowAddModal(true);
   };
 
@@ -245,34 +252,39 @@ const CustomersPage: React.FC = () => {
     setShowAddModal(false);
     setIsEditMode(false);
     setSelectedCustomerId(null);
-    setFormData({ customer_id: "", mobile: "", email: "" });
+    setFormData({ customer_id: "", first_name: "", last_name: "", mobile: "", email: "" });
     setModalErrorMessage("");
     setModalSuccessMessage("");
   };
 
   const handleSaveCustomer = () => {
-    // Validation
-    if (!formData.customer_id.trim()) {
-      showNotification("Customer ID is required", "error");
-      return;
+    setModalErrorMessage("");
+
+    // Only validate customer_id when creating new customer
+    if (!isEditMode) {
+      if (!formData.customer_id || String(formData.customer_id).trim() === "") {
+        setModalErrorMessage("Customer ID is required");
+        return;
+      }
+
+      if (isNaN(parseInt(String(formData.customer_id)))) {
+        setModalErrorMessage("Customer ID must be a valid number");
+        return;
+      }
     }
 
-    if (isNaN(parseInt(formData.customer_id))) {
-      showNotification("Customer ID must be a valid number", "error");
-      return;
-    }
-
-    if (!formData.mobile.trim()) {
-      showNotification("Mobile number is required", "error");
+    if (!formData.mobile || String(formData.mobile).trim() === "") {
+      setModalErrorMessage("Mobile number is required");
       return;
     }
 
     // Email validation (optional but must be valid if provided)
     if (
-      formData.email.trim() &&
+      formData.email &&
+      String(formData.email).trim() &&
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
     ) {
-      showNotification("Please enter a valid email address", "error");
+      setModalErrorMessage("Please enter a valid email address");
       return;
     }
 
@@ -606,12 +618,12 @@ const CustomersPage: React.FC = () => {
                 <input
                   type="number"
                   placeholder="e.g., 1001"
-                  value={formData.customer_id}
+                  value={formData.customer_id || ""}
                   onChange={(e) =>
                     setFormData({ ...formData, customer_id: e.target.value })
                   }
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && formData.customer_id.trim()) {
+                    if (e.key === 'Enter' && String(formData.customer_id || "").trim()) {
                       (document.querySelector('input[placeholder*="Mobile"]') as HTMLInputElement)?.focus();
                     }
                   }}
@@ -628,12 +640,12 @@ const CustomersPage: React.FC = () => {
                 <input
                   type="tel"
                   placeholder="e.g., +94-71-1234567"
-                  value={formData.mobile}
+                  value={formData.mobile || ""}
                   onChange={(e) =>
                     setFormData({ ...formData, mobile: e.target.value })
                   }
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && formData.mobile.trim()) {
+                    if (e.key === 'Enter' && String(formData.mobile || "").trim()) {
                       (document.querySelector('input[placeholder*="customer@example.com"]') as HTMLInputElement)?.focus();
                     }
                   }}
@@ -649,7 +661,7 @@ const CustomersPage: React.FC = () => {
                 <input
                   type="email"
                   placeholder="e.g., customer@example.com (optional)"
-                  value={formData.email}
+                  value={formData.email || ""}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }

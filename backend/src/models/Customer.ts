@@ -122,6 +122,26 @@ class CustomerModel {
         return false;
       }
 
+      // Validate mobile number if provided
+      if ('mobile' in customerData && customerData.mobile) {
+        const mobileRegex = /^[0-9\-\+\s]{7,}$/;
+        if (!mobileRegex.test(customerData.mobile)) {
+          const error = new Error('Invalid mobile number format');
+          (error as any).statusCode = 400;
+          throw error;
+        }
+      }
+
+      // Validate email if provided
+      if ('email' in customerData && customerData.email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(customerData.email)) {
+          const error = new Error('Invalid email format');
+          (error as any).statusCode = 400;
+          throw error;
+        }
+      }
+
       const fields: string[] = [];
       const values: any[] = [];
 
@@ -148,7 +168,7 @@ class CustomerModel {
       const results = await query(`UPDATE customers SET ${fields.join(', ')} WHERE customer_id = ? AND shop_id = ?`, values);
       const affectedRows = (results as any).affectedRows;
 
-      logger.info('Customer updated successfully', { customerId, shopId, affectedRows });
+      logger.info('Customer updated successfully', { customerId, shopId, affectedRows, updatedFields: fields.length });
       return affectedRows > 0;
     } catch (error) {
       logger.error('Error updating customer:', error);

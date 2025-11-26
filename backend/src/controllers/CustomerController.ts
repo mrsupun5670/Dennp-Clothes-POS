@@ -149,6 +149,28 @@ class CustomerController {
         return;
       }
 
+      // Validate mobile number format
+      const mobileRegex = /^[0-9\-\+\s]{7,}$/;
+      if (!mobileRegex.test(mobile)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid mobile number format',
+        });
+        return;
+      }
+
+      // Validate email format if provided
+      if (email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          res.status(400).json({
+            success: false,
+            error: 'Invalid email format',
+          });
+          return;
+        }
+      }
+
       const customerId = await CustomerModel.createCustomerWithId(shop_id, customer_id, {
         first_name: '',
         last_name: '',
@@ -214,6 +236,15 @@ class CustomerController {
       });
     } catch (error: any) {
       logger.error('Error in updateCustomer:', error);
+
+      // Handle validation errors (mobile/email format)
+      if (error.statusCode === 400) {
+        res.status(400).json({
+          success: false,
+          error: error.message,
+        });
+        return;
+      }
 
       // Handle duplicate mobile number error
       if (error.code === 'ER_DUP_ENTRY' && error.message.includes('unique_mobile_per_shop')) {

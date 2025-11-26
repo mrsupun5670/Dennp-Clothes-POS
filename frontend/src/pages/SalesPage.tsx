@@ -1,27 +1,42 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import BankPaymentModal, { BankPaymentData } from "../components/BankPaymentModal";
 import PaymentMethodSelector from "../components/PaymentMethodSelector";
 import { printContent, saveAsPDF, generateOrderBillHTML } from "../utils/exportUtils";
+import { useShop } from "../context/ShopContext";
+import { API_URL } from "../config/api";
 
 // Interfaces
 interface Customer {
-  id: string;
-  name: string;
-  email: string;
+  customer_id?: number;
+  id?: string;
+  first_name?: string;
+  last_name?: string;
+  name?: string;
+  email?: string;
   mobile: string;
-  totalSpent: number;
-  totalOrders: number;
-  joined: string;
+  totalSpent?: number;
+  total_spent?: number;
+  totalOrders?: number;
+  orders_count?: number;
+  joined?: string;
+  created_at?: string;
 }
 
 interface Product {
-  id: string;
+  id?: string;
+  product_id?: number;
   code: string;
   name: string;
-  retailPrice: number;
-  sizesByCategory: { [key: string]: string[] };
-  colorsByCategory: { [key: string]: string[] };
-  category: string;
+  retailPrice?: number;
+  retail_price?: number;
+  wholesalePrice?: number;
+  wholesale_price?: number;
+  costPrice?: number;
+  cost_price?: number;
+  sizesByCategory?: { [key: string]: string[] };
+  colorsByCategory?: { [key: string]: string[] };
+  category?: string;
+  product_category?: string;
 }
 
 interface CartItem {
@@ -246,6 +261,9 @@ interface ColorOption {
 
 
 const SalesPage: React.FC = () => {
+  // Shop context
+  const { shopId } = useShop();
+
   // State Management
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -260,6 +278,12 @@ const SalesPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
   const [bankPaymentDetails, setBankPaymentDetails] = useState<BankPaymentData | null>(null);
   const [showBankPaymentModal, setShowBankPaymentModal] = useState(false);
+
+  // Loading states for customers and products
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   // Load order from sessionStorage on component mount
   React.useEffect(() => {
@@ -421,7 +445,7 @@ const SalesPage: React.FC = () => {
   // Search and Filter States
   const [customerSearch, setCustomerSearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
-  const [customers, setCustomers] = useState<Customer[]>(SAMPLE_CUSTOMERS);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerTypeFilter, setCustomerTypeFilter] = useState<"wholesale" | "retail">("wholesale");
   const [newCustomer, setNewCustomer] = useState<NewCustomer>({
     name: "",
@@ -434,28 +458,160 @@ const SalesPage: React.FC = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedQty, setSelectedQty] = useState("");
+  const [selectedPrice, setSelectedPrice] = useState<string>(""); // Editable price
+
+  // Store all customers for local filtering
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+
+  // Load all customers on component mount
+  useEffect(() => {
+    if (!shopId) return;
+
+    const loadCustomers = async () => {
+      try {
+        const response = await fetch(`${API_URL}/customers?shop_id=${shopId}`);
+        const result = await response.json();
+        if (result.success) {
+          const data = result.data || [];
+          setAllCustomers(data);
+          setCustomers(data);
+        }
+      } catch (error) {
+        console.error("Error loading customers:", error);
+      }
+    };
+
+    loadCustomers();
+  }, [shopId]);
+
+  // Search customers on key up - with instant local filtering
+  useEffect(() => {
+    if (!customerSearch.trim()) {
+      // Show all customers if search is cleared
+      setCustomers(allCustomers);
+      return;
+    }
+
+    if (!shopId) return;
+
+    // Instant local filtering for faster UX
+    const query = customerSearch.toLowerCase();
+    const localFiltered = allCustomers.filter(
+      (customer) =>
+        String(customer.customer_id || customer.id || "").toLowerCase().includes(query) ||
+        (customer.mobile && customer.mobile.toLowerCase().includes(query)) ||
+        (customer.name && customer.name.toLowerCase().includes(query)) ||
+        (customer.first_name && customer.first_name.toLowerCase().includes(query)) ||
+        (customer.last_name && customer.last_name.toLowerCase().includes(query))
+    );
+
+    // Show local results immediately
+    setCustomers(localFiltered);
+
+    // Fetch from API for more accurate results
+    const searchTimer = setTimeout(async () => {
+      setIsLoadingCustomers(true);
+      try {
+        const response = await fetch(
+          `${API_URL}/customers/search?shop_id=${shopId}&q=${encodeURIComponent(customerSearch)}`
+        );
+        const result = await response.json();
+        if (result.success) {
+          setCustomers(result.data || []);
+        }
+      } catch (error) {
+        console.error("Error searching customers:", error);
+      } finally {
+        setIsLoadingCustomers(false);
+      }
+    }, 50); // Very fast debounce for API call
+
+    return () => clearTimeout(searchTimer);
+  }, [customerSearch, shopId, allCustomers]);
+
+  // Load all products on component mount
+  useEffect(() => {
+    if (!shopId) return;
+
+    const loadProducts = async () => {
+      try {
+        const response = await fetch(`${API_URL}/products?shop_id=${shopId}`);
+        const result = await response.json();
+        if (result.success) {
+          const data = result.data || [];
+          setAllProducts(data);
+          setProducts(data);
+        }
+      } catch (error) {
+        console.error("Error loading products:", error);
+      }
+    };
+
+    loadProducts();
+  }, [shopId]);
+
+  // Search products on key up - with instant local filtering
+  useEffect(() => {
+    if (!productSearch.trim()) {
+      setProducts(allProducts);
+      return;
+    }
+
+    if (!shopId) return;
+
+    // Instant local filtering
+    const query = productSearch.toLowerCase();
+    const localFiltered = allProducts.filter(
+      (product) =>
+        (product.name && product.name.toLowerCase().includes(query)) ||
+        (product.code && product.code.toLowerCase().includes(query))
+    );
+
+    setProducts(localFiltered);
+
+    // Fetch from API for more accurate results
+    const searchTimer = setTimeout(async () => {
+      setIsLoadingProducts(true);
+      try {
+        const response = await fetch(
+          `${API_URL}/products/search?shop_id=${shopId}&q=${encodeURIComponent(productSearch)}`
+        );
+        const result = await response.json();
+        if (result.success) {
+          setProducts(result.data || []);
+        }
+      } catch (error) {
+        console.error("Error searching products:", error);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    }, 50);
+
+    return () => clearTimeout(searchTimer);
+  }, [productSearch, shopId, allProducts]);
+
+  // Helper function to get price based on customer type
+  const getProductPrice = (product: Product): number => {
+    if (!product) return 0;
+
+    let price = 0;
+    if (customerTypeFilter === "wholesale") {
+      price = (product.wholesale_price as number) || (product.wholesalePrice as number) || 0;
+    } else {
+      price = (product.retail_price as number) || (product.retailPrice as number) || 0;
+    }
+
+    return typeof price === 'number' ? price : 0;
+  };
 
   // Filtered data
   const filteredCustomers = useMemo(() => {
-    if (!customerSearch.trim()) return customers;
-    const query = customerSearch.toLowerCase();
-    return customers.filter(
-      (customer) =>
-        customer.name.toLowerCase().includes(query) ||
-        customer.id.toLowerCase().includes(query) ||
-        customer.mobile.includes(query)
-    );
-  }, [customerSearch, customers]);
+    return customers;
+  }, [customers]);
 
   const filteredProducts = useMemo(() => {
-    if (!productSearch.trim()) return SAMPLE_PRODUCTS;
-    const query = productSearch.toLowerCase();
-    return SAMPLE_PRODUCTS.filter(
-      (product) =>
-        product.name.toLowerCase().includes(query) ||
-        product.code.toLowerCase().includes(query)
-    );
-  }, [productSearch]);
+    return products;
+  }, [products]);
 
   // Calculations
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -485,19 +641,21 @@ const SalesPage: React.FC = () => {
   };
 
   const handleAddProductToCart = () => {
-    if (!selectedProduct || !selectedSize || !selectedColor || !selectedQty) {
-      alert("Please select size, color, and quantity");
+    if (!selectedProduct || !selectedSize || !selectedColor || !selectedQty || !selectedPrice) {
+      alert("Please fill all fields including price");
       return;
     }
 
+    const price = parseFloat(selectedPrice) || getProductPrice(selectedProduct);
+
     const cartItem: CartItem = {
-      id: `${selectedProduct.id}-${selectedSize}-${selectedColor}-${Date.now()}`,
+      id: `${selectedProduct.id || selectedProduct.product_id}-${selectedSize}-${selectedColor}-${Date.now()}`,
       productCode: selectedProduct.code,
       productName: selectedProduct.name,
       size: selectedSize,
       color: selectedColor,
       quantity: parseInt(selectedQty),
-      price: selectedProduct.retailPrice,
+      price: price,
     };
 
     setCartItems([...cartItems, cartItem]);
@@ -505,6 +663,7 @@ const SalesPage: React.FC = () => {
     setSelectedSize("");
     setSelectedColor("");
     setSelectedQty("");
+    setSelectedPrice("");
     setProductSearch("");
     setShowProductSearch(false);
   };
@@ -799,19 +958,29 @@ const SalesPage: React.FC = () => {
                 {/* Customer Dropdown */}
                 {customerSearch && filteredCustomers.length > 0 && (
                   <div className="absolute top-full left-0 right-0 bg-gray-700 border border-red-600/50 rounded-lg max-h-40 overflow-y-auto z-50 mt-1">
-                    {filteredCustomers.map((customer) => (
-                      <button
-                        key={customer.id}
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setCustomerSearch("");
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-red-900/40 border-b border-gray-600/50 text-sm"
-                      >
-                        <div className="font-medium text-gray-100">{customer.name}</div>
-                        <div className="text-xs text-gray-400">{customer.mobile}</div>
-                      </button>
-                    ))}
+                    {isLoadingCustomers ? (
+                      <div className="px-4 py-3 text-gray-400 text-sm">
+                        Searching...
+                      </div>
+                    ) : (
+                      filteredCustomers.map((customer) => (
+                        <button
+                          key={customer.customer_id || customer.id}
+                          onClick={() => {
+                            setSelectedCustomer(customer);
+                            setCustomerSearch("");
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-red-900/40 border-b border-gray-600/50 text-sm"
+                        >
+                          <div className="font-medium text-gray-100">
+                            ID: {customer.customer_id || customer.id}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {customer.mobile}
+                          </div>
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
 
@@ -832,7 +1001,9 @@ const SalesPage: React.FC = () => {
               <div className="bg-gray-700/50 border border-red-600/30 rounded p-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-semibold text-gray-100">{selectedCustomer.name}</p>
+                    <p className="font-semibold text-gray-100">
+                      ID: {selectedCustomer.customer_id || selectedCustomer.id}
+                    </p>
                     <p className="text-xs text-gray-400">{selectedCustomer.mobile}</p>
                   </div>
                   <button
@@ -875,21 +1046,30 @@ const SalesPage: React.FC = () => {
                 {/* Product Dropdown */}
                 {showProductSearch && productSearch && filteredProducts.length > 0 && (
                   <div className="absolute top-full left-0 right-0 bg-gray-700 border border-red-600/50 rounded-lg max-h-48 overflow-y-auto z-50 mt-1">
-                    {filteredProducts.map((product) => (
-                      <button
-                        key={product.id}
-                        onClick={() => {
-                          setSelectedProduct(product);
-                          setShowProductSearch(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-red-900/40 border-b border-gray-600/50 text-sm"
-                      >
-                        <div className="font-medium text-gray-100">{product.name}</div>
-                        <div className="text-xs text-gray-400">
-                          {product.code} • Rs. {product.retailPrice.toFixed(2)}
-                        </div>
-                      </button>
-                    ))}
+                    {isLoadingProducts ? (
+                      <div className="px-4 py-3 text-gray-400 text-sm">
+                        Searching...
+                      </div>
+                    ) : (
+                      filteredProducts.map((product) => (
+                        <button
+                          key={product.id || product.product_id}
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setShowProductSearch(false);
+                            setSelectedPrice(String(getProductPrice(product)));
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-red-900/40 border-b border-gray-600/50 text-sm"
+                        >
+                          <div className="font-medium text-gray-100">
+                            ID: {product.product_id || product.id} - {product.name}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            Wholesale: Rs. {((product.wholesale_price as number) || (product.wholesalePrice as number) || 0).toFixed(2)}
+                          </div>
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
                 </div>
@@ -961,6 +1141,27 @@ const SalesPage: React.FC = () => {
                       </div>
                     )}
 
+                    {/* Price Input - Editable price */}
+                    {selectedSize && selectedColor && (
+                      <div>
+                        <label className="block text-xs font-semibold text-red-400 mb-2">
+                          Price (Rs.) - {customerTypeFilter === "wholesale" ? "Wholesale" : "Retail"}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={selectedPrice}
+                          onChange={(e) => setSelectedPrice(e.target.value)}
+                          placeholder="Enter price"
+                          className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Default: Rs. {selectedProduct ? getProductPrice(selectedProduct).toFixed(2) : "0.00"}
+                        </p>
+                      </div>
+                    )}
+
                     {/* Add to Cart Button - Only show when all fields filled */}
                     {selectedSize && selectedColor && selectedQty && (
                       <button
@@ -978,6 +1179,7 @@ const SalesPage: React.FC = () => {
                         setSelectedSize("");
                         setSelectedColor("");
                         setSelectedQty("");
+                        setSelectedPrice("");
                       }}
                       className="w-full border border-gray-500 text-gray-400 py-2 rounded-lg text-sm hover:bg-gray-700/50 transition-colors"
                     >

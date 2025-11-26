@@ -40,3 +40,13 @@ export const clearProductStock = async (productId: number) => {
     throw error;
   }
 };
+
+export const getProductStockDetails = async (productId: number, shopId: number) => {
+  try {
+    const response = await axios.get(`${API_URL}/products/${productId}/stock?shop_id=${shopId}`);
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching product stock details:', error);
+    throw error;
+  }
+};

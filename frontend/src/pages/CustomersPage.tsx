@@ -41,6 +41,10 @@ const CustomersPage: React.FC = () => {
     "error" | "success" | ""
   >("");
 
+  // Modal error/success message state
+  const [modalErrorMessage, setModalErrorMessage] = useState("");
+  const [modalSuccessMessage, setModalSuccessMessage] = useState("");
+
   const {
     data: customers,
     isLoading: isLoadingCustomers,
@@ -105,6 +109,9 @@ const CustomersPage: React.FC = () => {
    */
   const createCustomer = async () => {
     setIsLoading(true);
+    setModalErrorMessage("");
+    setModalSuccessMessage("");
+
     try {
       const response = await fetch(`${API_URL}/customers`, {
         method: "POST",
@@ -119,22 +126,24 @@ const CustomersPage: React.FC = () => {
 
       const result = await response.json();
       if (result.success) {
-        showNotification("Customer created successfully!", "success");
-        refetchCustomers();
-        handleCloseModal();
+        setModalSuccessMessage("Customer created successfully!");
+        setTimeout(() => {
+          refetchCustomers();
+          handleCloseModal();
+        }, 1000);
       } else {
         // Check if it's a duplicate mobile number error
         const errorMessage = result.error || "Failed to create customer";
         if (errorMessage.includes("unique_mobile_per_shop") || errorMessage.includes("Duplicate entry")) {
-          showNotification(`This mobile number (${formData.mobile}) is already registered in this shop`, "error");
+          setModalErrorMessage(`This mobile number (${formData.mobile}) is already registered in this shop`);
         } else {
-          showNotification(errorMessage, "error");
+          setModalErrorMessage(errorMessage);
         }
         setIsLoading(false);
       }
     } catch (error: any) {
       console.error("Error creating customer:", error);
-      showNotification(error.message || "Failed to create customer", "error");
+      setModalErrorMessage(error.message || "Failed to create customer");
       setIsLoading(false);
     }
   };
@@ -146,6 +155,9 @@ const CustomersPage: React.FC = () => {
     if (!selectedCustomerId) return;
 
     setIsLoading(true);
+    setModalErrorMessage("");
+    setModalSuccessMessage("");
+
     try {
       const response = await fetch(
         `${API_URL}/customers/${selectedCustomerId}`,
@@ -162,22 +174,24 @@ const CustomersPage: React.FC = () => {
 
       const result = await response.json();
       if (result.success) {
-        showNotification("Customer updated successfully!", "success");
-        refetchCustomers();
-        handleCloseModal();
+        setModalSuccessMessage("Customer updated successfully!");
+        setTimeout(() => {
+          refetchCustomers();
+          handleCloseModal();
+        }, 1000);
       } else {
         // Check if it's a duplicate mobile number error
         const errorMessage = result.error || "Failed to update customer";
         if (errorMessage.includes("unique_mobile_per_shop") || errorMessage.includes("Duplicate entry")) {
-          showNotification(`This mobile number (${formData.mobile}) is already registered in this shop`, "error");
+          setModalErrorMessage(`This mobile number (${formData.mobile}) is already registered in this shop`);
         } else {
-          showNotification(errorMessage, "error");
+          setModalErrorMessage(errorMessage);
         }
         setIsLoading(false);
       }
     } catch (error: any) {
       console.error("Error updating customer:", error);
-      showNotification(error.message || "Failed to update customer", "error");
+      setModalErrorMessage(error.message || "Failed to update customer");
       setIsLoading(false);
     }
   };
@@ -232,6 +246,8 @@ const CustomersPage: React.FC = () => {
     setIsEditMode(false);
     setSelectedCustomerId(null);
     setFormData({ customer_id: "", mobile: "", email: "" });
+    setModalErrorMessage("");
+    setModalSuccessMessage("");
   };
 
   const handleSaveCustomer = () => {
@@ -562,6 +578,26 @@ const CustomersPage: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-6 space-y-5">
+              {/* Modal Error Message */}
+              {modalErrorMessage && (
+                <div className="bg-red-900/30 border-2 border-red-600 text-red-300 p-3 rounded-lg flex items-start gap-3">
+                  <span className="text-xl">✕</span>
+                  <div>
+                    <p className="font-semibold">{modalErrorMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Modal Success Message */}
+              {modalSuccessMessage && (
+                <div className="bg-green-900/30 border-2 border-green-600 text-green-300 p-3 rounded-lg flex items-start gap-3">
+                  <span className="text-xl">✓</span>
+                  <div>
+                    <p className="font-semibold">{modalSuccessMessage}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Customer ID */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-2">

@@ -147,8 +147,7 @@ const CustomersPage: React.FC = () => {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            first_name: formData.first_name,
-            last_name: formData.last_name,
+            shop_id: shopId,
             mobile: formData.mobile,
             email: formData.email || null,
           }),
@@ -590,8 +589,7 @@ const CustomersPage: React.FC = () => {
                       (document.querySelector('input[placeholder*="customer@example.com"]') as HTMLInputElement)?.focus();
                     }
                   }}
-                  disabled={isEditMode}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                 />
               </div>
 

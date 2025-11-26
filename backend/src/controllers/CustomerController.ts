@@ -164,6 +164,16 @@ class CustomerController {
       });
     } catch (error: any) {
       logger.error('Error in createCustomer:', error);
+
+      // Handle duplicate mobile number error
+      if (error.code === 'ER_DUP_ENTRY' && error.message.includes('unique_mobile_per_shop')) {
+        res.status(409).json({
+          success: false,
+          error: 'This mobile number is already registered in this shop',
+        });
+        return;
+      }
+
       res.status(500).json({
         success: false,
         error: 'Failed to create customer',
@@ -204,6 +214,16 @@ class CustomerController {
       });
     } catch (error: any) {
       logger.error('Error in updateCustomer:', error);
+
+      // Handle duplicate mobile number error
+      if (error.code === 'ER_DUP_ENTRY' && error.message.includes('unique_mobile_per_shop')) {
+        res.status(409).json({
+          success: false,
+          error: 'This mobile number is already registered in this shop',
+        });
+        return;
+      }
+
       res.status(500).json({
         success: false,
         error: 'Failed to update customer',

@@ -123,7 +123,13 @@ const CustomersPage: React.FC = () => {
         refetchCustomers();
         handleCloseModal();
       } else {
-        showNotification(result.error || "Failed to create customer", "error");
+        // Check if it's a duplicate mobile number error
+        const errorMessage = result.error || "Failed to create customer";
+        if (errorMessage.includes("unique_mobile_per_shop") || errorMessage.includes("Duplicate entry")) {
+          showNotification(`This mobile number (${formData.mobile}) is already registered in this shop`, "error");
+        } else {
+          showNotification(errorMessage, "error");
+        }
         setIsLoading(false);
       }
     } catch (error: any) {
@@ -160,7 +166,13 @@ const CustomersPage: React.FC = () => {
         refetchCustomers();
         handleCloseModal();
       } else {
-        showNotification(result.error || "Failed to update customer", "error");
+        // Check if it's a duplicate mobile number error
+        const errorMessage = result.error || "Failed to update customer";
+        if (errorMessage.includes("unique_mobile_per_shop") || errorMessage.includes("Duplicate entry")) {
+          showNotification(`This mobile number (${formData.mobile}) is already registered in this shop`, "error");
+        } else {
+          showNotification(errorMessage, "error");
+        }
         setIsLoading(false);
       }
     } catch (error: any) {

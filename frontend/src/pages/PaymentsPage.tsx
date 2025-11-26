@@ -38,19 +38,25 @@ const PaymentsPage: React.FC = () => {
   const [notification, setNotification] = useState<Notification | null>(null);
 
   const [formData, setFormData] = useState({
-    order_id: "",
     customer_id: "",
     payment_amount: "",
     payment_date: new Date().toISOString().split("T")[0],
     payment_time: new Date().toTimeString().slice(0, 5),
     payment_method: "cash" as "cash" | "online_transfer" | "bank_deposit",
+    bank_account_id: "",
     bank_name: "",
     branch_name: "",
-    bank_account_id: "",
+    order_id: "",
     transaction_id: "",
     payment_status: "completed" as "completed" | "pending" | "failed" | "refunded",
     notes: "",
   });
+
+  // Modal state for customer selection
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+  const [modalErrorMessage, setModalErrorMessage] = useState("");
+  const [modalSuccessMessage, setModalSuccessMessage] = useState("");
 
   // Use ref to prevent duplicate requests in strict mode
   const loadDataRef = useRef(false);
@@ -165,15 +171,15 @@ const PaymentsPage: React.FC = () => {
     if (payment) {
       setEditingPayment(payment);
       setFormData({
-        order_id: payment.order_id?.toString() || "",
         customer_id: payment.customer_id?.toString() || "",
         payment_amount: payment.payment_amount.toString(),
         payment_date: payment.payment_date,
         payment_time: payment.payment_time || "",
         payment_method: payment.payment_method,
+        bank_account_id: payment.bank_account_id?.toString() || "",
         bank_name: payment.bank_name || "",
         branch_name: payment.branch_name || "",
-        bank_account_id: payment.bank_account_id?.toString() || "",
+        order_id: payment.order_id?.toString() || "",
         transaction_id: payment.transaction_id || "",
         payment_status: payment.payment_status,
         notes: payment.notes || "",
@@ -181,33 +187,63 @@ const PaymentsPage: React.FC = () => {
     } else {
       setEditingPayment(null);
       setFormData({
-        order_id: "",
         customer_id: "",
         payment_amount: "",
         payment_date: new Date().toISOString().split("T")[0],
         payment_time: new Date().toTimeString().slice(0, 5),
         payment_method: "cash",
+        bank_account_id: "",
         bank_name: "",
         branch_name: "",
-        bank_account_id: "",
+        order_id: "",
         transaction_id: "",
         payment_status: "completed",
         notes: "",
       });
     }
+    setModalErrorMessage("");
+    setModalSuccessMessage("");
     setShowModal(true);
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
+    setShowCustomerSearch(false);
     setEditingPayment(null);
+    setCustomerSearchQuery("");
+    setModalErrorMessage("");
+    setModalSuccessMessage("");
   };
 
   const handleSavePayment = async () => {
     try {
-      if (!formData.payment_amount || !formData.payment_date) {
-        showNotification("error", "Please fill in required fields");
+      setModalErrorMessage("");
+
+      // Validate essential fields
+      if (!formData.customer_id || String(formData.customer_id).trim() === "") {
+        setModalErrorMessage("Customer ID is required. Please select or add a customer.");
         return;
+      }
+
+      if (!formData.payment_amount || parseFloat(formData.payment_amount) <= 0) {
+        setModalErrorMessage("Paid Amount must be greater than 0");
+        return;
+      }
+
+      if (!formData.payment_date) {
+        setModalErrorMessage("Payment date is required");
+        return;
+      }
+
+      if (formData.payment_method === "online_transfer" || formData.payment_method === "bank_deposit") {
+        if (!formData.bank_account_id) {
+          setModalErrorMessage("Bank Account is required for bank transfers");
+          return;
+        }
+        if (!formData.branch_name) {
+          setModalErrorMessage("Branch name is required");
+          return;
+        }
       }
 
       if (editingPayment) {
@@ -225,7 +261,7 @@ const PaymentsPage: React.FC = () => {
           payment_status: formData.payment_status,
           notes: formData.notes || undefined,
         });
-        showNotification("success", "Payment updated successfully");
+        setModalSuccessMessage("Payment updated successfully!");
       } else {
         await createPayment(shopId, {
           order_id: formData.order_id ? parseInt(formData.order_id) : undefined,
@@ -245,20 +281,21 @@ const PaymentsPage: React.FC = () => {
           payment_status: formData.payment_status,
           notes: formData.notes || undefined,
         } as any);
-        showNotification("success", "Payment created successfully");
+        setModalSuccessMessage("Payment created successfully!");
       }
 
       // Reload payments
-      const [paymentsData, summaryData] = await Promise.all([
-        getShopPayments(shopId),
-        getPaymentSummary(shopId),
+      await Promise.all([
+        getShopPayments(shopId).then(setPayments),
+        getPaymentSummary(shopId).then(setSummary),
       ]);
-      setPayments(paymentsData);
-      setSummary(summaryData);
-      handleCloseModal();
-    } catch (error) {
-      showNotification("error", "Failed to save payment");
+
+      setTimeout(() => {
+        handleCloseModal();
+      }, 500);
+    } catch (error: any) {
       console.error("Error saving payment:", error);
+      setModalErrorMessage(error.message || "Failed to save payment");
     }
   };
 
@@ -565,224 +602,177 @@ const PaymentsPage: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-6 space-y-5">
-              {/* Payment Amount */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Payment Amount (Rs.) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.payment_amount}
-                    onChange={(e) =>
-                      setFormData({ ...formData, payment_amount: e.target.value })
-                    }
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Payment Status <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.payment_status}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        payment_status: e.target.value as any,
-                      })
-                    }
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
-                  >
-                    <option value="completed">Completed</option>
-                    <option value="pending">Pending</option>
-                    <option value="failed">Failed</option>
-                    <option value="refunded">Refunded</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Date and Time */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Payment Date <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.payment_date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, payment_date: e.target.value })
-                    }
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Payment Time
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.payment_time}
-                    onChange={(e) =>
-                      setFormData({ ...formData, payment_time: e.target.value })
-                    }
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Order and Customer */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Order ID
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.order_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, order_id: e.target.value })
-                    }
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                    placeholder="Optional"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Customer ID
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.customer_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, customer_id: e.target.value })
-                    }
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                    placeholder="Optional"
-                  />
-                </div>
-              </div>
-
-              {/* Payment Method and Bank Account */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Payment Method <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.payment_method}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        payment_method: e.target.value as any,
-                      })
-                    }
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="online_transfer">Online Transfer</option>
-                    <option value="bank_deposit">Bank Deposit</option>
-                  </select>
-                </div>
-
-                {(formData.payment_method === "online_transfer" || formData.payment_method === "bank_deposit") && (
+              {/* Modal Error Message */}
+              {modalErrorMessage && (
+                <div className="bg-red-900/30 border-2 border-red-600 text-red-300 p-3 rounded-lg flex items-start gap-3">
+                  <span className="text-xl">✕</span>
                   <div>
-                    <label className="block text-sm font-semibold text-red-400 mb-2">
-                      Bank Account
-                    </label>
-                    <select
-                      value={formData.bank_account_id}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          bank_account_id: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
-                    >
-                      <option value="">Select Bank Account</option>
-                      {bankAccounts.map((account) => (
-                        <option key={account.bank_account_id} value={account.bank_account_id}>
-                          {account.bank_name} - {account.account_number}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {/* Bank Name and Branch Name */}
-              {(formData.payment_method === "online_transfer" || formData.payment_method === "bank_deposit") && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-red-400 mb-2">
-                      Bank Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.bank_name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, bank_name: e.target.value })
-                      }
-                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                      placeholder="e.g., Commercial Bank"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-red-400 mb-2">
-                      Branch Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.branch_name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, branch_name: e.target.value })
-                      }
-                      className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                      placeholder="e.g., Colombo Main"
-                    />
+                    <p className="font-semibold">{modalErrorMessage}</p>
                   </div>
                 </div>
               )}
 
-              {/* Transaction ID */}
+              {/* Modal Success Message */}
+              {modalSuccessMessage && (
+                <div className="bg-green-900/30 border-2 border-green-600 text-green-300 p-3 rounded-lg flex items-start gap-3">
+                  <span className="text-xl">✓</span>
+                  <div>
+                    <p className="font-semibold">{modalSuccessMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ===== ESSENTIAL FIELDS ===== */}
+
+              {/* Customer ID - with add customer option */}
               <div>
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Transaction ID
+                <label className="block text-sm font-semibold text-green-400 mb-2">
+                  Customer ID <span className="text-red-500">*</span> (Required)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.customer_id || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, customer_id: e.target.value })
+                    }
+                    placeholder="e.g., 1000"
+                    className="flex-1 px-4 py-2 bg-gray-700 border-2 border-green-600/50 text-white placeholder-gray-500 rounded-lg focus:border-green-500 focus:outline-none"
+                  />
+                  <button
+                    onClick={() => setShowCustomerSearch(!showCustomerSearch)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                  >
+                    🔍 Find
+                  </button>
+                </div>
+              </div>
+
+              {/* Paid Amount */}
+              <div>
+                <label className="block text-sm font-semibold text-green-400 mb-2">
+                  Paid Amount (Rs.) <span className="text-red-500">*</span> (Required)
                 </label>
                 <input
-                  type="text"
-                  value={formData.transaction_id}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.payment_amount || ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, transaction_id: e.target.value })
+                    setFormData({ ...formData, payment_amount: e.target.value })
                   }
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                  placeholder="Optional - for reference"
+                  placeholder="0.00"
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-green-600/50 text-white placeholder-gray-500 rounded-lg focus:border-green-500 focus:outline-none"
                 />
+              </div>
+
+              {/* Bank Account (only for bank transfers) */}
+              {formData.payment_method !== "cash" && (
+                <div>
+                  <label className="block text-sm font-semibold text-green-400 mb-2">
+                    Bank <span className="text-red-500">*</span> (Required)
+                  </label>
+                  <select
+                    value={formData.bank_account_id || ""}
+                    onChange={(e) => {
+                      const selectedAccount = bankAccounts.find(
+                        (acc) => acc.bank_account_id.toString() === e.target.value
+                      );
+                      setFormData({
+                        ...formData,
+                        bank_account_id: e.target.value,
+                        bank_name: selectedAccount?.bank_name || "",
+                        branch_name: selectedAccount?.branch_name || "",
+                      });
+                    }}
+                    className="w-full px-4 py-2 bg-gray-700 border-2 border-green-600/50 text-white rounded-lg focus:border-green-500 focus:outline-none"
+                  >
+                    <option value="">Select Bank</option>
+                    {bankAccounts.map((account) => (
+                      <option key={account.bank_account_id} value={account.bank_account_id}>
+                        {account.bank_name} - {account.branch_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Branch Name (only for bank transfers) */}
+              {formData.payment_method !== "cash" && (
+                <div>
+                  <label className="block text-sm font-semibold text-green-400 mb-2">
+                    Branch <span className="text-red-500">*</span> (Required)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.branch_name || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, branch_name: e.target.value })
+                    }
+                    placeholder="e.g., Colombo Main"
+                    className="w-full px-4 py-2 bg-gray-700 border-2 border-green-600/50 text-white placeholder-gray-500 rounded-lg focus:border-green-500 focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {/* ===== OPTIONAL FIELDS ===== */}
+
+              <div className="border-t border-gray-600 pt-4 mt-4">
+                <h3 className="text-sm font-bold text-gray-400 mb-4">Optional Fields</h3>
+              </div>
+
+              {/* Order ID */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-400 mb-2">
+                  Order ID
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.order_id || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, order_id: e.target.value })
+                  }
+                  placeholder="Optional"
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-gray-600/30 text-white placeholder-gray-500 rounded-lg focus:border-gray-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Payment Method */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-400 mb-2">
+                  Payment Method
+                </label>
+                <select
+                  value={formData.payment_method}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      payment_method: e.target.value as any,
+                    })
+                  }
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-gray-600/30 text-white rounded-lg focus:border-gray-500 focus:outline-none"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="online_transfer">Online Transfer</option>
+                  <option value="bank_deposit">Bank Deposit</option>
+                </select>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Notes
+                <label className="block text-sm font-semibold text-gray-400 mb-2">
+                  Note
                 </label>
                 <textarea
-                  value={formData.notes}
+                  value={formData.notes || ""}
                   onChange={(e) =>
                     setFormData({ ...formData, notes: e.target.value })
                   }
-                  rows={3}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none resize-none"
+                  rows={2}
                   placeholder="Add any notes or remarks..."
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-gray-600/30 text-white placeholder-gray-500 rounded-lg focus:border-gray-500 focus:outline-none resize-none"
                 />
               </div>
 
@@ -792,7 +782,7 @@ const PaymentsPage: React.FC = () => {
                   onClick={handleSavePayment}
                   className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors"
                 >
-                  {editingPayment ? "✓ Update Payment" : "✓ Create Payment"}
+                  {editingPayment ? "✓ Update Payment" : "✓ Record Payment"}
                 </button>
                 <button
                   onClick={handleCloseModal}

@@ -48,18 +48,57 @@ class PaymentController {
 
   async createPayment(req: Request, res: Response): Promise<void> {
     try {
-      const { shop_id, payment_amount, payment_date, payment_method } = req.body;
+      const { shop_id, customer_id, payment_amount, payment_date, payment_method, bank_account_id, branch_name } = req.body;
 
-      if (!shop_id || !payment_amount || !payment_date || !payment_method) {
-        res.status(400).json({ success: false, message: 'Missing required fields' });
+      // Validate essential fields
+      if (!shop_id) {
+        res.status(400).json({ success: false, message: 'Shop ID is required' });
+        return;
+      }
+
+      if (!customer_id) {
+        res.status(400).json({ success: false, message: 'Customer ID is required' });
+        return;
+      }
+
+      if (!payment_amount || parseFloat(payment_amount) <= 0) {
+        res.status(400).json({ success: false, message: 'Payment amount must be greater than 0' });
+        return;
+      }
+
+      if (!payment_date) {
+        res.status(400).json({ success: false, message: 'Payment date is required' });
+        return;
+      }
+
+      if (!payment_method) {
+        res.status(400).json({ success: false, message: 'Payment method is required' });
+        return;
+      }
+
+      // For bank transfers, bank account and branch are required
+      if ((payment_method === 'online_transfer' || payment_method === 'bank_deposit') && !bank_account_id) {
+        res.status(400).json({ success: false, message: 'Bank account is required for bank transfers' });
+        return;
+      }
+
+      if ((payment_method === 'online_transfer' || payment_method === 'bank_deposit') && !branch_name) {
+        res.status(400).json({ success: false, message: 'Branch name is required for bank transfers' });
         return;
       }
 
       const paymentId = await PaymentModel.createPayment(shop_id, req.body);
       res.status(201).json({ success: true, data: { payment_id: paymentId }, message: 'Payment created successfully' });
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error in createPayment:', error);
-      res.status(500).json({ success: false, message: 'Failed to create payment' });
+
+      // Handle customer not found error
+      if (error.code === 'ER_NO_REFERENCED_ROW_2' || error.message?.includes('foreign key')) {
+        res.status(400).json({ success: false, message: 'Customer not found. Please select a valid customer' });
+        return;
+      }
+
+      res.status(500).json({ success: false, message: 'Failed to create payment', details: error.message });
     }
   }
 

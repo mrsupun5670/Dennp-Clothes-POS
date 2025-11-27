@@ -604,7 +604,8 @@ const SalesPage: React.FC = () => {
     const localFiltered = allProducts.filter(
       (product) =>
         ((product.name || product.product_name) && (product.name || product.product_name)!.toLowerCase().includes(query)) ||
-        ((product.code || product.sku) && (product.code || product.sku)!.toLowerCase().includes(query))
+        ((product.code || product.sku) && (product.code || product.sku)!.toLowerCase().includes(query)) ||
+        ((product.id || product.product_id) && String(product.id || product.product_id).toLowerCase().includes(query))
     );
 
     setProducts(localFiltered);

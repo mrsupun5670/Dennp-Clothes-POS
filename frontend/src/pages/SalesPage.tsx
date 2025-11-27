@@ -1692,7 +1692,7 @@ const SalesPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={handleSaveOrder}
-                disabled={!selectedCustomer || cartItems.length === 0}
+                disabled={!selectedCustomer || cartItems.length === 0 || (paymentMethod === "cash" && !paidAmount) || (paymentMethod === "bank" && !bankPaymentDetails)}
                 className="bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
               >
                 {editingOrderId ? "📝 Update" : "✓ Save"}

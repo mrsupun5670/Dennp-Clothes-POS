@@ -132,10 +132,8 @@ class OrderController {
         user_id,
         total_items,
         total_amount,
-        payment_method,
         notes,
         order_date,
-        delivery_address,
         items,
       } = req.body;
 

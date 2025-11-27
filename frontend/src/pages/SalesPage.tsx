@@ -836,7 +836,9 @@ const SalesPage: React.FC = () => {
 
     const price = parseFloat(selectedPrice) || getProductPrice(selectedProduct);
     const productId = selectedProduct.id || selectedProduct.product_id;
-    const uniqueId = `${productId}-${selectedSize}-${selectedColor}-${price}`;
+    // Round price to 2 decimal places for consistent comparison
+    const roundedPrice = Math.round(price * 100) / 100;
+    const uniqueId = `${productId}-${selectedSize}-${selectedColor}-${roundedPrice}`;
 
     // Get product costs
     const productCost = parsePrice(selectedProduct.product_cost || selectedProduct.cost_price || selectedProduct.costPrice) || 0;
@@ -862,11 +864,12 @@ const SalesPage: React.FC = () => {
 
     // Check if this exact product/size/color/price combination already exists in cart
     const existingItemIndex = cartItems.findIndex(item => {
+      const itemRoundedPrice = Math.round(item.price * 100) / 100;
       return (
         item.productId === productId &&
         item.size === selectedSize &&
         item.color === selectedColor &&
-        item.price === price
+        itemRoundedPrice === roundedPrice
       );
     });
 
@@ -888,12 +891,12 @@ const SalesPage: React.FC = () => {
         sizeId: sizeId,
         colorId: colorId,
         quantity: requestedQty,
-        price: price,
+        price: roundedPrice,
         productCost: productCost,
         printCost: printCost,
       };
       setCartItems([...cartItems, cartItem]);
-      setMessage({ type: "success", text: `✓ Added to cart: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor}) @ Rs. ${price.toFixed(2)}` });
+      setMessage({ type: "success", text: `✓ Added to cart: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor}) @ Rs. ${roundedPrice.toFixed(2)}` });
     }
 
     setSelectedProduct(null);

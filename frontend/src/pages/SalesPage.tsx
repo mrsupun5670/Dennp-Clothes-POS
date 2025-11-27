@@ -1699,7 +1699,7 @@ const SalesPage: React.FC = () => {
               </button>
               <button
                 onClick={handlePrintBill}
-                disabled={!selectedCustomer || cartItems.length === 0}
+                disabled={!selectedCustomer || cartItems.length === 0 || (paymentMethod === "cash" ? (parseFloat(paidAmount) || 0) === 0 || (total - (parseFloat(paidAmount) || 0)) > 0 : (!bankPaymentDetails || (total - (parseFloat(bankPaymentDetails.paidAmount) || 0)) > 0))}
                 className="border-2 border-blue-600 text-blue-400 py-2 rounded-lg font-semibold hover:bg-blue-900/20 disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
               >
                 🖨️ Print

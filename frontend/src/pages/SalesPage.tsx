@@ -887,7 +887,7 @@ const SalesPage: React.FC = () => {
     setCartItems(cartItems.filter((item) => item.id !== id));
   };
 
-  const handleSaveOrder = () => {
+  const handleSaveOrder = async () => {
     // Validation
     if (!selectedCustomer) {
       setMessage({ type: "error", text: "Please select a customer" });
@@ -901,7 +901,7 @@ const SalesPage: React.FC = () => {
     // Validation based on payment method
     if (paymentMethod === "cash") {
       if (!paidAmount) {
-        setMessage({ type: "error", text: "Please enter cash amount" });
+        setMessage({ type: "error", text: "Cash payment selected: Please enter paid amount to continue" });
         return;
       }
     } else if (paymentMethod === "bank") {
@@ -911,81 +911,100 @@ const SalesPage: React.FC = () => {
       }
     }
 
-    // Calculate order details
-    const orderId = editingOrderId || `ORD-${Date.now()}`;
-    const newPayment = parseFloat(paidAmount) || 0;
+    try {
+      const newPayment = parseFloat(paidAmount) || 0;
+      const totalPaidNow = editingOrderId ? previouslyPaidAmount + newPayment : newPayment;
+      const balance = total - totalPaidNow;
 
-    // In edit mode: total paid = previously paid + new payment
-    // In new order mode: total paid = new payment
-    const totalPaidNow = editingOrderId
-      ? previouslyPaidAmount + newPayment
-      : newPayment;
+      // Determine payment status
+      let paymentStatus = "unpaid";
+      if (newPayment > 0) {
+        paymentStatus = balance <= 0 ? "fully_paid" : "partial";
+      }
 
-    const balance = total - totalPaidNow;
+      // Generate order number (000001000 format)
+      const orderNumberResponse = await fetch(`${API_URL}/orders/generate-number?shop_id=${shopId}`);
+      const orderNumberData = await orderNumberResponse.json();
+      const orderNumber = orderNumberData.orderNumber || `${String(Date.now()).slice(-9)}`;
 
-    // Status determination:
-    // - If fully paid (balance = 0): "Paid"
-    // - If partially paid (balance > 0 && total paid > 0): "Advance" for new orders, "Partial" for edits
-    // - If no payment: "Pending"
-    const orderStatus = balance === 0
-      ? "Paid"
-      : totalPaidNow > 0
-        ? (editingOrderId ? "Partial" : "Advance")
-        : "Pending";
-
-    // Build payment info object
-    let paymentInfo: any = {
-      method: paymentMethod,
-      amount: newPayment,
-      totalPaid: totalPaidNow, // Track cumulative total paid
-    };
-
-    if (paymentMethod === "bank" && bankPaymentDetails) {
-      paymentInfo = {
-        ...paymentInfo,
-        bank: bankPaymentDetails.bank,
-        isOnlineTransfer: bankPaymentDetails.isOnlineTransfer,
-        branch: bankPaymentDetails.branch,
-        receiptNumber: bankPaymentDetails.receiptNumber,
-        paymentDateTime: bankPaymentDetails.paymentDateTime,
+      // Create order object
+      const orderPayload = {
+        shop_id: shopId,
+        order_number: orderNumber,
+        customer_id: selectedCustomer.customer_id,
+        total_items: cartItems.length,
+        order_status: "pending",
+        total_amount: total,
+        delivery_charge: 0,
+        final_amount: totalPaidNow,
+        advance_paid: paymentStatus === "partial" ? newPayment : 0,
+        balance_due: balance > 0 ? balance : 0,
+        payment_status: paymentStatus,
+        notes: orderNotes || null,
+        order_date: new Date().toISOString().split('T')[0],
+        items: cartItems.map(item => ({
+          product_id: item.productId,
+          color_id: 1, // TODO: get actual color_id from product
+          size_id: 1,  // TODO: get actual size_id from product
+          quantity: item.quantity,
+          sold_price: item.price,
+          total_price: item.price * item.quantity,
+        })),
       };
+
+      // Save order to database
+      const orderResponse = await fetch(`${API_URL}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const orderResult = await orderResponse.json();
+      if (!orderResult.success) {
+        setMessage({ type: "error", text: `Failed to save order: ${orderResult.error}` });
+        return;
+      }
+
+      const savedOrderId = orderResult.data?.order_id;
+
+      // Save payment if amount is paid
+      if (newPayment > 0 && paymentMethod === "cash") {
+        const paymentPayload = {
+          shop_id: shopId,
+          order_id: savedOrderId,
+          customer_id: selectedCustomer.customer_id,
+          payment_amount: newPayment,
+          payment_date: new Date().toISOString().split('T')[0],
+          payment_time: new Date().toTimeString().split(' ')[0],
+          payment_method: "cash",
+          payment_status: "completed",
+          notes: null,
+        };
+
+        await fetch(`${API_URL}/payments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(paymentPayload),
+        });
+      }
+
+      // Success message
+      const displayMessage = `✓ Order ${orderNumber} created! Total: Rs. ${total.toFixed(2)} | Paid: Rs. ${totalPaidNow.toFixed(2)} | ${balance > 0 ? `Balance: Rs. ${balance.toFixed(2)}` : "Fully Paid"}`;
+      setMessage({ type: "success", text: displayMessage });
+
+      // Reset form
+      setCartItems([]);
+      setPaidAmount("");
+      setOrderNotes("");
+      setSelectedCustomer(null);
+      setPaymentMethod("cash");
+      setBankPaymentDetails(null);
+      setEditingOrderId(null);
+      setPreviouslyPaidAmount(0);
+    } catch (error: any) {
+      setMessage({ type: "error", text: `Error saving order: ${error.message}` });
+      console.error("Save order error:", error);
     }
-
-    // Log order data
-    const orderData = {
-      orderId,
-      isEdit: !!editingOrderId,
-      customer: selectedCustomer,
-      items: cartItems,
-      total,
-      newPayment,
-      totalPaid: totalPaidNow,
-      previouslyPaid: previouslyPaidAmount,
-      balance,
-      orderStatus,
-      payment: paymentInfo,
-      notes: orderNotes,
-      date: new Date().toISOString(),
-    };
-
-    console.log("Order Data:", orderData);
-
-    // Success message with correct amounts
-    const displayMessage = editingOrderId
-      ? `✓ Order ${editingOrderId} updated! Total: Rs. ${total.toFixed(2)} | Paid: Rs. ${totalPaidNow.toFixed(2)} | Remaining: Rs. ${Math.max(0, balance).toFixed(2)}`
-      : `✓ Order ${orderId} created! Total: Rs. ${total.toFixed(2)} | Paid: Rs. ${totalPaidNow.toFixed(2)} | Balance: Rs. ${Math.max(0, balance).toFixed(2)}`;
-
-    setMessage({ type: "success", text: displayMessage });
-
-    // Reset form
-    setCartItems([]);
-    setPaidAmount("");
-    setOrderNotes("");
-    setSelectedCustomer(null);
-    setPaymentMethod("cash");
-    setBankPaymentDetails(null);
-    setEditingOrderId(null);
-    setPreviouslyPaidAmount(0);
   };
 
   const handlePrintBill = () => {
@@ -994,15 +1013,31 @@ const SalesPage: React.FC = () => {
       return;
     }
 
-    // Only allow printing if cash payment is complete
+    // Calculate if payment is fully paid
+    const paidAmt = parseFloat(paidAmount) || 0;
+    const balance = total - paidAmt;
+
+    // Only allow printing if payment is fully paid or more
     if (paymentMethod === "cash") {
       if (!paidAmount) {
         setMessage({ type: "error", text: "Please enter cash amount to print bill" });
         return;
       }
+      if (balance > 0) {
+        setMessage({ type: "error", text: `Cannot print bill. Balance due: Rs. ${balance.toFixed(2)}. Full or more payment required to print.` });
+        return;
+      }
     } else if (paymentMethod === "bank") {
-      setMessage({ type: "info", text: "Bank payments cannot be printed immediately. Bill will be generated once payment is verified." });
-      return;
+      if (!bankPaymentDetails) {
+        setMessage({ type: "error", text: "Please add bank payment details" });
+        return;
+      }
+      const bankPaidAmt = parseFloat(bankPaymentDetails.paidAmount) || 0;
+      const bankBalance = total - bankPaidAmt;
+      if (bankBalance > 0) {
+        setMessage({ type: "error", text: `Cannot print bill. Balance due: Rs. ${bankBalance.toFixed(2)}. Full or more payment required to print.` });
+        return;
+      }
     }
 
     const html = generateOrderBillHTML({
@@ -1586,6 +1621,25 @@ const SalesPage: React.FC = () => {
                   placeholder="Enter cash amount received"
                   className="w-full px-3 py-2 bg-gray-700 border-2 border-green-600/30 text-white rounded focus:border-green-500 focus:outline-none text-sm"
                 />
+                {paidAmount && (() => {
+                  const paidAmt = parseFloat(paidAmount) || 0;
+                  const balance = total - paidAmt;
+                  const isFullyPaid = balance <= 0;
+
+                  return (
+                    <div className="mt-2 p-2 rounded text-xs font-semibold">
+                      {isFullyPaid ? (
+                        <div className="bg-green-900/40 text-green-400">
+                          ✓ Fully Paid {paidAmt > total ? `(Excess: Rs. ${(paidAmt - total).toFixed(2)})` : ''}
+                        </div>
+                      ) : (
+                        <div className="bg-orange-900/40 text-orange-400">
+                          ⚠️ Advance/Partial: Balance Due Rs. {balance.toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

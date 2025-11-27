@@ -290,6 +290,22 @@ const SalesPage: React.FC = () => {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
+  // Stock data interface
+  interface StockData {
+    stock_id: number;
+    product_id: number;
+    size_id: number;
+    color_id: number;
+    stock_qty: number;
+    color_name: string;
+    size_name: string;
+  }
+
+  // Stock management states
+  const [productStock, setProductStock] = useState<StockData[]>([]);
+  const [availableSizes, setAvailableSizes] = useState<{ size_id: number; size_name: string }[]>([]);
+  const [availableColors, setAvailableColors] = useState<{ color_id: number; color_name: string }[]>([]);
+
   // Load order from sessionStorage on component mount
   React.useEffect(() => {
     const orderData = sessionStorage.getItem('orderToEdit');
@@ -595,6 +611,79 @@ const SalesPage: React.FC = () => {
     return () => clearTimeout(searchTimer);
   }, [productSearch, shopId, allProducts]);
 
+  // Load stock data when product is selected
+  useEffect(() => {
+    if (!selectedProduct || !shopId) {
+      setProductStock([]);
+      setAvailableSizes([]);
+      setAvailableColors([]);
+      setSelectedSize("");
+      setSelectedColor("");
+      return;
+    }
+
+    const loadProductStock = async () => {
+      try {
+        const productId = selectedProduct.id || selectedProduct.product_id;
+        const response = await fetch(`${API_URL}/products/${productId}/stock?shop_id=${shopId}`);
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setProductStock(result.data);
+
+          // Get unique sizes from stock data
+          const sizesMap = new Map();
+          result.data.forEach((stock: StockData) => {
+            if (!sizesMap.has(stock.size_id)) {
+              sizesMap.set(stock.size_id, stock.size_name);
+            }
+          });
+          const sizes = Array.from(sizesMap.entries()).map(([id, name]) => ({
+            size_id: id,
+            size_name: name
+          }));
+          setAvailableSizes(sizes);
+          setAvailableColors([]);
+          setSelectedSize("");
+          setSelectedColor("");
+        }
+      } catch (error) {
+        console.error("Error loading product stock:", error);
+        setProductStock([]);
+        setAvailableSizes([]);
+        setAvailableColors([]);
+      }
+    };
+
+    loadProductStock();
+  }, [selectedProduct, shopId]);
+
+  // Update available colors when size is selected
+  useEffect(() => {
+    if (!selectedSize || productStock.length === 0) {
+      setAvailableColors([]);
+      setSelectedColor("");
+      return;
+    }
+
+    // Get colors available for the selected size
+    const colorsForSize = productStock
+      .filter(stock => stock.size_name === selectedSize && stock.stock_qty > 0)
+      .reduce((acc: Map<number, string>, stock) => {
+        if (!acc.has(stock.color_id)) {
+          acc.set(stock.color_id, stock.color_name);
+        }
+        return acc;
+      }, new Map());
+
+    const colors = Array.from(colorsForSize.entries()).map(([id, name]) => ({
+      color_id: id,
+      color_name: name
+    }));
+    setAvailableColors(colors);
+    setSelectedColor("");
+  }, [selectedSize, productStock]);
+
   // Helper function to safely convert price to number
   const parsePrice = (price: any): number => {
     if (typeof price === 'number') return price;
@@ -665,19 +754,71 @@ const SalesPage: React.FC = () => {
       return;
     }
 
+    // Get available quantity for this product/size/color combination
+    const availableQty = productStock.find(
+      stock =>
+        stock.size_name === selectedSize &&
+        stock.color_name === selectedColor
+    )?.stock_qty || 0;
+
+    const requestedQty = parseInt(selectedQty);
+
+    // Validate quantity against available stock
+    if (requestedQty > availableQty) {
+      alert(`Only ${availableQty} units available for this size and color`);
+      return;
+    }
+
+    // Calculate total quantity already in cart for this product
+    const cartQuantityForProduct = cartItems
+      .filter(item => {
+        const isSameProduct =
+          (item.productCode === (selectedProduct.code || selectedProduct.sku)) ||
+          (item.productName === (selectedProduct.name || selectedProduct.product_name));
+        return isSameProduct;
+      })
+      .reduce((sum, item) => sum + item.quantity, 0);
+
+    // Total would be: currently available - already in cart - requested
+    const totalRequestedQty = cartQuantityForProduct + requestedQty;
+    if (totalRequestedQty > availableQty) {
+      const remaining = availableQty - cartQuantityForProduct;
+      alert(`Only ${remaining} more units can be added to cart (${cartQuantityForProduct} already in cart)`);
+      return;
+    }
+
     const price = parseFloat(selectedPrice) || getProductPrice(selectedProduct);
+    const productId = selectedProduct.id || selectedProduct.product_id;
+    const uniqueId = `${productId}-${selectedSize}-${selectedColor}`;
 
-    const cartItem: CartItem = {
-      id: `${selectedProduct.id || selectedProduct.product_id}-${selectedSize}-${selectedColor}-${Date.now()}`,
-      productCode: selectedProduct.code || selectedProduct.sku || "",
-      productName: selectedProduct.name || selectedProduct.product_name || "",
-      size: selectedSize,
-      color: selectedColor,
-      quantity: parseInt(selectedQty),
-      price: price,
-    };
+    // Check if this exact product/size/color combination already exists in cart
+    const existingItemIndex = cartItems.findIndex(item => {
+      return (
+        (item.productCode === (selectedProduct.code || selectedProduct.sku) || item.productName === (selectedProduct.name || selectedProduct.product_name)) &&
+        item.size === selectedSize &&
+        item.color === selectedColor
+      );
+    });
 
-    setCartItems([...cartItems, cartItem]);
+    if (existingItemIndex >= 0) {
+      // Item already exists - increase quantity
+      const updatedItems = [...cartItems];
+      updatedItems[existingItemIndex].quantity += requestedQty;
+      setCartItems(updatedItems);
+    } else {
+      // New item - add to cart
+      const cartItem: CartItem = {
+        id: uniqueId,
+        productCode: selectedProduct.code || selectedProduct.sku || "",
+        productName: selectedProduct.name || selectedProduct.product_name || "",
+        size: selectedSize,
+        color: selectedColor,
+        quantity: requestedQty,
+        price: price,
+      };
+      setCartItems([...cartItems, cartItem]);
+    }
+
     setSelectedProduct(null);
     setSelectedSize("");
     setSelectedColor("");
@@ -1118,11 +1259,15 @@ const SalesPage: React.FC = () => {
                         className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
                       >
                         <option value="">-- Choose Size --</option>
-                        {sizeOptions.map((size) => (
-                          <option key={size} value={size}>
-                            {size}
-                          </option>
-                        ))}
+                        {availableSizes.length > 0 ? (
+                          availableSizes.map((size) => (
+                            <option key={size.size_id} value={size.size_name}>
+                              {size.size_name}
+                            </option>
+                          ))
+                        ) : (
+                          <option disabled>No sizes available</option>
+                        )}
                       </select>
                     </div>
 
@@ -1138,31 +1283,58 @@ const SalesPage: React.FC = () => {
                           className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
                         >
                           <option value="">-- Choose Color --</option>
-                          {colorOptions.map((color) => (
-                            <option key={color} value={color}>
-                              {color}
-                            </option>
-                          ))}
+                          {availableColors.length > 0 ? (
+                            availableColors.map((color) => (
+                              <option key={color.color_id} value={color.color_name}>
+                                {color.color_name}
+                              </option>
+                            ))
+                          ) : (
+                            <option disabled>No colors available</option>
+                          )}
                         </select>
                       </div>
                     )}
 
                     {/* Quantity Input - Only show after color selected */}
-                    {selectedSize && selectedColor && (
-                      <div>
-                        <label className="block text-xs font-semibold text-red-400 mb-2">
-                          Quantity
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={selectedQty}
-                          onChange={(e) => setSelectedQty(e.target.value)}
-                          placeholder="Enter quantity"
-                          className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                        />
-                      </div>
-                    )}
+                    {selectedSize && selectedColor && (() => {
+                      const availableQty = productStock.find(
+                        stock =>
+                          stock.size_name === selectedSize &&
+                          stock.color_name === selectedColor
+                      )?.stock_qty || 0;
+
+                      const cartQtyForProduct = cartItems
+                        .filter(item => {
+                          const isSameProduct =
+                            (item.productCode === (selectedProduct?.code || selectedProduct?.sku)) ||
+                            (item.productName === (selectedProduct?.name || selectedProduct?.product_name));
+                          return isSameProduct;
+                        })
+                        .reduce((sum, item) => sum + item.quantity, 0);
+
+                      const remainingQty = availableQty - cartQtyForProduct;
+
+                      return (
+                        <div>
+                          <label className="block text-xs font-semibold text-red-400 mb-2">
+                            Quantity (Available: {availableQty}, In Cart: {cartQtyForProduct}, Can Add: {remainingQty})
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max={remainingQty}
+                            value={selectedQty}
+                            onChange={(e) => setSelectedQty(e.target.value)}
+                            placeholder="Enter quantity"
+                            className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                          />
+                          {remainingQty <= 0 && (
+                            <p className="text-xs text-red-400 mt-1">⚠️ No quantity available to add</p>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Price Input - Editable price */}
                     {selectedSize && selectedColor && (

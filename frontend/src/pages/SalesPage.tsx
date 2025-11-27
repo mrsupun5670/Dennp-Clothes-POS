@@ -1398,13 +1398,28 @@ const SalesPage: React.FC = () => {
                               placeholder="Price"
                               className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
                             />
-                            <div className="mt-1 space-y-1 text-xs text-gray-400">
-                              <p>Default: Rs. {selectedProduct ? getProductPrice(selectedProduct).toFixed(2) : "0.00"}</p>
-                              {selectedProduct && (
-                                <p className="text-yellow-400 font-semibold">
-                                  Cost = Rs. {(parsePrice(selectedProduct.product_cost || selectedProduct.cost_price || selectedProduct.costPrice) || 0).toFixed(2)} + Rs. {(parsePrice(selectedProduct.print_cost || 0) || 0).toFixed(2)} = Rs. {((parsePrice(selectedProduct.product_cost || selectedProduct.cost_price || selectedProduct.costPrice) || 0) + (parsePrice(selectedProduct.print_cost || 0) || 0)).toFixed(2)}
-                                </p>
-                              )}
+                            <div className="mt-1 space-y-1 text-xs">
+                              <p className="text-gray-400">Default: Rs. {selectedProduct ? getProductPrice(selectedProduct).toFixed(2) : "0.00"}</p>
+                              {selectedProduct && (() => {
+                                const productCostVal = parsePrice(selectedProduct.product_cost || selectedProduct.cost_price || selectedProduct.costPrice) || 0;
+                                const printCostVal = parsePrice(selectedProduct.print_cost || 0) || 0;
+                                const totalCost = productCostVal + printCostVal;
+                                const currentPrice = parseFloat(selectedPrice) || 0;
+                                const isBelowCost = selectedPrice && currentPrice < totalCost;
+
+                                return (
+                                  <>
+                                    <p className="text-yellow-400 font-semibold">
+                                      Cost = Rs. {productCostVal.toFixed(2)} + Rs. {printCostVal.toFixed(2)} = Rs. {totalCost.toFixed(2)}
+                                    </p>
+                                    {isBelowCost && (
+                                      <p className="text-red-400 font-semibold flex items-center gap-1">
+                                        ⚠️ Price is below cost!
+                                      </p>
+                                    )}
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>

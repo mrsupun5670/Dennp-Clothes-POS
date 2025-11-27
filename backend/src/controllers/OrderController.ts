@@ -148,13 +148,8 @@ class OrderController {
         return;
       }
 
-      if (!delivery_address) {
-        res.status(400).json({
-          success: false,
-          error: 'Missing delivery_address',
-        });
-        return;
-      }
+      // Note: delivery_address is optional at order creation time
+      // It will be added/updated later in the Orders page during fulfillment
 
       const orderId = await OrderModel.createOrder({
         order_number,

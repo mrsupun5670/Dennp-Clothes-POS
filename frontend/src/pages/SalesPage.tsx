@@ -54,6 +54,8 @@ interface CartItem {
   productName: string;
   size: string;
   color: string;
+  sizeId: number;
+  colorId: number;
   quantity: number;
   price: number;
   productCost?: number;
@@ -840,6 +842,24 @@ const SalesPage: React.FC = () => {
     const productCost = parsePrice(selectedProduct.product_cost || selectedProduct.cost_price || selectedProduct.costPrice) || 0;
     const printCost = parsePrice(selectedProduct.print_cost || 0) || 0;
 
+    // Get color_id and size_id from product
+    let colorId = 1;
+    let sizeId = 1;
+
+    if (selectedProduct.colors && selectedProduct.colors.length > 0) {
+      const colorMatch = selectedProduct.colors.find(c => c.color_name === selectedColor);
+      if (colorMatch) {
+        colorId = colorMatch.color_id;
+      }
+    }
+
+    if (selectedProduct.sizes && selectedProduct.sizes.length > 0) {
+      const sizeMatch = selectedProduct.sizes.find(s => s.size_name === selectedSize);
+      if (sizeMatch) {
+        sizeId = sizeMatch.size_id;
+      }
+    }
+
     // Check if this exact product/size/color/price combination already exists in cart
     const existingItemIndex = cartItems.findIndex(item => {
       return (
@@ -865,6 +885,8 @@ const SalesPage: React.FC = () => {
         productName: selectedProduct.name || selectedProduct.product_name || "",
         size: selectedSize,
         color: selectedColor,
+        sizeId: sizeId,
+        colorId: colorId,
         quantity: requestedQty,
         price: price,
         productCost: productCost,
@@ -953,8 +975,8 @@ const SalesPage: React.FC = () => {
         recipient_phone: "",
         items: cartItems.map(item => ({
           product_id: item.productId,
-          color_id: 1, // TODO: get actual color_id from product
-          size_id: 1,  // TODO: get actual size_id from product
+          color_id: item.colorId,
+          size_id: item.sizeId,
           quantity: item.quantity,
           sold_price: item.price,
           total_price: item.price * item.quantity,
@@ -1567,7 +1589,7 @@ const SalesPage: React.FC = () => {
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-100">{item.productName}</p>
                       <p className="text-xs text-gray-400">
-                        {item.size} • {item.color}
+                        ID: {item.productId} • {item.size} • {item.color}
                       </p>
                     </div>
                     <button
@@ -1578,7 +1600,10 @@ const SalesPage: React.FC = () => {
                     </button>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-400">Qty: {item.quantity}</span>
+                    <div className="text-gray-400">
+                      <span>Qty: {item.quantity}</span>
+                      <span className="ml-3">@ Rs. {item.price.toFixed(2)}</span>
+                    </div>
                     <span className="font-semibold text-red-400">
                       Rs. {(item.price * item.quantity).toFixed(2)}
                     </span>

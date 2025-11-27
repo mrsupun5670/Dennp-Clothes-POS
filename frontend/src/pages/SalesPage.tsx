@@ -732,33 +732,6 @@ const SalesPage: React.FC = () => {
     return typeof price === 'number' && !isNaN(price) ? price : 0;
   };
 
-  // Update cart item prices when customer type (wholesale/retail) changes
-  useEffect(() => {
-    if (cartItems.length === 0) return;
-
-    // Find all products in the cart to get their default prices based on customer type
-    const updatedItems = cartItems.map(item => {
-      // Find the product from allProducts to get the correct price
-      const product = allProducts.find(p => (p.id || p.product_id) === item.productId);
-
-      if (product) {
-        // Get the default price based on current customer type filter
-        const newPrice = getProductPrice(product);
-        return { ...item, price: newPrice };
-      }
-      return item;
-    });
-
-    // Only update if prices actually changed
-    const pricesChanged = updatedItems.some((item, index) => item.price !== cartItems[index].price);
-    if (pricesChanged) {
-      setCartItems(updatedItems);
-      setMessage({
-        type: "info",
-        text: `Prices updated to ${customerTypeFilter} prices`
-      });
-    }
-  }, [customerTypeFilter, allProducts, cartItems.length]);
 
   // Filtered data
   const filteredCustomers = useMemo(() => {

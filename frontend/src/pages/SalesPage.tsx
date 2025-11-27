@@ -34,7 +34,10 @@ interface Product {
   wholesalePrice?: number;
   wholesale_price?: number | string;
   costPrice?: number;
-  cost_price?: number;
+  cost_price?: number | string;
+  product_cost?: number | string;
+  printPrice?: number;
+  print_cost?: number | string;
   sizesByCategory?: { [key: string]: string[] };
   colorsByCategory?: { [key: string]: string[] };
   category?: string;
@@ -46,12 +49,15 @@ interface Product {
 
 interface CartItem {
   id: string;
+  productId: number | string;
   productCode: string;
   productName: string;
   size: string;
   color: string;
   quantity: number;
   price: number;
+  productCost?: number;
+  printCost?: number;
 }
 
 interface NewCustomer {
@@ -800,14 +806,19 @@ const SalesPage: React.FC = () => {
 
     const price = parseFloat(selectedPrice) || getProductPrice(selectedProduct);
     const productId = selectedProduct.id || selectedProduct.product_id;
-    const uniqueId = `${productId}-${selectedSize}-${selectedColor}`;
+    const uniqueId = `${productId}-${selectedSize}-${selectedColor}-${price}`;
 
-    // Check if this exact product/size/color combination already exists in cart
+    // Get product costs
+    const productCost = parsePrice(selectedProduct.product_cost || selectedProduct.cost_price || selectedProduct.costPrice) || 0;
+    const printCost = parsePrice(selectedProduct.print_cost || 0) || 0;
+
+    // Check if this exact product/size/color/price combination already exists in cart
     const existingItemIndex = cartItems.findIndex(item => {
       return (
-        (item.productCode === (selectedProduct.code || selectedProduct.sku) || item.productName === (selectedProduct.name || selectedProduct.product_name)) &&
+        item.productId === productId &&
         item.size === selectedSize &&
-        item.color === selectedColor
+        item.color === selectedColor &&
+        item.price === price
       );
     });
 
@@ -816,20 +827,23 @@ const SalesPage: React.FC = () => {
       const updatedItems = [...cartItems];
       updatedItems[existingItemIndex].quantity += requestedQty;
       setCartItems(updatedItems);
-      setMessage({ type: "success", text: `✓ Qty updated: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor})` });
+      setMessage({ type: "success", text: `✓ Qty updated: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor}) @ Rs. ${price.toFixed(2)}` });
     } else {
       // New item - add to cart
       const cartItem: CartItem = {
         id: uniqueId,
+        productId: productId,
         productCode: selectedProduct.code || selectedProduct.sku || "",
         productName: selectedProduct.name || selectedProduct.product_name || "",
         size: selectedSize,
         color: selectedColor,
         quantity: requestedQty,
         price: price,
+        productCost: productCost,
+        printCost: printCost,
       };
       setCartItems([...cartItems, cartItem]);
-      setMessage({ type: "success", text: `✓ Added to cart: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor})` });
+      setMessage({ type: "success", text: `✓ Added to cart: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor}) @ Rs. ${price.toFixed(2)}` });
     }
 
     setSelectedProduct(null);
@@ -1384,9 +1398,14 @@ const SalesPage: React.FC = () => {
                               placeholder="Price"
                               className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
-                              Default: {selectedProduct ? getProductPrice(selectedProduct).toFixed(2) : "0.00"}
-                            </p>
+                            <div className="mt-1 space-y-1 text-xs text-gray-400">
+                              <p>Default: Rs. {selectedProduct ? getProductPrice(selectedProduct).toFixed(2) : "0.00"}</p>
+                              {selectedProduct && (
+                                <p className="text-yellow-400 font-semibold">
+                                  Cost = Rs. {(parsePrice(selectedProduct.product_cost || selectedProduct.cost_price || selectedProduct.costPrice) || 0).toFixed(2)} + Rs. {(parsePrice(selectedProduct.print_cost || 0) || 0).toFixed(2)} = Rs. {((parsePrice(selectedProduct.product_cost || selectedProduct.cost_price || selectedProduct.costPrice) || 0) + (parsePrice(selectedProduct.print_cost || 0) || 0)).toFixed(2)}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );

@@ -15,28 +15,27 @@ export interface Order {
   total_items: number;
   total_amount: number;
   delivery_charge?: number;
+  final_amount: number;
   advance_paid: number;
-  balance_paid: number;
-  total_paid: number;
+  balance_due: number;
   payment_status: 'unpaid' | 'partial' | 'fully_paid';
-  remaining_amount: number;
-  payment_method: 'cash' | 'card' | 'online' | 'check' | 'other';
+  payment_method?: 'cash' | 'card' | 'online' | 'check' | 'other';
   order_status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   notes?: string;
   tracking_number?: string | null;
   order_date: Date;
-  created_at: Date;
-  updated_at: Date;
-  delivery_address: {
-    line1: string;
-    line2: string;
-    postal_code: string;
-    city_name: string;
-    district_name: string;
-    province_name: string;
-    recipient_name: string;
-    recipient_phone: string;
-  };
+  created_at?: Date;
+  updated_at?: Date;
+  delivery_line1?: string;
+  delivery_line2?: string;
+  delivery_postal_code?: string;
+  delivery_city?: string;
+  delivery_district?: string;
+  delivery_province?: string;
+  recipient_name?: string;
+  recipient_phone?: string;
+  recipient_phone1?: string;
+  delivery_address?: any;
 }
 
 class OrderModel {
@@ -103,25 +102,21 @@ class OrderModel {
         user_id,
         total_items,
         total_amount,
+        delivery_charge,
+        final_amount,
         advance_paid,
-        balance_paid,
-        total_paid,
+        balance_due,
         payment_status,
-        remaining_amount,
-        payment_method,
         order_status,
         notes,
         order_date,
-        delivery_address,
       } = orderData;
-
-      const deliveryJson = JSON.stringify(delivery_address);
 
       const results = await query(
         `INSERT INTO orders
-        (order_number, shop_id, customer_id, user_id, total_items, total_amount, advance_paid, balance_paid,
-         total_paid, payment_status, remaining_amount, payment_method, order_status, notes, order_date, delivery_address)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (order_number, shop_id, customer_id, user_id, total_items, total_amount, delivery_charge, final_amount,
+         advance_paid, balance_due, payment_status, order_status, notes, order_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           order_number,
           shop_id,
@@ -129,16 +124,14 @@ class OrderModel {
           user_id || null,
           total_items,
           total_amount,
+          delivery_charge || 0,
+          final_amount,
           advance_paid,
-          balance_paid,
-          total_paid,
+          balance_due,
           payment_status,
-          remaining_amount,
-          payment_method,
           order_status,
           notes || null,
           order_date,
-          deliveryJson,
         ]
       );
 
@@ -174,12 +167,11 @@ class OrderModel {
         'customer_id',
         'total_items',
         'total_amount',
+        'delivery_charge',
+        'final_amount',
         'advance_paid',
-        'balance_paid',
-        'total_paid',
+        'balance_due',
         'payment_status',
-        'remaining_amount',
-        'payment_method',
         'order_status',
         'notes',
         'tracking_number',
@@ -233,36 +225,34 @@ class OrderModel {
       const grandTotal = order.total_amount + (order.delivery_charge || 0);
 
       let newAdvancePaid = order.advance_paid;
-      let newBalancePaid = order.balance_paid;
-      let newTotalPaid = order.total_paid;
+      let newBalanceDue = order.balance_due;
+      let newFinalAmount = order.final_amount;
 
       if (paymentType === 'advance') {
         newAdvancePaid += amountPaid;
+        newFinalAmount = newAdvancePaid;
       } else if (paymentType === 'balance') {
-        newBalancePaid += amountPaid;
+        newBalanceDue = Math.max(0, order.balance_due - amountPaid);
+        newFinalAmount = order.final_amount + amountPaid;
       } else if (paymentType === 'full') {
         // Full payment means paying the grand total (order + delivery)
-        newTotalPaid = grandTotal;
+        newFinalAmount = grandTotal;
         newAdvancePaid = 0;
-        newBalancePaid = grandTotal;
+        newBalanceDue = 0;
       }
 
-      newTotalPaid = newAdvancePaid + newBalancePaid;
-      // Remaining amount is now based on grand total (order + delivery)
-      const newRemainingAmount = Math.max(0, grandTotal - newTotalPaid);
-
       let paymentStatus: 'unpaid' | 'partial' | 'fully_paid' = 'unpaid';
-      if (newTotalPaid >= grandTotal) {
+      if (newBalanceDue <= 0) {
         paymentStatus = 'fully_paid';
-      } else if (newTotalPaid > 0) {
+      } else if (newAdvancePaid > 0 || newFinalAmount > 0) {
         paymentStatus = 'partial';
       }
 
       const results = await query(
         `UPDATE orders
-         SET advance_paid = ?, balance_paid = ?, total_paid = ?, payment_status = ?, remaining_amount = ?, updated_at = NOW()
+         SET final_amount = ?, advance_paid = ?, balance_due = ?, payment_status = ?, updated_at = NOW()
          WHERE order_id = ? AND shop_id = ?`,
-        [newAdvancePaid, newBalancePaid, newTotalPaid, paymentStatus, newRemainingAmount, orderId, shopId]
+        [newFinalAmount, newAdvancePaid, newBalanceDue, paymentStatus, orderId, shopId]
       );
 
       logger.info('Payment recorded for order', { orderId, shopId, amountPaid, paymentType, newPaymentStatus: paymentStatus, grandTotal });

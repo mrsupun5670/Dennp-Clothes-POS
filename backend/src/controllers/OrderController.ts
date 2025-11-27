@@ -158,16 +158,14 @@ class OrderController {
         user_id,
         total_items,
         total_amount,
+        delivery_charge: 0,
+        final_amount: total_amount,
         advance_paid: 0,
-        balance_paid: 0,
-        total_paid: 0,
+        balance_due: total_amount,
         payment_status: 'unpaid',
-        remaining_amount: total_amount,
-        payment_method: payment_method || 'cash',
         order_status: 'pending',
         notes,
         order_date: new Date(order_date),
-        delivery_address,
       });
 
       // Add order items if provided
@@ -237,15 +235,15 @@ class OrderController {
           return;
         }
 
-        // Check if payment is fully settled (total_paid >= total_amount)
-        if (order.total_paid < order.total_amount) {
+        // Check if payment is fully settled (final_amount >= total_amount)
+        if (order.balance_due > 0) {
           res.status(400).json({
             success: false,
-            error: `Payment not complete. Amount due: Rs. ${(order.total_amount - order.total_paid).toFixed(2)}. Please settle payment before marking as shipped.`,
+            error: `Payment not complete. Amount due: Rs. ${order.balance_due.toFixed(2)}. Please settle payment before marking as shipped.`,
             details: {
               total_amount: order.total_amount,
-              total_paid: order.total_paid,
-              remaining: order.total_amount - order.total_paid,
+              final_amount: order.final_amount,
+              balance_due: order.balance_due,
             },
           });
           return;

@@ -1372,7 +1372,7 @@ const SalesPage: React.FC = () => {
                             {product.name || product.product_name}
                           </div>
                           <div className="text-xs text-gray-400">
-                            {customerTypeFilter === "wholesale" ? "Wholesale" : "Retail"}: Rs. {getProductPrice(product).toFixed(2)}
+                            ID: {product.id || product.product_id} • {customerTypeFilter === "wholesale" ? "Wholesale" : "Retail"}: Rs. {getProductPrice(product).toFixed(2)}
                           </div>
                         </button>
                       ))

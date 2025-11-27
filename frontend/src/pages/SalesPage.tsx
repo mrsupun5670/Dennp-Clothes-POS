@@ -1615,6 +1615,30 @@ const SalesPage: React.FC = () => {
                 No items in cart
               </div>
             )}
+
+            {/* Price Preview - Show what will be added when price is entered */}
+            {selectedProduct && selectedSize && selectedColor && selectedQty && selectedPrice && (
+              <div className="bg-blue-900/30 border border-blue-600/50 p-3 rounded mt-2 animate-fadeIn">
+                <p className="text-xs text-blue-300 font-semibold mb-2">Preview - Will add:</p>
+                <div className="space-y-1 text-xs">
+                  <p className="text-gray-300">
+                    <span className="font-medium">{selectedProduct.name || selectedProduct.product_name}</span>
+                  </p>
+                  <p className="text-gray-400">
+                    ID: {selectedProduct.id || selectedProduct.product_id} • {selectedSize} • {selectedColor}
+                  </p>
+                  <div className="flex justify-between items-center pt-1 border-t border-blue-600/30">
+                    <div className="text-gray-400">
+                      <span>Qty: {selectedQty}</span>
+                      <span className="ml-3">@ Rs. {parseFloat(selectedPrice).toFixed(2)}</span>
+                    </div>
+                    <span className="font-semibold text-blue-400">
+                      Rs. {(parseFloat(selectedPrice) * parseInt(selectedQty)).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Totals */}

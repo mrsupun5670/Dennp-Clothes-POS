@@ -407,14 +407,14 @@ class ProductModel {
   }
 
   /**
-   * Search products by name or SKU
+   * Search products by name, SKU, or product ID
    */
   async searchProducts(shopId: number, searchTerm: string): Promise<Product[]> {
     try {
       const searchPattern = `%${searchTerm}%`;
       const results = await query(
-        'SELECT * FROM products WHERE shop_id = ? AND (product_name LIKE ? OR sku LIKE ?) AND product_status = "active" ORDER BY product_name ASC',
-        [shopId, searchPattern, searchPattern]
+        'SELECT * FROM products WHERE shop_id = ? AND (product_name LIKE ? OR sku LIKE ? OR product_id LIKE ?) AND product_status = "active" ORDER BY product_name ASC',
+        [shopId, searchPattern, searchPattern, searchPattern]
       );
 
       logger.debug("Searched products", {

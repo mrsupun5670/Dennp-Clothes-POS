@@ -1248,55 +1248,58 @@ const SalesPage: React.FC = () => {
                       <p className="text-xs text-gray-400 mt-1">{selectedProduct.code || selectedProduct.sku}</p>
                     </div>
 
-                    {/* Size Selection Dropdown */}
-                    <div>
-                      <label className="block text-xs font-semibold text-red-400 mb-2">
-                        Select Size
-                      </label>
-                      <select
-                        value={selectedSize}
-                        onChange={(e) => setSelectedSize(e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                      >
-                        <option value="">-- Choose Size --</option>
-                        {availableSizes.length > 0 ? (
-                          availableSizes.map((size) => (
-                            <option key={size.size_id} value={size.size_name}>
-                              {size.size_name}
-                            </option>
-                          ))
-                        ) : (
-                          <option disabled>No sizes available</option>
-                        )}
-                      </select>
-                    </div>
-
-                    {/* Color Selection Dropdown - Only show after size selected */}
-                    {selectedSize && (
+                    {/* Row 1: Size and Color in same row */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Size Selection Dropdown */}
                       <div>
                         <label className="block text-xs font-semibold text-red-400 mb-2">
-                          Select Color
+                          Select Size
                         </label>
                         <select
-                          value={selectedColor}
-                          onChange={(e) => setSelectedColor(e.target.value)}
+                          value={selectedSize}
+                          onChange={(e) => setSelectedSize(e.target.value)}
                           className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
                         >
-                          <option value="">-- Choose Color --</option>
-                          {availableColors.length > 0 ? (
-                            availableColors.map((color) => (
-                              <option key={color.color_id} value={color.color_name}>
-                                {color.color_name}
+                          <option value="">-- Choose Size --</option>
+                          {availableSizes.length > 0 ? (
+                            availableSizes.map((size) => (
+                              <option key={size.size_id} value={size.size_name}>
+                                {size.size_name}
                               </option>
                             ))
                           ) : (
-                            <option disabled>No colors available</option>
+                            <option disabled>No sizes available</option>
                           )}
                         </select>
                       </div>
-                    )}
 
-                    {/* Quantity Input - Only show after color selected */}
+                      {/* Color Selection Dropdown - Only show after size selected */}
+                      {selectedSize && (
+                        <div>
+                          <label className="block text-xs font-semibold text-red-400 mb-2">
+                            Select Color
+                          </label>
+                          <select
+                            value={selectedColor}
+                            onChange={(e) => setSelectedColor(e.target.value)}
+                            className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                          >
+                            <option value="">-- Choose Color --</option>
+                            {availableColors.length > 0 ? (
+                              availableColors.map((color) => (
+                                <option key={color.color_id} value={color.color_name}>
+                                  {color.color_name}
+                                </option>
+                              ))
+                            ) : (
+                              <option disabled>No colors available</option>
+                            )}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Row 2: Quantity and Price in same row */}
                     {selectedSize && selectedColor && (() => {
                       const availableQty = productStock.find(
                         stock =>
@@ -1316,48 +1319,49 @@ const SalesPage: React.FC = () => {
                       const remainingQty = availableQty - cartQtyForProduct;
 
                       return (
-                        <div>
-                          <label className="block text-xs font-semibold text-red-400 mb-2">
-                            Quantity (Available: {availableQty}, In Cart: {cartQtyForProduct}, Can Add: {remainingQty})
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            max={remainingQty}
-                            value={selectedQty}
-                            onChange={(e) => setSelectedQty(e.target.value)}
-                            placeholder="Enter quantity"
-                            className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                          />
-                          {remainingQty <= 0 && (
-                            <p className="text-xs text-red-400 mt-1">⚠️ No quantity available to add</p>
-                          )}
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* Quantity Input */}
+                          <div>
+                            <label className="block text-xs font-semibold text-red-400 mb-2">
+                              Qty (Avl: {availableQty}, Cart: {cartQtyForProduct})
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max={remainingQty}
+                              value={selectedQty}
+                              onChange={(e) => setSelectedQty(e.target.value)}
+                              placeholder="Qty"
+                              className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                            />
+                            {remainingQty <= 0 && (
+                              <p className="text-xs text-red-400 mt-1">⚠️ Out of stock</p>
+                            )}
+                          </div>
+
+                          {/* Price Input */}
+                          <div>
+                            <label className="block text-xs font-semibold text-red-400 mb-2">
+                              Price (Rs.)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={selectedPrice}
+                              onChange={(e) => setSelectedPrice(e.target.value)}
+                              placeholder="Price"
+                              className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Default: {selectedProduct ? getProductPrice(selectedProduct).toFixed(2) : "0.00"}
+                            </p>
+                          </div>
                         </div>
                       );
                     })()}
 
-                    {/* Price Input - Editable price */}
-                    {selectedSize && selectedColor && (
-                      <div>
-                        <label className="block text-xs font-semibold text-red-400 mb-2">
-                          Price (Rs.) - {customerTypeFilter === "wholesale" ? "Wholesale" : "Retail"}
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={selectedPrice}
-                          onChange={(e) => setSelectedPrice(e.target.value)}
-                          placeholder="Enter price"
-                          className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Default: Rs. {selectedProduct ? getProductPrice(selectedProduct).toFixed(2) : "0.00"}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Add to Cart Button - Only show when all fields filled */}
+                    {/* Row 3: Add to Cart Button - Full width */}
                     {selectedSize && selectedColor && selectedQty && (
                       <button
                         onClick={handleAddProductToCart}

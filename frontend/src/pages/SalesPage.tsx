@@ -879,10 +879,14 @@ const SalesPage: React.FC = () => {
   };
 
   const sizeOptions = selectedProduct
-    ? selectedProduct.sizesByCategory[selectedProduct.category] || []
+    ? (selectedProduct.sizesByCategory?.[selectedProduct.category || ""] ||
+       selectedProduct.sizes?.map(s => s.size_name) ||
+       [])
     : [];
   const colorOptions = selectedProduct
-    ? selectedProduct.colorsByCategory[selectedProduct.category] || []
+    ? (selectedProduct.colorsByCategory?.[selectedProduct.category || ""] ||
+       selectedProduct.colors?.map(c => c.color_name) ||
+       [])
     : [];
 
   return (

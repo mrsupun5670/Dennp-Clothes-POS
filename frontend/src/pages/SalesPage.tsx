@@ -481,6 +481,17 @@ const SalesPage: React.FC = () => {
   const [selectedQty, setSelectedQty] = useState("");
   const [selectedPrice, setSelectedPrice] = useState<string>(""); // Editable price
 
+  // UI Message state
+  const [message, setMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null);
+
+  // Auto-dismiss message after 4 seconds
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => setMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
   // Store all customers for local filtering
   const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
 
@@ -750,7 +761,7 @@ const SalesPage: React.FC = () => {
 
   const handleAddProductToCart = () => {
     if (!selectedProduct || !selectedSize || !selectedColor || !selectedQty || !selectedPrice) {
-      alert("Please fill all fields including price");
+      setMessage({ type: "error", text: "Please fill all fields including price" });
       return;
     }
 
@@ -765,7 +776,7 @@ const SalesPage: React.FC = () => {
 
     // Validate quantity against available stock
     if (requestedQty > availableQty) {
-      alert(`Only ${availableQty} units available for this size and color`);
+      setMessage({ type: "error", text: `Only ${availableQty} units available for this size and color` });
       return;
     }
 
@@ -783,7 +794,7 @@ const SalesPage: React.FC = () => {
     const totalRequestedQty = cartQuantityForProduct + requestedQty;
     if (totalRequestedQty > availableQty) {
       const remaining = availableQty - cartQuantityForProduct;
-      alert(`Only ${remaining} more units can be added to cart (${cartQuantityForProduct} already in cart)`);
+      setMessage({ type: "error", text: `Only ${remaining} more units can be added to cart (${cartQuantityForProduct} already in cart)` });
       return;
     }
 
@@ -805,6 +816,7 @@ const SalesPage: React.FC = () => {
       const updatedItems = [...cartItems];
       updatedItems[existingItemIndex].quantity += requestedQty;
       setCartItems(updatedItems);
+      setMessage({ type: "success", text: `✓ Qty updated: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor})` });
     } else {
       // New item - add to cart
       const cartItem: CartItem = {
@@ -817,6 +829,7 @@ const SalesPage: React.FC = () => {
         price: price,
       };
       setCartItems([...cartItems, cartItem]);
+      setMessage({ type: "success", text: `✓ Added to cart: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor})` });
     }
 
     setSelectedProduct(null);
@@ -835,23 +848,23 @@ const SalesPage: React.FC = () => {
   const handleSaveOrder = () => {
     // Validation
     if (!selectedCustomer) {
-      alert("Please select a customer");
+      setMessage({ type: "error", text: "Please select a customer" });
       return;
     }
     if (cartItems.length === 0) {
-      alert("Please add items to cart");
+      setMessage({ type: "error", text: "Please add items to cart" });
       return;
     }
 
     // Validation based on payment method
     if (paymentMethod === "cash") {
       if (!paidAmount) {
-        alert("Please enter cash amount");
+        setMessage({ type: "error", text: "Please enter cash amount" });
         return;
       }
     } else if (paymentMethod === "bank") {
       if (!bankPaymentDetails) {
-        alert("Please add bank payment details");
+        setMessage({ type: "error", text: "Please add bank payment details" });
         return;
       }
     }
@@ -917,10 +930,10 @@ const SalesPage: React.FC = () => {
 
     // Success message with correct amounts
     const displayMessage = editingOrderId
-      ? `Order ${editingOrderId} updated successfully!\n\nOrder Total: Rs. ${total.toFixed(2)}\nPreviously Paid: Rs. ${previouslyPaidAmount.toFixed(2)}\nNow Paying: Rs. ${newPayment.toFixed(2)}\nTotal Paid: Rs. ${totalPaidNow.toFixed(2)}\nRemaining: Rs. ${Math.max(0, balance).toFixed(2)}`
-      : `Order ${orderId} created successfully!\n\nTotal: Rs. ${total.toFixed(2)}\nPaid: Rs. ${totalPaidNow.toFixed(2)}\nBalance: Rs. ${Math.max(0, balance).toFixed(2)}`;
+      ? `✓ Order ${editingOrderId} updated! Total: Rs. ${total.toFixed(2)} | Paid: Rs. ${totalPaidNow.toFixed(2)} | Remaining: Rs. ${Math.max(0, balance).toFixed(2)}`
+      : `✓ Order ${orderId} created! Total: Rs. ${total.toFixed(2)} | Paid: Rs. ${totalPaidNow.toFixed(2)} | Balance: Rs. ${Math.max(0, balance).toFixed(2)}`;
 
-    alert(displayMessage);
+    setMessage({ type: "success", text: displayMessage });
 
     // Reset form
     setCartItems([]);
@@ -935,18 +948,18 @@ const SalesPage: React.FC = () => {
 
   const handlePrintBill = () => {
     if (!selectedCustomer || cartItems.length === 0) {
-      alert("Please select customer and add items");
+      setMessage({ type: "error", text: "Please select customer and add items" });
       return;
     }
 
     // Only allow printing if cash payment is complete
     if (paymentMethod === "cash") {
       if (!paidAmount) {
-        alert("Please enter cash amount to print bill");
+        setMessage({ type: "error", text: "Please enter cash amount to print bill" });
         return;
       }
     } else if (paymentMethod === "bank") {
-      alert("Bank payments cannot be printed immediately. Bill will be generated once payment is verified.");
+      setMessage({ type: "info", text: "Bank payments cannot be printed immediately. Bill will be generated once payment is verified." });
       return;
     }
 
@@ -963,18 +976,18 @@ const SalesPage: React.FC = () => {
 
   const handleSaveBillAsImage = () => {
     if (!selectedCustomer || cartItems.length === 0) {
-      alert("Please select customer and add items");
+      setMessage({ type: "error", text: "Please select customer and add items" });
       return;
     }
 
     // Only allow saving if cash payment is complete
     if (paymentMethod === "cash") {
       if (!paidAmount) {
-        alert("Please enter cash amount to save bill");
+        setMessage({ type: "error", text: "Please enter cash amount to save bill" });
         return;
       }
     } else if (paymentMethod === "bank") {
-      alert("Bank payments cannot be saved immediately. Bill will be generated once payment is verified.");
+      setMessage({ type: "info", text: "Bank payments cannot be saved immediately. Bill will be generated once payment is verified." });
       return;
     }
 
@@ -1046,6 +1059,24 @@ const SalesPage: React.FC = () => {
             : "Create orders from online or WhatsApp enquiries"}
         </p>
       </div>
+
+      {/* Message Display */}
+      {message && (
+        <div
+          className={`p-4 rounded-lg border-2 flex items-start gap-3 animate-in fade-in ${
+            message.type === "error"
+              ? "bg-red-900/40 border-red-600 text-red-300"
+              : message.type === "success"
+              ? "bg-green-900/40 border-green-600 text-green-300"
+              : "bg-blue-900/40 border-blue-600 text-blue-300"
+          }`}
+        >
+          <span className="text-xl font-bold mt-0.5">
+            {message.type === "error" ? "✕" : message.type === "success" ? "✓" : "ℹ"}
+          </span>
+          <p className="flex-1">{message.text}</p>
+        </div>
+      )}
 
       {/* Main Content - Two Columns */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">

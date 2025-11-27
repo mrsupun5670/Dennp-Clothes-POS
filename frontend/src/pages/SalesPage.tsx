@@ -927,7 +927,7 @@ const SalesPage: React.FC = () => {
       const orderNumberData = await orderNumberResponse.json();
       const orderNumber = orderNumberData.orderNumber || `${String(Date.now()).slice(-9)}`;
 
-      // Create order object
+      // Create order object (minimal data - delivery address will be added later in Orders page)
       const orderPayload = {
         shop_id: shopId,
         order_number: orderNumber,
@@ -942,6 +942,15 @@ const SalesPage: React.FC = () => {
         payment_status: paymentStatus,
         notes: orderNotes || null,
         order_date: new Date().toISOString().split('T')[0],
+        // Delivery address will be filled in Orders page - set to empty/null values for now
+        delivery_line1: "",
+        delivery_line2: null,
+        delivery_postal_code: null,
+        delivery_city: "",
+        delivery_district: "",
+        delivery_province: "",
+        recipient_name: "",
+        recipient_phone: "",
         items: cartItems.map(item => ({
           product_id: item.productId,
           color_id: 1, // TODO: get actual color_id from product

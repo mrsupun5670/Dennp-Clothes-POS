@@ -9,6 +9,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  timezone: '+05:30', // Sri Lankan timezone (UTC+5:30)
 });
 
 pool.on("connection", () => {

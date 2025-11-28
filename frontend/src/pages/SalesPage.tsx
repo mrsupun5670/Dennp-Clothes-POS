@@ -5,6 +5,23 @@ import { printContent, saveAsPDF, generateOrderBillHTML } from "../utils/exportU
 import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
 
+// Utility function to get Sri Lankan timezone datetime
+const getSriLankanDateTime = () => {
+  const date = new Date();
+  const sriLankanDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Colombo' }));
+  const year = sriLankanDate.getFullYear();
+  const month = String(sriLankanDate.getMonth() + 1).padStart(2, '0');
+  const day = String(sriLankanDate.getDate()).padStart(2, '0');
+  const hours = String(sriLankanDate.getHours()).padStart(2, '0');
+  const minutes = String(sriLankanDate.getMinutes()).padStart(2, '0');
+  const seconds = String(sriLankanDate.getSeconds()).padStart(2, '0');
+  return {
+    dateString: `${year}-${month}-${day}`,
+    timeString: `${hours}:${minutes}:${seconds}`,
+    fullDateTime: `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  };
+};
+
 // Interfaces
 interface Customer {
   customer_id?: number;
@@ -948,6 +965,9 @@ const SalesPage: React.FC = () => {
       const orderNumberData = await orderNumberResponse.json();
       const orderNumber = orderNumberData.orderNumber || `${String(Date.now()).slice(-9)}`;
 
+      // Get Sri Lankan datetime
+      const sriLankanDateTime = getSriLankanDateTime();
+
       // Create order object (minimal data - delivery address will be added later in Orders page)
       const orderPayload = {
         shop_id: shopId,
@@ -963,7 +983,7 @@ const SalesPage: React.FC = () => {
         balance_due: balanceDue,
         payment_status: paymentStatus,
         notes: orderNotes || null,
-        order_date: new Date().toISOString().split('T')[0],
+        order_date: sriLankanDateTime.dateString,
         items: cartItems.map(item => ({
           product_id: item.productId,
           color_id: item.colorId,
@@ -996,8 +1016,8 @@ const SalesPage: React.FC = () => {
           order_id: savedOrderId,
           customer_id: selectedCustomer.customer_id,
           payment_amount: newPayment,
-          payment_date: new Date().toISOString().split('T')[0],
-          payment_time: new Date().toTimeString().split(' ')[0],
+          payment_date: sriLankanDateTime.dateString,
+          payment_time: sriLankanDateTime.timeString,
           payment_method: "cash",
           payment_status: "completed",
           notes: null,
@@ -1010,8 +1030,9 @@ const SalesPage: React.FC = () => {
         });
       }
 
-      // Success message
-      const displayMessage = `✓ Order ${orderNumber} created! Total: Rs. ${total.toFixed(2)} | Paid: Rs. ${totalPaidNow.toFixed(2)} | ${balance > 0 ? `Balance: Rs. ${balance.toFixed(2)}` : "Fully Paid"}`;
+      // Success message with payment status
+      const paymentStatusText = paymentStatus === "fully_paid" ? "✓ Fully Paid" : (paymentStatus === "partial" ? "⚠ Partially Paid" : "⏳ Unpaid");
+      const displayMessage = `✓ Order ${orderNumber} created! Total: Rs. ${total.toFixed(2)} | Paid: Rs. ${finalAmount.toFixed(2)} | Status: ${paymentStatusText}${balanceDue > 0 ? ` | Balance Due: Rs. ${balanceDue.toFixed(2)}` : ""}`;
       setMessage({ type: "success", text: displayMessage });
 
       // Reset form
@@ -1098,7 +1119,9 @@ const SalesPage: React.FC = () => {
       paidAmount,
     });
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+    // Use Sri Lankan datetime for PDF filename
+    const sriLankanDateTime = getSriLankanDateTime();
+    const timestamp = sriLankanDateTime.dateString.replace(/[-.]/g, '');
     saveAsPDF(html, `order_bill_${selectedCustomer.name.replace(/\s+/g, '_')}_${timestamp}`, 'orders');
   };
 

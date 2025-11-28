@@ -180,7 +180,7 @@ const OrdersPage: React.FC = () => {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (order) =>
-          order.recipient_name.toLowerCase().includes(query) ||
+          (order.recipient_name && order.recipient_name.toLowerCase().includes(query)) ||
           (order.customer_id && order.customer_id.toString().includes(query)) ||
           order.order_id.toString().includes(query)
       );

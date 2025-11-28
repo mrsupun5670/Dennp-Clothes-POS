@@ -19,23 +19,27 @@ interface Order {
   customer_id: number | null;
   total_items: number;
   total_amount: number;
+  final_amount: number;
   advance_paid: number;
-  balance_paid: number;
-  total_paid: number;
+  balance_due: number;
   payment_status: "unpaid" | "partial" | "fully_paid";
-  remaining_amount: number;
-  payment_method: "cash" | "card" | "online" | "other";
-  order_status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-  notes: string | null;
+  payment_method?: "cash" | "card" | "online" | "other";
+  order_status:
+    | "pending"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
+  notes?: string | null;
   order_date: string;
-  recipient_name: string;
-  recipient_phone: string;
-  line1: string;
-  line2: string;
-  city_name: string;
-  district_name: string;
-  province_name: string;
-  postal_code: string;
+  recipient_name?: string;
+  recipient_phone?: string;
+  delivery_line1?: string;
+  delivery_line2?: string;
+  delivery_city?: string;
+  delivery_district?: string;
+  delivery_province?: string;
+  delivery_postal_code?: string;
   tracking_number?: string | null;
   delivery_charge?: number;
   items?: OrderItem[];
@@ -119,7 +123,9 @@ const exportReceiptAsImage = async (
     link.click();
     document.body.removeChild(link);
 
-    alert(`Receipt saved as ${customerMobile}_${orderId}.${format}\nCheck your Downloads folder.`);
+    alert(
+      `Receipt saved as ${customerMobile}_${orderId}.${format}\nCheck your Downloads folder.`
+    );
   } catch (error) {
     console.error("Error exporting receipt:", error);
     alert("Failed to export receipt. Please try again.");
@@ -157,19 +163,23 @@ const OrdersPage: React.FC = () => {
     data: orders,
     isLoading: isLoadingOrders,
     refetch: refetchOrders,
-  } = useQuery<Order[]>(["orders", selectedStatus, shopId], async () => {
-    if (!shopId) {
-      throw new Error("Shop ID is required");
-    }
-    const url = `${API_URL}/orders?shop_id=${shopId}&status=${selectedStatus}`;
-    const response = await fetch(url);
-    const result = await response.json();
-    if (result.success) {
-      return result.data;
-    } else {
-      throw new Error(result.error || "Failed to fetch orders");
-    }
-  }, { enabled: shopId !== null });
+  } = useQuery<Order[]>(
+    ["orders", selectedStatus, shopId],
+    async () => {
+      if (!shopId) {
+        throw new Error("Shop ID is required");
+      }
+      const url = `${API_URL}/orders?shop_id=${shopId}&status=${selectedStatus}`;
+      const response = await fetch(url);
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "Failed to fetch orders");
+      }
+    },
+    { enabled: shopId !== null }
+  );
 
   // Filter and search orders
   const filteredOrders = useMemo(() => {
@@ -180,7 +190,8 @@ const OrdersPage: React.FC = () => {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (order) =>
-          (order.recipient_name && order.recipient_name.toLowerCase().includes(query)) ||
+          (order.recipient_name &&
+            order.recipient_name.toLowerCase().includes(query)) ||
           (order.customer_id && order.customer_id.toString().includes(query)) ||
           order.order_id.toString().includes(query)
       );
@@ -277,17 +288,14 @@ const OrdersPage: React.FC = () => {
 
     setIsUpdatingOrder(true);
     try {
-      const response = await fetch(
-        `${API_URL}/orders/${selectedOrderId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            shop_id: shopId,
-            order_status: "cancelled",
-          }),
-        }
-      );
+      const response = await fetch(`${API_URL}/orders/${selectedOrderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop_id: shopId,
+          order_status: "cancelled",
+        }),
+      });
       const result = await response.json();
       if (result.success) {
         setPaymentMessage("✅ Order cancelled successfully!");
@@ -318,9 +326,9 @@ const OrdersPage: React.FC = () => {
       return;
     }
 
-    if (amount > (selectedOrder?.remaining_amount || 0)) {
+    if (amount > (selectedOrder?.balance_due || 0)) {
       setPaymentMessage(
-        `❌ Amount cannot exceed remaining balance (Rs. ${parseFloat(String(selectedOrder?.remaining_amount || 0)).toFixed(2)})`
+        `❌ Amount cannot exceed balance due (Rs. ${parseFloat(String(selectedOrder?.balance_due || 0)).toFixed(2)})`
       );
       return;
     }
@@ -419,7 +427,9 @@ const OrdersPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-full flex-col gap-4">
         <p className="text-gray-400 text-lg">Loading orders...</p>
-        <p className="text-gray-500 text-sm">Shop ID: {shopId} | Status: {selectedStatus}</p>
+        <p className="text-gray-500 text-sm">
+          Shop ID: {shopId} | Status: {selectedStatus}
+        </p>
       </div>
     );
   }
@@ -590,7 +600,7 @@ const OrdersPage: React.FC = () => {
                           order.payment_status
                         )}`}
                       >
-                        {order.payment_status.replace("_", " ").toUpperCase()}
+                        {order.payment_status.replace("_", " ")}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-gray-300 text-sm">
@@ -606,7 +616,10 @@ const OrdersPage: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
+                  <td
+                    colSpan={8}
+                    className="px-6 py-8 text-center text-gray-400"
+                  >
                     No orders found for this status
                   </td>
                 </tr>
@@ -673,7 +686,7 @@ const OrdersPage: React.FC = () => {
                       Payment Method
                     </p>
                     <p className="text-gray-200 font-medium">
-                      {selectedOrder.payment_method.toUpperCase()}
+                      {selectedOrder.payment_method}
                     </p>
                   </div>
                 </div>
@@ -725,7 +738,9 @@ const OrdersPage: React.FC = () => {
                                 {parseFloat(String(item.sold_price)).toFixed(2)}
                               </td>
                               <td className="px-4 py-3 text-right text-red-400 font-semibold">
-                                {parseFloat(String(item.total_price)).toFixed(2)}
+                                {parseFloat(String(item.total_price)).toFixed(
+                                  2
+                                )}
                               </td>
                             </tr>
                           ))}
@@ -734,7 +749,10 @@ const OrdersPage: React.FC = () => {
                               Subtotal:
                             </td>
                             <td className="px-4 py-3 text-right text-red-400">
-                              Rs. {parseFloat(String(selectedOrder.total_amount)).toFixed(2)}
+                              Rs.{" "}
+                              {parseFloat(
+                                String(selectedOrder.total_amount)
+                              ).toFixed(2)}
                             </td>
                           </tr>
                         </tbody>
@@ -754,7 +772,10 @@ const OrdersPage: React.FC = () => {
                   <div className="flex justify-between items-center pb-3 border-b border-gray-600">
                     <p className="text-gray-300">Order Subtotal:</p>
                     <p className="text-gray-100 font-semibold">
-                      Rs. {parseFloat(String(selectedOrder.total_amount)).toFixed(2)}
+                      Rs.{" "}
+                      {parseFloat(String(selectedOrder.total_amount)).toFixed(
+                        2
+                      )}
                     </p>
                   </div>
 
@@ -763,7 +784,10 @@ const OrdersPage: React.FC = () => {
                     <div className="flex justify-between items-center pb-3 border-b border-gray-600">
                       <p className="text-gray-300">Delivery Charge:</p>
                       <p className="text-gray-100 font-semibold">
-                        Rs. {parseFloat(String(selectedOrder.delivery_charge)).toFixed(2)}
+                        Rs.{" "}
+                        {parseFloat(
+                          String(selectedOrder.delivery_charge)
+                        ).toFixed(2)}
                       </p>
                     </div>
                   ) : null}
@@ -774,7 +798,11 @@ const OrdersPage: React.FC = () => {
                       Grand Total (Amount Due):
                     </p>
                     <p className="text-red-400 font-bold text-xl">
-                      Rs. {((parseFloat(String(selectedOrder.total_amount)) + (parseFloat(String(selectedOrder.delivery_charge)) || 0))).toFixed(2)}
+                      Rs.{" "}
+                      {(
+                        parseFloat(String(selectedOrder.total_amount)) +
+                        (parseFloat(String(selectedOrder.delivery_charge)) || 0)
+                      ).toFixed(2)}
                     </p>
                   </div>
 
@@ -785,20 +813,27 @@ const OrdersPage: React.FC = () => {
                         Advance Paid
                       </p>
                       <p className="text-green-400 font-bold text-lg">
-                        Rs. {parseFloat(String(selectedOrder.advance_paid)).toFixed(2)}
+                        Rs.{" "}
+                        {parseFloat(String(selectedOrder.advance_paid)).toFixed(
+                          2
+                        )}
                       </p>
                     </div>
                     <div>
                       {(() => {
-                        const grandTotal = parseFloat(String(selectedOrder.total_amount)) + (parseFloat(String(selectedOrder.delivery_charge)) || 0);
-                        const balanceToPay = Math.max(0, grandTotal - parseFloat(String(selectedOrder.total_paid)));
+                        const balanceDue =
+                          parseFloat(String(selectedOrder.balance_due)) || 0;
                         return (
                           <>
                             <p className="text-xs text-gray-400 font-semibold mb-1">
-                              {balanceToPay > 0 ? "Balance To Be Paid" : "Balance Paid"}
+                              {balanceDue > 0
+                                ? "Balance To Be Paid"
+                                : "Balance Paid"}
                             </p>
-                            <p className={`font-bold text-lg ${balanceToPay > 0 ? "text-red-400" : "text-green-400"}`}>
-                              Rs. {balanceToPay.toFixed(2)}
+                            <p
+                              className={`font-bold text-lg ${balanceDue > 0 ? "text-red-400" : "text-green-400"}`}
+                            >
+                              Rs. {balanceDue.toFixed(2)}
                             </p>
                           </>
                         );
@@ -808,16 +843,18 @@ const OrdersPage: React.FC = () => {
 
                   {/* Payment Status */}
                   <div className="pt-2 border-t border-gray-600">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getPaymentStatusBadgeColor(
-                      selectedOrder.payment_status
-                    )}`}>
-                      {selectedOrder.payment_status.replace("_", " ").toUpperCase()}
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getPaymentStatusBadgeColor(
+                        selectedOrder.payment_status
+                      )}`}
+                    >
+                      {selectedOrder.payment_status
+                        .replace("_", " ")
+                        .toUpperCase()}
                     </span>
                   </div>
                 </div>
               </div>
-
-
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-700 flex-wrap">
@@ -874,7 +911,11 @@ const OrdersPage: React.FC = () => {
                 {selectedOrder.order_status === "pending" && (
                   <button
                     onClick={() => {
-                      if (window.confirm("Are you sure you want to cancel this order? This action cannot be undone.")) {
+                      if (
+                        window.confirm(
+                          "Are you sure you want to cancel this order? This action cannot be undone."
+                        )
+                      ) {
                         handleCancelOrder();
                       }
                     }}

@@ -3,11 +3,11 @@
  * Handles requests related to orders and sends responses to the frontend
  */
 
-import { Request, Response } from 'express';
-import OrderModel from '../models/Order';
-import OrderItemModel from '../models/OrderItem';
-import PaymentModel from '../models/Payment';
-import { logger } from '../utils/logger';
+import { Request, Response } from "express";
+import OrderModel from "../models/Order";
+import OrderItemModel from "../models/OrderItem";
+import PaymentModel from "../models/Payment";
+import { logger } from "../utils/logger";
 
 class OrderController {
   /**
@@ -21,11 +21,11 @@ class OrderController {
       let orders = await OrderModel.getAllOrders(shopId);
 
       // Filter by status if provided
-      if (status && status !== 'all') {
-        const validStatuses = ['pending', 'processing', 'shipped', 'delivered'];
+      if (status && status !== "all") {
+        const validStatuses = ["pending", "processing", "shipped", "delivered"];
         const lowerStatus = status.toLowerCase();
         if (validStatuses.includes(lowerStatus)) {
-          orders = orders.filter(order => order.order_status === lowerStatus);
+          orders = orders.filter((order) => order.order_status === lowerStatus);
         }
       }
 
@@ -35,10 +35,10 @@ class OrderController {
         message: `Retrieved ${orders.length} orders`,
       });
     } catch (error: any) {
-      logger.error('Error in getAllOrders:', error);
+      logger.error("Error in getAllOrders:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch orders',
+        error: "Failed to fetch orders",
         details: error.message,
       });
     }
@@ -55,7 +55,7 @@ class OrderController {
       if (!shopId) {
         res.status(400).json({
           success: false,
-          error: 'shop_id is required',
+          error: "shop_id is required",
         });
         return;
       }
@@ -65,7 +65,7 @@ class OrderController {
       if (!order) {
         res.status(404).json({
           success: false,
-          error: 'Order not found',
+          error: "Order not found",
         });
         return;
       }
@@ -78,10 +78,10 @@ class OrderController {
         data: { ...order, items },
       });
     } catch (error: any) {
-      logger.error('Error in getOrderById:', error);
+      logger.error("Error in getOrderById:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch order',
+        error: "Failed to fetch order",
         details: error.message,
       });
     }
@@ -98,12 +98,15 @@ class OrderController {
       if (!shopId) {
         res.status(400).json({
           success: false,
-          error: 'shop_id is required',
+          error: "shop_id is required",
         });
         return;
       }
 
-      const orders = await OrderModel.getOrdersByCustomer(Number(customerId), shopId);
+      const orders = await OrderModel.getOrdersByCustomer(
+        Number(customerId),
+        shopId
+      );
 
       res.json({
         success: true,
@@ -111,10 +114,10 @@ class OrderController {
         message: `Retrieved ${orders.length} orders for customer`,
       });
     } catch (error: any) {
-      logger.error('Error in getOrdersByCustomer:', error);
+      logger.error("Error in getOrdersByCustomer:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch orders',
+        error: "Failed to fetch orders",
         details: error.message,
       });
     }
@@ -131,6 +134,7 @@ class OrderController {
         customer_id,
         user_id,
         total_items,
+        payment_status,
         total_amount,
         notes,
         order_date,
@@ -141,7 +145,8 @@ class OrderController {
       if (!order_number || !shop_id || !total_items || !total_amount) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: order_number, shop_id, total_items, total_amount',
+          error:
+            "Missing required fields: order_number, shop_id, total_items, total_amount",
         });
         return;
       }
@@ -160,8 +165,8 @@ class OrderController {
         final_amount: total_amount,
         advance_paid: 0,
         balance_due: total_amount,
-        payment_status: 'unpaid',
-        order_status: 'pending',
+        payment_status, // here this value should be dynamic
+        order_status: "pending",
         notes,
         order_date: new Date(order_date),
       });
@@ -178,13 +183,13 @@ class OrderController {
       res.status(201).json({
         success: true,
         data: { order_id: orderId },
-        message: 'Order created successfully',
+        message: "Order created successfully",
       });
     } catch (error: any) {
-      logger.error('Error in createOrder:', error);
+      logger.error("Error in createOrder:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to create order',
+        error: "Failed to create order",
         details: error.message,
       });
     }
@@ -202,7 +207,7 @@ class OrderController {
       if (!shop_id) {
         res.status(400).json({
           success: false,
-          error: 'Missing required field: shop_id',
+          error: "Missing required field: shop_id",
         });
         return;
       }
@@ -222,13 +227,13 @@ class OrderController {
       Object.assign(updateData, otherData);
 
       // If trying to change status to shipped, check if payment is complete
-      if (order_status === 'shipped') {
+      if (order_status === "shipped") {
         const order = await OrderModel.getOrderById(Number(id), shop_id);
 
         if (!order) {
           res.status(404).json({
             success: false,
-            error: 'Order not found',
+            error: "Order not found",
           });
           return;
         }
@@ -248,25 +253,29 @@ class OrderController {
         }
       }
 
-      const success = await OrderModel.updateOrder(Number(id), shop_id, updateData);
+      const success = await OrderModel.updateOrder(
+        Number(id),
+        shop_id,
+        updateData
+      );
 
       if (!success) {
         res.status(404).json({
           success: false,
-          error: 'Order not found or no changes made',
+          error: "Order not found or no changes made",
         });
         return;
       }
 
       res.json({
         success: true,
-        message: 'Order updated successfully',
+        message: "Order updated successfully",
       });
     } catch (error: any) {
-      logger.error('Error in updateOrder:', error);
+      logger.error("Error in updateOrder:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to update order',
+        error: "Failed to update order",
         details: error.message,
       });
     }
@@ -278,13 +287,20 @@ class OrderController {
   async recordPayment(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { shop_id, amount_paid, payment_type, payment_method, bank_name, branch_name } = req.body;
+      const {
+        shop_id,
+        amount_paid,
+        payment_type,
+        payment_method,
+        bank_name,
+        branch_name,
+      } = req.body;
 
       // Validation
       if (!shop_id) {
         res.status(400).json({
           success: false,
-          error: 'Missing required field: shop_id',
+          error: "Missing required field: shop_id",
         });
         return;
       }
@@ -292,18 +308,23 @@ class OrderController {
       if (!amount_paid || !payment_type) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: amount_paid, payment_type',
+          error: "Missing required fields: amount_paid, payment_type",
         });
         return;
       }
 
       // Record payment in orders table
-      const paymentSuccess = await OrderModel.recordPayment(Number(id), shop_id, amount_paid, payment_type);
+      const paymentSuccess = await OrderModel.recordPayment(
+        Number(id),
+        shop_id,
+        amount_paid,
+        payment_type
+      );
 
       if (!paymentSuccess) {
         res.status(404).json({
           success: false,
-          error: 'Order not found',
+          error: "Order not found",
         });
         return;
       }
@@ -312,22 +333,22 @@ class OrderController {
       const paymentId = await PaymentModel.createPayment(shop_id, {
         order_id: Number(id),
         payment_amount: amount_paid,
-        payment_date: new Date().toISOString().split('T')[0],
-        payment_method: payment_method || 'cash',
-        payment_status: 'completed',
-        notes: `${payment_type} payment - Bank: ${bank_name || 'N/A'}, Branch: ${branch_name || 'N/A'}`,
+        payment_date: new Date().toISOString().split("T")[0],
+        payment_method: payment_method || "cash",
+        payment_status: "completed",
+        notes: `${payment_type} payment - Bank: ${bank_name || "N/A"}, Branch: ${branch_name || "N/A"}`,
       });
 
       res.json({
         success: true,
         data: { payment_id: paymentId },
-        message: 'Payment recorded successfully',
+        message: "Payment recorded successfully",
       });
     } catch (error: any) {
-      logger.error('Error in recordPayment:', error);
+      logger.error("Error in recordPayment:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to record payment',
+        error: "Failed to record payment",
         details: error.message,
       });
     }
@@ -343,7 +364,7 @@ class OrderController {
       if (!shopId) {
         res.status(400).json({
           success: false,
-          error: 'shop_id is required',
+          error: "shop_id is required",
         });
         return;
       }
@@ -356,10 +377,10 @@ class OrderController {
         message: `Retrieved ${orders.length} pending orders`,
       });
     } catch (error: any) {
-      logger.error('Error in getPendingOrders:', error);
+      logger.error("Error in getPendingOrders:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch pending orders',
+        error: "Failed to fetch pending orders",
         details: error.message,
       });
     }
@@ -375,7 +396,7 @@ class OrderController {
       if (!shop_id || !start_date || !end_date) {
         res.status(400).json({
           success: false,
-          error: 'Missing required parameters: shop_id, start_date, end_date',
+          error: "Missing required parameters: shop_id, start_date, end_date",
         });
         return;
       }
@@ -391,10 +412,10 @@ class OrderController {
         data: summary,
       });
     } catch (error: any) {
-      logger.error('Error in getOrderSummary:', error);
+      logger.error("Error in getOrderSummary:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch order summary',
+        error: "Failed to fetch order summary",
         details: error.message,
       });
     }
@@ -414,10 +435,10 @@ class OrderController {
         message: `Retrieved ${payments.length} payments`,
       });
     } catch (error: any) {
-      logger.error('Error in getOrderPayments:', error);
+      logger.error("Error in getOrderPayments:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch payments',
+        error: "Failed to fetch payments",
         details: error.message,
       });
     }
@@ -434,7 +455,7 @@ class OrderController {
       if (!shopId) {
         res.status(400).json({
           success: false,
-          error: 'Shop ID is required',
+          error: "Shop ID is required",
         });
         return;
       }
@@ -444,7 +465,7 @@ class OrderController {
       if (!order) {
         res.status(404).json({
           success: false,
-          error: 'Order not found',
+          error: "Order not found",
         });
         return;
       }
@@ -459,10 +480,10 @@ class OrderController {
         data: { html: receiptHtml },
       });
     } catch (error: any) {
-      logger.error('Error in getOrderReceipt:', error);
+      logger.error("Error in getOrderReceipt:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to generate receipt',
+        error: "Failed to generate receipt",
         details: error.message,
       });
     }
@@ -472,26 +493,28 @@ class OrderController {
    * Helper method to generate receipt HTML
    */
   private generateReceiptHTML(order: any): string {
-    const currentDate = new Date().toLocaleString('en-US', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true
+    const currentDate = new Date().toLocaleString("en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
     });
 
     const itemsHTML = (order.items || [])
-      .map((item: any) => `
+      .map(
+        (item: any) => `
         <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.product_name || 'N/A'}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.product_name || "N/A"}</td>
           <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
           <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">Rs. ${(item.sold_price || 0).toFixed(2)}</td>
           <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">Rs. ${(item.total_price || 0).toFixed(2)}</td>
         </tr>
-      `)
-      .join('');
+      `
+      )
+      .join("");
 
     return `
       <!DOCTYPE html>
@@ -678,7 +701,7 @@ class OrderController {
             </div>
             <div class="info-box">
               <label>Order Date</label>
-              <value>${new Date(order.order_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' })}</value>
+              <value>${new Date(order.order_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" })}</value>
             </div>
             <div class="info-box">
               <label>Status</label>
@@ -686,19 +709,19 @@ class OrderController {
             </div>
             <div class="info-box">
               <label>Payment Method</label>
-              <value>${(order.payment_method || 'cash').toUpperCase()}</value>
+              <value>${(order.payment_method || "cash").toUpperCase()}</value>
             </div>
           </div>
 
           <div class="section-title">Recipient Information</div>
           <div class="address-section">
-            <div class="address-title">${order.recipient_name || 'N/A'}</div>
-            <div>${order.recipient_phone || 'N/A'}</div>
+            <div class="address-title">${order.recipient_name || "N/A"}</div>
+            <div>${order.recipient_phone || "N/A"}</div>
             <div style="margin-top: 8px; line-height: 1.5;">
-              ${order.line1 || 'N/A'}<br>
-              ${order.line2 || 'N/A'}<br>
-              ${order.city_name || 'N/A'}, ${order.district_name || 'N/A'} ${order.postal_code || 'N/A'}<br>
-              ${order.province_name || 'N/A'}
+              ${order.line1 || "N/A"}<br>
+              ${order.line2 || "N/A"}<br>
+              ${order.city_name || "N/A"}, ${order.district_name || "N/A"} ${order.postal_code || "N/A"}<br>
+              ${order.province_name || "N/A"}
             </div>
           </div>
 
@@ -735,7 +758,7 @@ class OrderController {
               <span>Rs. ${(order.total_amount || 0).toFixed(2)}</span>
             </div>
             <div style="text-align: center; margin-top: 8px;">
-              <span class="payment-status status-${order.payment_status || 'unpaid'}">${(order.payment_status || 'unpaid').toUpperCase().replace('_', ' ')}</span>
+              <span class="payment-status status-${order.payment_status || "unpaid"}">${(order.payment_status || "unpaid").toUpperCase().replace("_", " ")}</span>
             </div>
           </div>
 

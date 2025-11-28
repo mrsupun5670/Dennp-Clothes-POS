@@ -1,24 +1,32 @@
 import React, { useState, useMemo, useEffect } from "react";
-import BankPaymentModal, { BankPaymentData } from "../components/BankPaymentModal";
+import BankPaymentModal, {
+  BankPaymentData,
+} from "../components/BankPaymentModal";
 import PaymentMethodSelector from "../components/PaymentMethodSelector";
-import { printContent, saveAsPDF, generateOrderBillHTML } from "../utils/exportUtils";
+import {
+  printContent,
+  saveAsPDF,
+  generateOrderBillHTML,
+} from "../utils/exportUtils";
 import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
 
 // Utility function to get Sri Lankan timezone datetime
 const getSriLankanDateTime = () => {
   const date = new Date();
-  const sriLankanDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Colombo' }));
+  const sriLankanDate = new Date(
+    date.toLocaleString("en-US", { timeZone: "Asia/Colombo" })
+  );
   const year = sriLankanDate.getFullYear();
-  const month = String(sriLankanDate.getMonth() + 1).padStart(2, '0');
-  const day = String(sriLankanDate.getDate()).padStart(2, '0');
-  const hours = String(sriLankanDate.getHours()).padStart(2, '0');
-  const minutes = String(sriLankanDate.getMinutes()).padStart(2, '0');
-  const seconds = String(sriLankanDate.getSeconds()).padStart(2, '0');
+  const month = String(sriLankanDate.getMonth() + 1).padStart(2, "0");
+  const day = String(sriLankanDate.getDate()).padStart(2, "0");
+  const hours = String(sriLankanDate.getHours()).padStart(2, "0");
+  const minutes = String(sriLankanDate.getMinutes()).padStart(2, "0");
+  const seconds = String(sriLankanDate.getSeconds()).padStart(2, "0");
   return {
     dateString: `${year}-${month}-${day}`,
     timeString: `${hours}:${minutes}:${seconds}`,
-    fullDateTime: `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    fullDateTime: `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`,
   };
 };
 
@@ -214,7 +222,9 @@ const SAMPLE_PRODUCTS: Product[] = [
     retailPrice: 1250,
     category: "tshirt",
     sizesByCategory: { tshirt: ["XS", "S", "M", "L", "XL", "XXL"] },
-    colorsByCategory: { tshirt: ["Black", "White", "Navy", "Maroon", "Green", "Blue", "Gray"] },
+    colorsByCategory: {
+      tshirt: ["Black", "White", "Navy", "Maroon", "Green", "Blue", "Gray"],
+    },
   },
   {
     id: "P002",
@@ -223,7 +233,9 @@ const SAMPLE_PRODUCTS: Product[] = [
     retailPrice: 1600,
     category: "shirt",
     sizesByCategory: { shirt: ["S", "M", "L", "XL", "XXL"] },
-    colorsByCategory: { shirt: ["White", "Navy", "Red", "Green", "Black", "Maroon"] },
+    colorsByCategory: {
+      shirt: ["White", "Navy", "Red", "Green", "Black", "Maroon"],
+    },
   },
   {
     id: "P003",
@@ -231,8 +243,12 @@ const SAMPLE_PRODUCTS: Product[] = [
     name: "Formal Shirt",
     retailPrice: 1800,
     category: "shirt",
-    sizesByCategory: { shirt: ["14", "14.5", "15", "15.5", "16", "16.5", "17"] },
-    colorsByCategory: { shirt: ["White", "Light Blue", "Sky Blue", "Cream", "Pink"] },
+    sizesByCategory: {
+      shirt: ["14", "14.5", "15", "15.5", "16", "16.5", "17"],
+    },
+    colorsByCategory: {
+      shirt: ["White", "Light Blue", "Sky Blue", "Cream", "Pink"],
+    },
   },
   {
     id: "P004",
@@ -259,7 +275,9 @@ const SAMPLE_PRODUCTS: Product[] = [
     retailPrice: 950,
     category: "tshirt",
     sizesByCategory: { tshirt: ["XS", "S", "M", "L", "XL"] },
-    colorsByCategory: { tshirt: ["Black", "White", "Pink", "Peach", "Yellow", "Red"] },
+    colorsByCategory: {
+      tshirt: ["Black", "White", "Pink", "Peach", "Yellow", "Red"],
+    },
   },
   {
     id: "P007",
@@ -289,13 +307,14 @@ interface ColorOption {
   [key: string]: string[];
 }
 
-
 const SalesPage: React.FC = () => {
   // Shop context
   const { shopId } = useShop();
 
   // State Management
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null
+  );
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [paidAmount, setPaidAmount] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
@@ -306,7 +325,8 @@ const SalesPage: React.FC = () => {
 
   // New payment system states
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
-  const [bankPaymentDetails, setBankPaymentDetails] = useState<BankPaymentData | null>(null);
+  const [bankPaymentDetails, setBankPaymentDetails] =
+    useState<BankPaymentData | null>(null);
   const [showBankPaymentModal, setShowBankPaymentModal] = useState(false);
 
   // Loading states for customers and products
@@ -328,12 +348,16 @@ const SalesPage: React.FC = () => {
 
   // Stock management states
   const [productStock, setProductStock] = useState<StockData[]>([]);
-  const [availableSizes, setAvailableSizes] = useState<{ size_id: number; size_name: string }[]>([]);
-  const [availableColors, setAvailableColors] = useState<{ color_id: number; color_name: string }[]>([]);
+  const [availableSizes, setAvailableSizes] = useState<
+    { size_id: number; size_name: string }[]
+  >([]);
+  const [availableColors, setAvailableColors] = useState<
+    { color_id: number; color_name: string }[]
+  >([]);
 
   // Load order from sessionStorage on component mount
   React.useEffect(() => {
-    const orderData = sessionStorage.getItem('orderToEdit');
+    const orderData = sessionStorage.getItem("orderToEdit");
     if (orderData) {
       try {
         const order = JSON.parse(orderData);
@@ -355,27 +379,29 @@ const SalesPage: React.FC = () => {
         setSelectedCustomer(customer);
 
         // Load cart items
-        const newCartItems: CartItem[] = order.items.map((item: any, idx: number) => ({
-          id: `edit-${idx}-${Date.now()}`,
-          productCode: `CODE-${idx}`,
-          productName: item.productName,
-          size: item.size || "N/A",
-          color: item.color || "N/A",
-          quantity: item.quantity,
-          price: item.price,
-        }));
+        const newCartItems: CartItem[] = order.items.map(
+          (item: any, idx: number) => ({
+            id: `edit-${idx}-${Date.now()}`,
+            productCode: `CODE-${idx}`,
+            productName: item.productName,
+            size: item.size || "N/A",
+            color: item.color || "N/A",
+            quantity: item.quantity,
+            price: item.price,
+          })
+        );
         setCartItems(newCartItems);
 
         // Clear the sessionStorage after loading
-        sessionStorage.removeItem('orderToEdit');
+        sessionStorage.removeItem("orderToEdit");
       } catch (error) {
-        console.error('Error loading order data:', error);
+        console.error("Error loading order data:", error);
       }
     }
 
     // Clear navigation flag
-    if (sessionStorage.getItem('navigateToSales') === 'true') {
-      sessionStorage.removeItem('navigateToSales');
+    if (sessionStorage.getItem("navigateToSales") === "true") {
+      sessionStorage.removeItem("navigateToSales");
     }
   }, []);
 
@@ -389,7 +415,9 @@ const SalesPage: React.FC = () => {
 
   // New Product Form States
   const [selectedCategory, setSelectedCategory] = useState<string>("tshirt");
-  const [stockRows, setStockRows] = useState<{ id: number; size: string; color: string; qty: number }[]>([]);
+  const [stockRows, setStockRows] = useState<
+    { id: number; size: string; color: string; qty: number }[]
+  >([]);
   const [nextRowId, setNextRowId] = useState(1);
   const [customSizes, setCustomSizes] = useState<string[]>([]);
   const [customColors, setCustomColors] = useState<string[]>([]);
@@ -437,7 +465,11 @@ const SalesPage: React.FC = () => {
     return [...baseColors, ...customColors];
   };
 
-  const updateStockRow = (rowId: number, field: "size" | "color" | "qty", value: any) => {
+  const updateStockRow = (
+    rowId: number,
+    field: "size" | "color" | "qty",
+    value: any
+  ) => {
     setStockRows(
       stockRows.map((row) =>
         row.id === rowId ? { ...row, [field]: value } : row
@@ -446,7 +478,10 @@ const SalesPage: React.FC = () => {
   };
 
   const addStockRow = () => {
-    setStockRows([...stockRows, { id: nextRowId, size: "", color: "", qty: 0 }]);
+    setStockRows([
+      ...stockRows,
+      { id: nextRowId, size: "", color: "", qty: 0 },
+    ]);
     setNextRowId(nextRowId + 1);
   };
 
@@ -477,12 +512,24 @@ const SalesPage: React.FC = () => {
     setNextRowId(2);
     setCustomSizes([]);
     setCustomColors([]);
-    setFormData({ code: "", name: "", costPrice: "", retailPrice: "", wholesalePrice: "" });
+    setFormData({
+      code: "",
+      name: "",
+      costPrice: "",
+      retailPrice: "",
+      wholesalePrice: "",
+    });
   };
 
   const handleCloseProductModal = () => {
     setShowAddProductModal(false);
-    setFormData({ code: "", name: "", costPrice: "", retailPrice: "", wholesalePrice: "" });
+    setFormData({
+      code: "",
+      name: "",
+      costPrice: "",
+      retailPrice: "",
+      wholesalePrice: "",
+    });
     setStockRows([]);
     setCustomSizes([]);
     setCustomColors([]);
@@ -492,7 +539,9 @@ const SalesPage: React.FC = () => {
   const [customerSearch, setCustomerSearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customerTypeFilter, setCustomerTypeFilter] = useState<"wholesale" | "retail">("wholesale");
+  const [customerTypeFilter, setCustomerTypeFilter] = useState<
+    "wholesale" | "retail"
+  >("wholesale");
   const [newCustomer, setNewCustomer] = useState<NewCustomer>({
     name: "",
     email: "",
@@ -507,7 +556,10 @@ const SalesPage: React.FC = () => {
   const [selectedPrice, setSelectedPrice] = useState<string>(""); // Editable price
 
   // UI Message state
-  const [message, setMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: "error" | "success" | "info";
+    text: string;
+  } | null>(null);
 
   // Auto-dismiss message after 4 seconds
   useEffect(() => {
@@ -555,10 +607,13 @@ const SalesPage: React.FC = () => {
     const query = customerSearch.toLowerCase();
     const localFiltered = allCustomers.filter(
       (customer) =>
-        String(customer.customer_id || customer.id || "").toLowerCase().includes(query) ||
+        String(customer.customer_id || customer.id || "")
+          .toLowerCase()
+          .includes(query) ||
         (customer.mobile && customer.mobile.toLowerCase().includes(query)) ||
         (customer.name && customer.name.toLowerCase().includes(query)) ||
-        (customer.first_name && customer.first_name.toLowerCase().includes(query)) ||
+        (customer.first_name &&
+          customer.first_name.toLowerCase().includes(query)) ||
         (customer.last_name && customer.last_name.toLowerCase().includes(query))
     );
 
@@ -620,9 +675,16 @@ const SalesPage: React.FC = () => {
     const query = productSearch.toLowerCase();
     const localFiltered = allProducts.filter(
       (product) =>
-        ((product.name || product.product_name) && (product.name || product.product_name)!.toLowerCase().includes(query)) ||
-        ((product.code || product.sku) && (product.code || product.sku)!.toLowerCase().includes(query)) ||
-        ((product.id || product.product_id) && String(product.id || product.product_id).toLowerCase().includes(query))
+        ((product.name || product.product_name) &&
+          (product.name || product.product_name)!
+            .toLowerCase()
+            .includes(query)) ||
+        ((product.code || product.sku) &&
+          (product.code || product.sku)!.toLowerCase().includes(query)) ||
+        ((product.id || product.product_id) &&
+          String(product.id || product.product_id)
+            .toLowerCase()
+            .includes(query))
     );
 
     setProducts(localFiltered);
@@ -662,7 +724,9 @@ const SalesPage: React.FC = () => {
     const loadProductStock = async () => {
       try {
         const productId = selectedProduct.id || selectedProduct.product_id;
-        const response = await fetch(`${API_URL}/products/${productId}/stock?shop_id=${shopId}`);
+        const response = await fetch(
+          `${API_URL}/products/${productId}/stock?shop_id=${shopId}`
+        );
         const result = await response.json();
 
         if (result.success && result.data) {
@@ -677,7 +741,7 @@ const SalesPage: React.FC = () => {
           });
           const sizes = Array.from(sizesMap.entries()).map(([id, name]) => ({
             size_id: id,
-            size_name: name
+            size_name: name,
           }));
           setAvailableSizes(sizes);
           setAvailableColors([]);
@@ -705,7 +769,9 @@ const SalesPage: React.FC = () => {
 
     // Get colors available for the selected size
     const colorsForSize = productStock
-      .filter(stock => stock.size_name === selectedSize && stock.stock_qty > 0)
+      .filter(
+        (stock) => stock.size_name === selectedSize && stock.stock_qty > 0
+      )
       .reduce((acc: Map<number, string>, stock) => {
         if (!acc.has(stock.color_id)) {
           acc.set(stock.color_id, stock.color_name);
@@ -715,7 +781,7 @@ const SalesPage: React.FC = () => {
 
     const colors = Array.from(colorsForSize.entries()).map(([id, name]) => ({
       color_id: id,
-      color_name: name
+      color_name: name,
     }));
     setAvailableColors(colors);
     setSelectedColor("");
@@ -723,8 +789,8 @@ const SalesPage: React.FC = () => {
 
   // Helper function to safely convert price to number
   const parsePrice = (price: any): number => {
-    if (typeof price === 'number') return price;
-    if (typeof price === 'string') return parseFloat(price) || 0;
+    if (typeof price === "number") return price;
+    if (typeof price === "string") return parseFloat(price) || 0;
     return 0;
   };
 
@@ -734,21 +800,29 @@ const SalesPage: React.FC = () => {
 
     let price = 0;
     if (customerTypeFilter === "wholesale") {
-      price = parsePrice(product.wholesale_price) || parsePrice(product.wholesalePrice) || 0;
+      price =
+        parsePrice(product.wholesale_price) ||
+        parsePrice(product.wholesalePrice) ||
+        0;
     } else {
-      price = parsePrice(product.retail_price) || parsePrice(product.retailPrice) || 0;
+      price =
+        parsePrice(product.retail_price) ||
+        parsePrice(product.retailPrice) ||
+        0;
     }
 
-    return typeof price === 'number' && !isNaN(price) ? price : 0;
+    return typeof price === "number" && !isNaN(price) ? price : 0;
   };
 
   // Helper function to safely get wholesale price for display
   const getWholesalePrice = (product: Product): number => {
     if (!product) return 0;
-    const price = parsePrice(product.wholesale_price) || parsePrice(product.wholesalePrice) || 0;
-    return typeof price === 'number' && !isNaN(price) ? price : 0;
+    const price =
+      parsePrice(product.wholesale_price) ||
+      parsePrice(product.wholesalePrice) ||
+      0;
+    return typeof price === "number" && !isNaN(price) ? price : 0;
   };
-
 
   // Filtered data
   const filteredCustomers = useMemo(() => {
@@ -760,7 +834,10 @@ const SalesPage: React.FC = () => {
   }, [products]);
 
   // Calculations
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
   const total = subtotal;
 
   // Handlers
@@ -787,32 +864,45 @@ const SalesPage: React.FC = () => {
   };
 
   const handleAddProductToCart = () => {
-    if (!selectedProduct || !selectedSize || !selectedColor || !selectedQty || !selectedPrice) {
-      setMessage({ type: "error", text: "Please fill all fields including price" });
+    if (
+      !selectedProduct ||
+      !selectedSize ||
+      !selectedColor ||
+      !selectedQty ||
+      !selectedPrice
+    ) {
+      setMessage({
+        type: "error",
+        text: "Please fill all fields including price",
+      });
       return;
     }
 
     // Get available quantity for this product/size/color combination
-    const availableQty = productStock.find(
-      stock =>
-        stock.size_name === selectedSize &&
-        stock.color_name === selectedColor
-    )?.stock_qty || 0;
+    const availableQty =
+      productStock.find(
+        (stock) =>
+          stock.size_name === selectedSize && stock.color_name === selectedColor
+      )?.stock_qty || 0;
 
     const requestedQty = parseInt(selectedQty);
 
     // Validate quantity against available stock
     if (requestedQty > availableQty) {
-      setMessage({ type: "error", text: `Only ${availableQty} units available for this size and color` });
+      setMessage({
+        type: "error",
+        text: `Only ${availableQty} units available for this size and color`,
+      });
       return;
     }
 
     // Calculate total quantity already in cart for this product
     const cartQuantityForProduct = cartItems
-      .filter(item => {
+      .filter((item) => {
         const isSameProduct =
-          (item.productCode === (selectedProduct.code || selectedProduct.sku)) ||
-          (item.productName === (selectedProduct.name || selectedProduct.product_name));
+          item.productCode === (selectedProduct.code || selectedProduct.sku) ||
+          item.productName ===
+            (selectedProduct.name || selectedProduct.product_name);
         return isSameProduct;
       })
       .reduce((sum, item) => sum + item.quantity, 0);
@@ -821,7 +911,10 @@ const SalesPage: React.FC = () => {
     const totalRequestedQty = cartQuantityForProduct + requestedQty;
     if (totalRequestedQty > availableQty) {
       const remaining = availableQty - cartQuantityForProduct;
-      setMessage({ type: "error", text: `Only ${remaining} more units can be added to cart (${cartQuantityForProduct} already in cart)` });
+      setMessage({
+        type: "error",
+        text: `Only ${remaining} more units can be added to cart (${cartQuantityForProduct} already in cart)`,
+      });
       return;
     }
 
@@ -832,7 +925,12 @@ const SalesPage: React.FC = () => {
     const uniqueId = `${productId}-${selectedSize}-${selectedColor}-${roundedPrice}`;
 
     // Get product costs
-    const productCost = parsePrice(selectedProduct.product_cost || selectedProduct.cost_price || selectedProduct.costPrice) || 0;
+    const productCost =
+      parsePrice(
+        selectedProduct.product_cost ||
+          selectedProduct.cost_price ||
+          selectedProduct.costPrice
+      ) || 0;
     const printCost = parsePrice(selectedProduct.print_cost || 0) || 0;
 
     // Get color_id and size_id from product
@@ -840,21 +938,25 @@ const SalesPage: React.FC = () => {
     let sizeId = 1;
 
     if (selectedProduct.colors && selectedProduct.colors.length > 0) {
-      const colorMatch = selectedProduct.colors.find(c => c.color_name === selectedColor);
+      const colorMatch = selectedProduct.colors.find(
+        (c) => c.color_name === selectedColor
+      );
       if (colorMatch) {
         colorId = colorMatch.color_id;
       }
     }
 
     if (selectedProduct.sizes && selectedProduct.sizes.length > 0) {
-      const sizeMatch = selectedProduct.sizes.find(s => s.size_name === selectedSize);
+      const sizeMatch = selectedProduct.sizes.find(
+        (s) => s.size_name === selectedSize
+      );
       if (sizeMatch) {
         sizeId = sizeMatch.size_id;
       }
     }
 
     // Check if this exact product/size/color/price combination already exists in cart
-    const existingItemIndex = cartItems.findIndex(item => {
+    const existingItemIndex = cartItems.findIndex((item) => {
       const itemRoundedPrice = Math.round(item.price * 100) / 100;
       return (
         item.productId === productId &&
@@ -869,7 +971,10 @@ const SalesPage: React.FC = () => {
       const updatedItems = [...cartItems];
       updatedItems[existingItemIndex].quantity += requestedQty;
       setCartItems(updatedItems);
-      setMessage({ type: "success", text: `✓ Qty updated: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor}) @ Rs. ${price.toFixed(2)}` });
+      setMessage({
+        type: "success",
+        text: `✓ Qty updated: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor}) @ Rs. ${price.toFixed(2)}`,
+      });
     } else {
       // New item - add to cart
       const cartItem: CartItem = {
@@ -887,7 +992,10 @@ const SalesPage: React.FC = () => {
         printCost: printCost,
       };
       setCartItems([...cartItems, cartItem]);
-      setMessage({ type: "success", text: `✓ Added to cart: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor}) @ Rs. ${roundedPrice.toFixed(2)}` });
+      setMessage({
+        type: "success",
+        text: `✓ Added to cart: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor}) @ Rs. ${roundedPrice.toFixed(2)}`,
+      });
     }
 
     setSelectedProduct(null);
@@ -917,7 +1025,10 @@ const SalesPage: React.FC = () => {
     // Validation based on payment method
     if (paymentMethod === "cash") {
       if (!paidAmount) {
-        setMessage({ type: "error", text: "Cash payment selected: Please enter paid amount to continue" });
+        setMessage({
+          type: "error",
+          text: "Cash payment selected: Please enter paid amount to continue",
+        });
         return;
       }
     } else if (paymentMethod === "bank") {
@@ -929,11 +1040,13 @@ const SalesPage: React.FC = () => {
 
     try {
       const newPayment = parseFloat(paidAmount) || 0;
-      const totalPaidNow = editingOrderId ? previouslyPaidAmount + newPayment : newPayment;
+      const totalPaidNow = editingOrderId
+        ? previouslyPaidAmount + newPayment
+        : newPayment;
       const balance = total - totalPaidNow;
 
       // Determine payment status and amounts based on whether paid amount is less than total
-      let paymentStatus = "unpaid";
+      let paymentStatus = "";
       let advancePaid = 0;
       let balanceDue = 0;
       let finalAmount = 0;
@@ -954,16 +1067,19 @@ const SalesPage: React.FC = () => {
         }
       } else {
         // No payment made
-        paymentStatus = "unpaid";
+        paymentStatus = "";
         advancePaid = 0;
         balanceDue = total;
         finalAmount = 0;
       }
 
       // Generate order number (000001000 format)
-      const orderNumberResponse = await fetch(`${API_URL}/orders/generate-number?shop_id=${shopId}`);
+      const orderNumberResponse = await fetch(
+        `${API_URL}/orders/generate-number?shop_id=${shopId}`
+      );
       const orderNumberData = await orderNumberResponse.json();
-      const orderNumber = orderNumberData.orderNumber || `${String(Date.now()).slice(-9)}`;
+      const orderNumber =
+        orderNumberData.orderNumber || `${String(Date.now()).slice(-9)}`;
 
       // Get Sri Lankan datetime
       const sriLankanDateTime = getSriLankanDateTime();
@@ -984,7 +1100,7 @@ const SalesPage: React.FC = () => {
         payment_status: paymentStatus,
         notes: orderNotes || null,
         order_date: sriLankanDateTime.dateString,
-        items: cartItems.map(item => ({
+        items: cartItems.map((item) => ({
           product_id: item.productId,
           color_id: item.colorId,
           size_id: item.sizeId,
@@ -1003,7 +1119,10 @@ const SalesPage: React.FC = () => {
 
       const orderResult = await orderResponse.json();
       if (!orderResult.success) {
-        setMessage({ type: "error", text: `Failed to save order: ${orderResult.error}` });
+        setMessage({
+          type: "error",
+          text: `Failed to save order: ${orderResult.error}`,
+        });
         return;
       }
 
@@ -1031,7 +1150,12 @@ const SalesPage: React.FC = () => {
       }
 
       // Success message with payment status
-      const paymentStatusText = paymentStatus === "fully_paid" ? "✓ Fully Paid" : (paymentStatus === "partial" ? "⚠ Partially Paid" : "⏳ Unpaid");
+      const paymentStatusText =
+        paymentStatus === "fully_paid"
+          ? "✓ Fully Paid"
+          : paymentStatus === "partial"
+            ? "⚠ Partially Paid"
+            : "⏳ Unpaid";
       const displayMessage = `✓ Order ${orderNumber} created! Total: Rs. ${total.toFixed(2)} | Paid: Rs. ${finalAmount.toFixed(2)} | Status: ${paymentStatusText}${balanceDue > 0 ? ` | Balance Due: Rs. ${balanceDue.toFixed(2)}` : ""}`;
       setMessage({ type: "success", text: displayMessage });
 
@@ -1045,14 +1169,20 @@ const SalesPage: React.FC = () => {
       setEditingOrderId(null);
       setPreviouslyPaidAmount(0);
     } catch (error: any) {
-      setMessage({ type: "error", text: `Error saving order: ${error.message}` });
+      setMessage({
+        type: "error",
+        text: `Error saving order: ${error.message}`,
+      });
       console.error("Save order error:", error);
     }
   };
 
   const handlePrintBill = () => {
     if (!selectedCustomer || cartItems.length === 0) {
-      setMessage({ type: "error", text: "Please select customer and add items" });
+      setMessage({
+        type: "error",
+        text: "Please select customer and add items",
+      });
       return;
     }
 
@@ -1063,11 +1193,17 @@ const SalesPage: React.FC = () => {
     // Only allow printing if payment is fully paid or more
     if (paymentMethod === "cash") {
       if (!paidAmount) {
-        setMessage({ type: "error", text: "Please enter cash amount to print bill" });
+        setMessage({
+          type: "error",
+          text: "Please enter cash amount to print bill",
+        });
         return;
       }
       if (balance > 0) {
-        setMessage({ type: "error", text: `Cannot print bill. Balance due: Rs. ${balance.toFixed(2)}. Full or more payment required to print.` });
+        setMessage({
+          type: "error",
+          text: `Cannot print bill. Balance due: Rs. ${balance.toFixed(2)}. Full or more payment required to print.`,
+        });
         return;
       }
     } else if (paymentMethod === "bank") {
@@ -1078,7 +1214,10 @@ const SalesPage: React.FC = () => {
       const bankPaidAmt = parseFloat(bankPaymentDetails.paidAmount) || 0;
       const bankBalance = total - bankPaidAmt;
       if (bankBalance > 0) {
-        setMessage({ type: "error", text: `Cannot print bill. Balance due: Rs. ${bankBalance.toFixed(2)}. Full or more payment required to print.` });
+        setMessage({
+          type: "error",
+          text: `Cannot print bill. Balance due: Rs. ${bankBalance.toFixed(2)}. Full or more payment required to print.`,
+        });
         return;
       }
     }
@@ -1091,23 +1230,32 @@ const SalesPage: React.FC = () => {
       paidAmount,
     });
 
-    printContent(html, 'Order Bill');
+    printContent(html, "Order Bill");
   };
 
   const handleSaveBillAsImage = () => {
     if (!selectedCustomer || cartItems.length === 0) {
-      setMessage({ type: "error", text: "Please select customer and add items" });
+      setMessage({
+        type: "error",
+        text: "Please select customer and add items",
+      });
       return;
     }
 
     // Only allow saving if cash payment is complete
     if (paymentMethod === "cash") {
       if (!paidAmount) {
-        setMessage({ type: "error", text: "Please enter cash amount to save bill" });
+        setMessage({
+          type: "error",
+          text: "Please enter cash amount to save bill",
+        });
         return;
       }
     } else if (paymentMethod === "bank") {
-      setMessage({ type: "info", text: "Bank payments cannot be saved immediately. Bill will be generated once payment is verified." });
+      setMessage({
+        type: "info",
+        text: "Bank payments cannot be saved immediately. Bill will be generated once payment is verified.",
+      });
       return;
     }
 
@@ -1121,8 +1269,12 @@ const SalesPage: React.FC = () => {
 
     // Use Sri Lankan datetime for PDF filename
     const sriLankanDateTime = getSriLankanDateTime();
-    const timestamp = sriLankanDateTime.dateString.replace(/[-.]/g, '');
-    saveAsPDF(html, `order_bill_${selectedCustomer.name.replace(/\s+/g, '_')}_${timestamp}`, 'orders');
+    const timestamp = sriLankanDateTime.dateString.replace(/[-.]/g, "");
+    saveAsPDF(
+      html,
+      `order_bill_${selectedCustomer.name.replace(/\s+/g, "_")}_${timestamp}`,
+      "orders"
+    );
   };
 
   const handleCancelOrder = () => {
@@ -1155,14 +1307,14 @@ const SalesPage: React.FC = () => {
   };
 
   const sizeOptions = selectedProduct
-    ? (selectedProduct.sizesByCategory?.[selectedProduct.category || ""] ||
-       selectedProduct.sizes?.map(s => s.size_name) ||
-       [])
+    ? selectedProduct.sizesByCategory?.[selectedProduct.category || ""] ||
+      selectedProduct.sizes?.map((s) => s.size_name) ||
+      []
     : [];
   const colorOptions = selectedProduct
-    ? (selectedProduct.colorsByCategory?.[selectedProduct.category || ""] ||
-       selectedProduct.colors?.map(c => c.color_name) ||
-       [])
+    ? selectedProduct.colorsByCategory?.[selectedProduct.category || ""] ||
+      selectedProduct.colors?.map((c) => c.color_name) ||
+      []
     : [];
 
   return (
@@ -1170,7 +1322,11 @@ const SalesPage: React.FC = () => {
       {/* Header */}
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold text-red-500">{editingOrderId ? `Edit Order: ${editingOrderId}` : "Sales & Orders"}</h1>
+          <h1 className="text-3xl font-bold text-red-500">
+            {editingOrderId
+              ? `Edit Order: ${editingOrderId}`
+              : "Sales & Orders"}
+          </h1>
           <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
             {cartItems.length} items
           </span>
@@ -1189,12 +1345,16 @@ const SalesPage: React.FC = () => {
             message.type === "error"
               ? "bg-red-900/40 border-red-600 text-red-300"
               : message.type === "success"
-              ? "bg-green-900/40 border-green-600 text-green-300"
-              : "bg-blue-900/40 border-blue-600 text-blue-300"
+                ? "bg-green-900/40 border-green-600 text-green-300"
+                : "bg-blue-900/40 border-blue-600 text-blue-300"
           }`}
         >
           <span className="text-xl font-bold mt-0.5">
-            {message.type === "error" ? "✕" : message.type === "success" ? "✓" : "ℹ"}
+            {message.type === "error"
+              ? "✕"
+              : message.type === "success"
+                ? "✓"
+                : "ℹ"}
           </span>
           <p className="flex-1">{message.text}</p>
         </div>
@@ -1321,7 +1481,9 @@ const SalesPage: React.FC = () => {
                     <p className="font-semibold text-gray-100">
                       ID: {selectedCustomer.customer_id || selectedCustomer.id}
                     </p>
-                    <p className="text-xs text-gray-400">{selectedCustomer.mobile}</p>
+                    <p className="text-xs text-gray-400">
+                      {selectedCustomer.mobile}
+                    </p>
                   </div>
                   <button
                     onClick={() => setSelectedCustomer(null)}
@@ -1360,35 +1522,43 @@ const SalesPage: React.FC = () => {
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/30"
                   />
 
-                {/* Product Dropdown */}
-                {showProductSearch && productSearch && filteredProducts.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 bg-gray-700 border border-red-600/50 rounded-lg max-h-48 overflow-y-auto z-50 mt-1">
-                    {isLoadingProducts ? (
-                      <div className="px-4 py-3 text-gray-400 text-sm">
-                        Searching...
+                  {/* Product Dropdown */}
+                  {showProductSearch &&
+                    productSearch &&
+                    filteredProducts.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 bg-gray-700 border border-red-600/50 rounded-lg max-h-48 overflow-y-auto z-50 mt-1">
+                        {isLoadingProducts ? (
+                          <div className="px-4 py-3 text-gray-400 text-sm">
+                            Searching...
+                          </div>
+                        ) : (
+                          filteredProducts.map((product) => (
+                            <button
+                              key={product.id || product.product_id}
+                              onClick={() => {
+                                setSelectedProduct(product);
+                                setShowProductSearch(false);
+                                setSelectedPrice(
+                                  String(getProductPrice(product))
+                                );
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-red-900/40 border-b border-gray-600/50 text-sm"
+                            >
+                              <div className="font-medium text-gray-100">
+                                {product.name || product.product_name}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                ID: {product.id || product.product_id} •{" "}
+                                {customerTypeFilter === "wholesale"
+                                  ? "Wholesale"
+                                  : "Retail"}
+                                : Rs. {getProductPrice(product).toFixed(2)}
+                              </div>
+                            </button>
+                          ))
+                        )}
                       </div>
-                    ) : (
-                      filteredProducts.map((product) => (
-                        <button
-                          key={product.id || product.product_id}
-                          onClick={() => {
-                            setSelectedProduct(product);
-                            setShowProductSearch(false);
-                            setSelectedPrice(String(getProductPrice(product)));
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-red-900/40 border-b border-gray-600/50 text-sm"
-                        >
-                          <div className="font-medium text-gray-100">
-                            {product.name || product.product_name}
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            ID: {product.id || product.product_id} • {customerTypeFilter === "wholesale" ? "Wholesale" : "Retail"}: Rs. {getProductPrice(product).toFixed(2)}
-                          </div>
-                        </button>
-                      ))
                     )}
-                  </div>
-                )}
                 </div>
               </div>
 
@@ -1397,8 +1567,12 @@ const SalesPage: React.FC = () => {
                 <div className="flex-1 overflow-y-auto min-h-0">
                   <div className="bg-gray-700/50 border border-red-600/30 rounded-lg p-4 space-y-3">
                     <div>
-                      <p className="font-semibold text-gray-100">{selectedProduct.name || selectedProduct.product_name}</p>
-                      <p className="text-xs text-gray-400 mt-1">{selectedProduct.code || selectedProduct.sku}</p>
+                      <p className="font-semibold text-gray-100">
+                        {selectedProduct.name || selectedProduct.product_name}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {selectedProduct.code || selectedProduct.sku}
+                      </p>
                     </div>
 
                     {/* Row 1: Size and Color in same row */}
@@ -1440,7 +1614,10 @@ const SalesPage: React.FC = () => {
                             <option value="">-- Choose Color --</option>
                             {availableColors.length > 0 ? (
                               availableColors.map((color) => (
-                                <option key={color.color_id} value={color.color_name}>
+                                <option
+                                  key={color.color_id}
+                                  value={color.color_name}
+                                >
                                   {color.color_name}
                                 </option>
                               ))
@@ -1453,86 +1630,119 @@ const SalesPage: React.FC = () => {
                     </div>
 
                     {/* Row 2: Quantity and Price in same row */}
-                    {selectedSize && selectedColor && (() => {
-                      const availableQty = productStock.find(
-                        stock =>
-                          stock.size_name === selectedSize &&
-                          stock.color_name === selectedColor
-                      )?.stock_qty || 0;
+                    {selectedSize &&
+                      selectedColor &&
+                      (() => {
+                        const availableQty =
+                          productStock.find(
+                            (stock) =>
+                              stock.size_name === selectedSize &&
+                              stock.color_name === selectedColor
+                          )?.stock_qty || 0;
 
-                      const cartQtyForProduct = cartItems
-                        .filter(item => {
-                          const isSameProduct =
-                            (item.productCode === (selectedProduct?.code || selectedProduct?.sku)) ||
-                            (item.productName === (selectedProduct?.name || selectedProduct?.product_name));
-                          return isSameProduct;
-                        })
-                        .reduce((sum, item) => sum + item.quantity, 0);
+                        const cartQtyForProduct = cartItems
+                          .filter((item) => {
+                            const isSameProduct =
+                              item.productCode ===
+                                (selectedProduct?.code ||
+                                  selectedProduct?.sku) ||
+                              item.productName ===
+                                (selectedProduct?.name ||
+                                  selectedProduct?.product_name);
+                            return isSameProduct;
+                          })
+                          .reduce((sum, item) => sum + item.quantity, 0);
 
-                      const remainingQty = availableQty - cartQtyForProduct;
+                        const remainingQty = availableQty - cartQtyForProduct;
 
-                      return (
-                        <div className="grid grid-cols-2 gap-3">
-                          {/* Quantity Input */}
-                          <div>
-                            <label className="block text-xs font-semibold text-red-400 mb-2">
-                              Qty (Avl: {availableQty}, Cart: {cartQtyForProduct})
-                            </label>
-                            <input
-                              type="number"
-                              min="1"
-                              max={remainingQty}
-                              value={selectedQty}
-                              onChange={(e) => setSelectedQty(e.target.value)}
-                              placeholder="Qty"
-                              className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                            />
-                            {remainingQty <= 0 && (
-                              <p className="text-xs text-red-400 mt-1">⚠️ Out of stock</p>
-                            )}
-                          </div>
+                        return (
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Quantity Input */}
+                            <div>
+                              <label className="block text-xs font-semibold text-red-400 mb-2">
+                                Qty (Avl: {availableQty}, Cart:{" "}
+                                {cartQtyForProduct})
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                max={remainingQty}
+                                value={selectedQty}
+                                onChange={(e) => setSelectedQty(e.target.value)}
+                                placeholder="Qty"
+                                className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                              />
+                              {remainingQty <= 0 && (
+                                <p className="text-xs text-red-400 mt-1">
+                                  ⚠️ Out of stock
+                                </p>
+                              )}
+                            </div>
 
-                          {/* Price Input */}
-                          <div>
-                            <label className="block text-xs font-semibold text-red-400 mb-2">
-                              Price (Rs.)
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={selectedPrice}
-                              onChange={(e) => setSelectedPrice(e.target.value)}
-                              placeholder="Price"
-                              className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                            />
-                            <div className="mt-1 space-y-1 text-xs">
-                              <p className="text-gray-400">Default: Rs. {selectedProduct ? getProductPrice(selectedProduct).toFixed(2) : "0.00"}</p>
-                              {selectedProduct && (() => {
-                                const productCostVal = parsePrice(selectedProduct.product_cost || selectedProduct.cost_price || selectedProduct.costPrice) || 0;
-                                const printCostVal = parsePrice(selectedProduct.print_cost || 0) || 0;
-                                const totalCost = productCostVal + printCostVal;
-                                const currentPrice = parseFloat(selectedPrice) || 0;
-                                const isBelowCost = selectedPrice && currentPrice < totalCost;
+                            {/* Price Input */}
+                            <div>
+                              <label className="block text-xs font-semibold text-red-400 mb-2">
+                                Price (Rs.)
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={selectedPrice}
+                                onChange={(e) =>
+                                  setSelectedPrice(e.target.value)
+                                }
+                                placeholder="Price"
+                                className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                              />
+                              <div className="mt-1 space-y-1 text-xs">
+                                <p className="text-gray-400">
+                                  Default: Rs.{" "}
+                                  {selectedProduct
+                                    ? getProductPrice(selectedProduct).toFixed(
+                                        2
+                                      )
+                                    : "0.00"}
+                                </p>
+                                {selectedProduct &&
+                                  (() => {
+                                    const productCostVal =
+                                      parsePrice(
+                                        selectedProduct.product_cost ||
+                                          selectedProduct.cost_price ||
+                                          selectedProduct.costPrice
+                                      ) || 0;
+                                    const printCostVal =
+                                      parsePrice(
+                                        selectedProduct.print_cost || 0
+                                      ) || 0;
+                                    const totalCost =
+                                      productCostVal + printCostVal;
+                                    const currentPrice =
+                                      parseFloat(selectedPrice) || 0;
+                                    const isBelowCost =
+                                      selectedPrice && currentPrice < totalCost;
 
-                                return (
-                                  <>
-                                    <p className="text-yellow-400 font-semibold">
-                                      Cost = Rs. {productCostVal.toFixed(2)} + Rs. {printCostVal.toFixed(2)} = Rs. {totalCost.toFixed(2)}
-                                    </p>
-                                    {isBelowCost && (
-                                      <p className="text-red-400 font-semibold flex items-center gap-1">
-                                        ⚠️ Price is below cost!
-                                      </p>
-                                    )}
-                                  </>
-                                );
-                              })()}
+                                    return (
+                                      <>
+                                        <p className="text-yellow-400 font-semibold">
+                                          Cost = Rs. {productCostVal.toFixed(2)}{" "}
+                                          + Rs. {printCostVal.toFixed(2)} = Rs.{" "}
+                                          {totalCost.toFixed(2)}
+                                        </p>
+                                        {isBelowCost && (
+                                          <p className="text-red-400 font-semibold flex items-center gap-1">
+                                            ⚠️ Price is below cost!
+                                          </p>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })()}
+                        );
+                      })()}
 
                     {/* Row 3: Add to Cart Button - Full width */}
                     {selectedSize && selectedColor && selectedQty && (
@@ -1584,7 +1794,11 @@ const SalesPage: React.FC = () => {
               <button
                 onClick={handleCancelOrder}
                 className="px-3 py-2 border border-gray-600 text-gray-400 rounded-lg text-sm hover:bg-gray-700/50 transition-colors"
-                title={editingOrderId ? "Cancel editing and return to sales" : "Clear cart and reset"}
+                title={
+                  editingOrderId
+                    ? "Cancel editing and return to sales"
+                    : "Clear cart and reset"
+                }
               >
                 {editingOrderId ? "✕ Cancel" : "🔄 Clear"}
               </button>
@@ -1601,7 +1815,9 @@ const SalesPage: React.FC = () => {
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-100">{item.productName}</p>
+                      <p className="text-sm font-medium text-gray-100">
+                        {item.productName}
+                      </p>
                       <p className="text-xs text-gray-400">
                         ID: {item.productId} • {item.size} • {item.color}
                       </p>
@@ -1616,7 +1832,9 @@ const SalesPage: React.FC = () => {
                   <div className="flex justify-between items-center text-xs">
                     <div className="text-gray-400">
                       <span>Qty: {item.quantity}</span>
-                      <span className="ml-3">@ Rs. {item.price.toFixed(2)}</span>
+                      <span className="ml-3">
+                        @ Rs. {item.price.toFixed(2)}
+                      </span>
                     </div>
                     <span className="font-semibold text-red-400">
                       Rs. {(item.price * item.quantity).toFixed(2)}
@@ -1631,39 +1849,57 @@ const SalesPage: React.FC = () => {
             )}
 
             {/* Price Preview - Show what will be added when price is entered */}
-            {selectedProduct && selectedSize && selectedColor && selectedQty && selectedPrice && (
-              <div className="bg-blue-900/30 border border-blue-600/50 p-3 rounded mt-2 animate-fadeIn">
-                <p className="text-xs text-blue-300 font-semibold mb-2">Preview - Will add:</p>
-                <div className="space-y-1 text-xs">
-                  <p className="text-gray-300">
-                    <span className="font-medium">{selectedProduct.name || selectedProduct.product_name}</span>
+            {selectedProduct &&
+              selectedSize &&
+              selectedColor &&
+              selectedQty &&
+              selectedPrice && (
+                <div className="bg-blue-900/30 border border-blue-600/50 p-3 rounded mt-2 animate-fadeIn">
+                  <p className="text-xs text-blue-300 font-semibold mb-2">
+                    Preview - Will add:
                   </p>
-                  <p className="text-gray-400">
-                    ID: {selectedProduct.id || selectedProduct.product_id} • {selectedSize} • {selectedColor}
-                  </p>
-                  <div className="flex justify-between items-center pt-1 border-t border-blue-600/30">
-                    <div className="text-gray-400">
-                      <span>Qty: {selectedQty}</span>
-                      <span className="ml-3">@ Rs. {parseFloat(selectedPrice).toFixed(2)}</span>
+                  <div className="space-y-1 text-xs">
+                    <p className="text-gray-300">
+                      <span className="font-medium">
+                        {selectedProduct.name || selectedProduct.product_name}
+                      </span>
+                    </p>
+                    <p className="text-gray-400">
+                      ID: {selectedProduct.id || selectedProduct.product_id} •{" "}
+                      {selectedSize} • {selectedColor}
+                    </p>
+                    <div className="flex justify-between items-center pt-1 border-t border-blue-600/30">
+                      <div className="text-gray-400">
+                        <span>Qty: {selectedQty}</span>
+                        <span className="ml-3">
+                          @ Rs. {parseFloat(selectedPrice).toFixed(2)}
+                        </span>
+                      </div>
+                      <span className="font-semibold text-blue-400">
+                        Rs.{" "}
+                        {(
+                          parseFloat(selectedPrice) * parseInt(selectedQty)
+                        ).toFixed(2)}
+                      </span>
                     </div>
-                    <span className="font-semibold text-blue-400">
-                      Rs. {(parseFloat(selectedPrice) * parseInt(selectedQty)).toFixed(2)}
-                    </span>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
 
           {/* Totals */}
           <div className="space-y-3 border-t border-gray-700 pt-4 mb-4">
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Subtotal:</span>
-              <span className="font-semibold text-gray-100">Rs. {subtotal.toFixed(2)}</span>
+              <span className="font-semibold text-gray-100">
+                Rs. {subtotal.toFixed(2)}
+              </span>
             </div>
             <div className="flex justify-between text-lg pt-2 border-t border-red-600">
               <span className="font-bold text-gray-100">Total:</span>
-              <span className="font-bold text-red-500">Rs. {total.toFixed(2)}</span>
+              <span className="font-bold text-red-500">
+                Rs. {total.toFixed(2)}
+              </span>
             </div>
           </div>
 
@@ -1673,17 +1909,25 @@ const SalesPage: React.FC = () => {
               paymentMethod={paymentMethod}
               onPaymentMethodChange={handlePaymentMethodChange}
               onBankPaymentClick={() => setShowBankPaymentModal(true)}
-              paidAmount={paymentMethod === "cash" ? paidAmount : (bankPaymentDetails?.paidAmount || "")}
+              paidAmount={
+                paymentMethod === "cash"
+                  ? paidAmount
+                  : bankPaymentDetails?.paidAmount || ""
+              }
               totalAmount={total}
               previouslyPaidAmount={previouslyPaidAmount}
-              bankPaymentDetails={paymentMethod === "bank" ? bankPaymentDetails : null}
+              bankPaymentDetails={
+                paymentMethod === "bank" ? bankPaymentDetails : null
+              }
               isEditingOrder={!!editingOrderId}
             />
 
             {/* Cash Amount Input - Only for Cash Payment */}
             {paymentMethod === "cash" && (
               <div className="space-y-2 mt-4">
-                <label className="block text-xs font-semibold text-green-400">Cash Amount (Rs.) <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-semibold text-green-400">
+                  Cash Amount (Rs.) <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="number"
                   min="0"
@@ -1693,25 +1937,30 @@ const SalesPage: React.FC = () => {
                   placeholder="Enter cash amount received"
                   className="w-full px-3 py-2 bg-gray-700 border-2 border-green-600/30 text-white rounded focus:border-green-500 focus:outline-none text-sm"
                 />
-                {paidAmount && (() => {
-                  const paidAmt = parseFloat(paidAmount) || 0;
-                  const balance = total - paidAmt;
-                  const isFullyPaid = balance <= 0;
+                {paidAmount &&
+                  (() => {
+                    const paidAmt = parseFloat(paidAmount) || 0;
+                    const balance = total - paidAmt;
+                    const isFullyPaid = balance <= 0;
 
-                  return (
-                    <div className="mt-2 p-2 rounded text-xs font-semibold">
-                      {isFullyPaid ? (
-                        <div className="bg-green-900/40 text-green-400">
-                          ✓ Fully Paid {paidAmt > total ? `(Excess: Rs. ${(paidAmt - total).toFixed(2)})` : ''}
-                        </div>
-                      ) : (
-                        <div className="bg-orange-900/40 text-orange-400">
-                          ⚠️ Advance/Partial: Balance Due Rs. {balance.toFixed(2)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                    return (
+                      <div className="mt-2 p-2 rounded text-xs font-semibold">
+                        {isFullyPaid ? (
+                          <div className="bg-green-900/40 text-green-400">
+                            ✓ Fully Paid{" "}
+                            {paidAmt > total
+                              ? `(Excess: Rs. ${(paidAmt - total).toFixed(2)})`
+                              : ""}
+                          </div>
+                        ) : (
+                          <div className="bg-orange-900/40 text-orange-400">
+                            ⚠️ Advance/Partial: Balance Due Rs.{" "}
+                            {balance.toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
               </div>
             )}
           </div>
@@ -1736,18 +1985,23 @@ const SalesPage: React.FC = () => {
               </button>
               <button
                 onClick={handlePrintBill}
-                disabled={!selectedCustomer || cartItems.length === 0 || (() => {
-                  // Check if payment allows printing (only for full payment)
-                  if (paymentMethod === "cash") {
-                    const paidAmt = parseFloat(paidAmount) || 0;
-                    return paidAmt === 0 || paidAmt < total; // Disable if not paid or partial
-                  } else if (paymentMethod === "bank") {
-                    if (!bankPaymentDetails) return true; // Disable if no bank details
-                    const bankPaidAmt = parseFloat(bankPaymentDetails.paidAmount) || 0;
-                    return bankPaidAmt < total; // Disable if not full payment
-                  }
-                  return true; // Disable if no payment method selected
-                })()}
+                disabled={
+                  !selectedCustomer ||
+                  cartItems.length === 0 ||
+                  (() => {
+                    // Check if payment allows printing (only for full payment)
+                    if (paymentMethod === "cash") {
+                      const paidAmt = parseFloat(paidAmount) || 0;
+                      return paidAmt === 0 || paidAmt < total; // Disable if not paid or partial
+                    } else if (paymentMethod === "bank") {
+                      if (!bankPaymentDetails) return true; // Disable if no bank details
+                      const bankPaidAmt =
+                        parseFloat(bankPaymentDetails.paidAmount) || 0;
+                      return bankPaidAmt < total; // Disable if not full payment
+                    }
+                    return true; // Disable if no payment method selected
+                  })()
+                }
                 className="border-2 border-blue-600 text-blue-400 py-2 rounded-lg font-semibold hover:bg-blue-900/20 disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
               >
                 🖨️ Print
@@ -1762,7 +2016,9 @@ const SalesPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700 space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold text-red-500">Add New Customer</h2>
+              <h2 className="text-xl font-bold text-red-500">
+                Add New Customer
+              </h2>
               <button
                 onClick={() => setShowAddCustomerModal(false)}
                 className="text-gray-400 hover:text-red-400 text-xl"
@@ -1776,21 +2032,27 @@ const SalesPage: React.FC = () => {
                 type="text"
                 placeholder="Customer Name *"
                 value={newCustomer.name}
-                onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                onChange={(e) =>
+                  setNewCustomer({ ...newCustomer, name: e.target.value })
+                }
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded text-sm placeholder-gray-500 focus:border-red-500 focus:outline-none"
               />
               <input
                 type="email"
                 placeholder="Email"
                 value={newCustomer.email}
-                onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                onChange={(e) =>
+                  setNewCustomer({ ...newCustomer, email: e.target.value })
+                }
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded text-sm placeholder-gray-500 focus:border-red-500 focus:outline-none"
               />
               <input
                 type="tel"
                 placeholder="Mobile Number *"
                 value={newCustomer.mobile}
-                onChange={(e) => setNewCustomer({ ...newCustomer, mobile: e.target.value })}
+                onChange={(e) =>
+                  setNewCustomer({ ...newCustomer, mobile: e.target.value })
+                }
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded text-sm placeholder-gray-500 focus:border-red-500 focus:outline-none"
               />
             </div>
@@ -1872,7 +2134,9 @@ const SalesPage: React.FC = () => {
                   type="text"
                   placeholder="e.g., TSH-001"
                   value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, code: e.target.value })
+                  }
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                 />
               </div>
@@ -1886,7 +2150,9 @@ const SalesPage: React.FC = () => {
                   type="text"
                   placeholder="e.g., Blue T-Shirt"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                 />
               </div>
@@ -1924,7 +2190,9 @@ const SalesPage: React.FC = () => {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.costPrice}
-                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, costPrice: e.target.value })
+                    }
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
                 </div>
@@ -1937,20 +2205,28 @@ const SalesPage: React.FC = () => {
                     step="0.01"
                     placeholder="0.00"
                     value={formData.retailPrice}
-                    onChange={(e) => setFormData({ ...formData, retailPrice: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, retailPrice: e.target.value })
+                    }
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-red-400 mb-2">
-                    Wholesale Price (Rs.) <span className="text-red-500">*</span>
+                    Wholesale Price (Rs.){" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
                     step="0.01"
                     placeholder="0.00"
                     value={formData.wholesalePrice}
-                    onChange={(e) => setFormData({ ...formData, wholesalePrice: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        wholesalePrice: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
                 </div>
@@ -1959,13 +2235,17 @@ const SalesPage: React.FC = () => {
               {/* Stock Entry Rows - Row-Based System */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-3">
-                  Stock Entries (Size, Color & Quantity) <span className="text-red-500">*</span>
+                  Stock Entries (Size, Color & Quantity){" "}
+                  <span className="text-red-500">*</span>
                 </label>
 
                 {/* Stock Rows Table with Scroll */}
                 <div className="mb-4 bg-gray-900/50 border border-gray-700 rounded-lg p-4 h-64 overflow-y-auto">
                   {stockRows.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-6">No stock entries yet. Click "Add Row" to start adding stock.</p>
+                    <p className="text-sm text-gray-400 text-center py-6">
+                      No stock entries yet. Click "Add Row" to start adding
+                      stock.
+                    </p>
                   ) : (
                     <div className="space-y-3">
                       {stockRows.map((row) => (
@@ -1975,10 +2255,14 @@ const SalesPage: React.FC = () => {
                         >
                           {/* Size Dropdown */}
                           <div className="flex-1 min-w-[120px]">
-                            <label className="block text-xs text-gray-400 font-semibold mb-1">Size</label>
+                            <label className="block text-xs text-gray-400 font-semibold mb-1">
+                              Size
+                            </label>
                             <select
                               value={row.size}
-                              onChange={(e) => updateStockRow(row.id, "size", e.target.value)}
+                              onChange={(e) =>
+                                updateStockRow(row.id, "size", e.target.value)
+                              }
                               className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
                             >
                               <option value="">Select Size</option>
@@ -1992,10 +2276,14 @@ const SalesPage: React.FC = () => {
 
                           {/* Color Dropdown */}
                           <div className="flex-1 min-w-[120px]">
-                            <label className="block text-xs text-gray-400 font-semibold mb-1">Color</label>
+                            <label className="block text-xs text-gray-400 font-semibold mb-1">
+                              Color
+                            </label>
                             <select
                               value={row.color}
-                              onChange={(e) => updateStockRow(row.id, "color", e.target.value)}
+                              onChange={(e) =>
+                                updateStockRow(row.id, "color", e.target.value)
+                              }
                               className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
                             >
                               <option value="">Select Color</option>
@@ -2009,12 +2297,20 @@ const SalesPage: React.FC = () => {
 
                           {/* Quantity Input */}
                           <div className="flex-1 min-w-[100px]">
-                            <label className="block text-xs text-gray-400 font-semibold mb-1">Qty</label>
+                            <label className="block text-xs text-gray-400 font-semibold mb-1">
+                              Qty
+                            </label>
                             <input
                               type="number"
                               min="0"
                               value={row.qty}
-                              onChange={(e) => updateStockRow(row.id, "qty", parseInt(e.target.value) || 0)}
+                              onChange={(e) =>
+                                updateStockRow(
+                                  row.id,
+                                  "qty",
+                                  parseInt(e.target.value) || 0
+                                )
+                              }
                               placeholder="0"
                               className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none text-center"
                             />
@@ -2173,7 +2469,9 @@ const SalesPage: React.FC = () => {
               <div className="flex gap-3 pt-4 border-t border-gray-700">
                 <button
                   onClick={() => {
-                    alert("Product added successfully! Note: This is a demo. In production, this would save to database.");
+                    alert(
+                      "Product added successfully! Note: This is a demo. In production, this would save to database."
+                    );
                     handleCloseProductModal();
                   }}
                   className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors"

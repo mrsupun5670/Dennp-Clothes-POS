@@ -1039,7 +1039,14 @@ const SalesPage: React.FC = () => {
     }
 
     try {
-      const newPayment = parseFloat(paidAmount) || 0;
+      // Get paid amount based on payment method
+      let newPayment = 0;
+      if (paymentMethod === "cash") {
+        newPayment = parseFloat(paidAmount) || 0;
+      } else if (paymentMethod === "bank") {
+        newPayment = parseFloat(bankPaymentDetails?.paidAmount || "0") || 0;
+      }
+
       const totalPaidNow = editingOrderId
         ? previouslyPaidAmount + newPayment
         : newPayment;
@@ -1129,24 +1136,44 @@ const SalesPage: React.FC = () => {
       const savedOrderId = orderResult.data?.order_id;
 
       // Save payment if amount is paid
-      if (newPayment > 0 && paymentMethod === "cash") {
-        const paymentPayload = {
-          shop_id: shopId,
-          order_id: savedOrderId,
-          customer_id: selectedCustomer.customer_id,
-          payment_amount: newPayment,
-          payment_date: sriLankanDateTime.dateString,
-          payment_time: sriLankanDateTime.timeString,
-          payment_method: "cash",
-          payment_status: "completed",
-          notes: null,
-        };
+      if (newPayment > 0) {
+        if (paymentMethod === "cash") {
+          const paymentPayload = {
+            shop_id: shopId,
+            order_id: savedOrderId,
+            customer_id: selectedCustomer.customer_id,
+            payment_amount: newPayment,
+            payment_date: sriLankanDateTime.dateString,
+            payment_time: sriLankanDateTime.timeString,
+            payment_method: "cash",
+            payment_status: "completed",
+            notes: null,
+          };
 
-        await fetch(`${API_URL}/payments`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(paymentPayload),
-        });
+          await fetch(`${API_URL}/payments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(paymentPayload),
+          });
+        } else if (paymentMethod === "bank" && bankPaymentDetails) {
+          const paymentPayload = {
+            shop_id: shopId,
+            order_id: savedOrderId,
+            customer_id: selectedCustomer.customer_id,
+            payment_amount: newPayment,
+            payment_date: sriLankanDateTime.dateString,
+            payment_time: sriLankanDateTime.timeString,
+            payment_method: bankPaymentDetails.bank || "bank",
+            payment_status: "completed",
+            notes: `Bank: ${bankPaymentDetails.bank}, Receipt: ${bankPaymentDetails.receiptNumber}`,
+          };
+
+          await fetch(`${API_URL}/payments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(paymentPayload),
+          });
+        }
       }
 
       // Success message with payment status

@@ -915,10 +915,32 @@ const SalesPage: React.FC = () => {
       const totalPaidNow = editingOrderId ? previouslyPaidAmount + newPayment : newPayment;
       const balance = total - totalPaidNow;
 
-      // Determine payment status
+      // Determine payment status and amounts based on whether paid amount is less than total
       let paymentStatus = "unpaid";
+      let advancePaid = 0;
+      let balanceDue = 0;
+      let finalAmount = 0;
+
       if (newPayment > 0) {
-        paymentStatus = balance <= 0 ? "fully_paid" : "partial";
+        if (newPayment < total) {
+          // Partial payment: paid amount goes to advance_paid, difference goes to balance_due, and final_amount equals paid amount
+          paymentStatus = "partial";
+          advancePaid = newPayment;
+          balanceDue = total - newPayment;
+          finalAmount = newPayment;
+        } else {
+          // Full payment: only final_amount is set, advance_paid and balance_due are 0
+          paymentStatus = "fully_paid";
+          advancePaid = 0;
+          balanceDue = 0;
+          finalAmount = newPayment;
+        }
+      } else {
+        // No payment made
+        paymentStatus = "unpaid";
+        advancePaid = 0;
+        balanceDue = total;
+        finalAmount = 0;
       }
 
       // Generate order number (000001000 format)
@@ -936,9 +958,9 @@ const SalesPage: React.FC = () => {
         order_status: "pending",
         total_amount: total,
         delivery_charge: 0,
-        final_amount: totalPaidNow,
-        advance_paid: paymentStatus === "partial" ? newPayment : 0,
-        balance_due: balance > 0 ? balance : 0,
+        final_amount: finalAmount,
+        advance_paid: advancePaid,
+        balance_due: balanceDue,
         payment_status: paymentStatus,
         notes: orderNotes || null,
         order_date: new Date().toISOString().split('T')[0],
@@ -1691,7 +1713,18 @@ const SalesPage: React.FC = () => {
               </button>
               <button
                 onClick={handlePrintBill}
-                disabled={!selectedCustomer || cartItems.length === 0 || (paymentMethod === "cash" ? (parseFloat(paidAmount) || 0) === 0 || (total - (parseFloat(paidAmount) || 0)) > 0 : (!bankPaymentDetails || (total - (parseFloat(bankPaymentDetails.paidAmount) || 0)) > 0))}
+                disabled={!selectedCustomer || cartItems.length === 0 || (() => {
+                  // Check if payment allows printing (only for full payment)
+                  if (paymentMethod === "cash") {
+                    const paidAmt = parseFloat(paidAmount) || 0;
+                    return paidAmt === 0 || paidAmt < total; // Disable if not paid or partial
+                  } else if (paymentMethod === "bank") {
+                    if (!bankPaymentDetails) return true; // Disable if no bank details
+                    const bankPaidAmt = parseFloat(bankPaymentDetails.paidAmount) || 0;
+                    return bankPaidAmt < total; // Disable if not full payment
+                  }
+                  return true; // Disable if no payment method selected
+                })()}
                 className="border-2 border-blue-600 text-blue-400 py-2 rounded-lg font-semibold hover:bg-blue-900/20 disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
               >
                 🖨️ Print

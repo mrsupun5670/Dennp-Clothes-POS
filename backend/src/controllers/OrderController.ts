@@ -140,6 +140,8 @@ class OrderController {
         advance_paid,
         balance_due,
         delivery_charge,
+        payment_method,
+        recipient_phone,
         notes,
         order_date,
         order_status,
@@ -171,7 +173,9 @@ class OrderController {
         advance_paid: advance_paid || 0,
         balance_due: balance_due || 0,
         payment_status: payment_status || "unpaid",
+        payment_method: payment_method || undefined,
         order_status: order_status || "pending",
+        recipient_phone: recipient_phone || undefined,
         notes,
         order_date: new Date(order_date),
       });

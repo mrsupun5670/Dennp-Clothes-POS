@@ -1105,6 +1105,8 @@ const SalesPage: React.FC = () => {
         advance_paid: advancePaid,
         balance_due: balanceDue,
         payment_status: paymentStatus,
+        payment_method: paymentMethod === "cash" ? "cash" : (bankPaymentDetails?.bank || "bank"),
+        recipient_phone: selectedCustomer.mobile || null,
         notes: orderNotes || null,
         order_date: sriLankanDateTime.dateString,
         items: cartItems.map((item) => ({

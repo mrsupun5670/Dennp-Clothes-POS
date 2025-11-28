@@ -136,8 +136,13 @@ class OrderController {
         total_items,
         payment_status,
         total_amount,
+        final_amount,
+        advance_paid,
+        balance_due,
+        delivery_charge,
         notes,
         order_date,
+        order_status,
         items,
       } = req.body;
 
@@ -161,12 +166,12 @@ class OrderController {
         user_id,
         total_items,
         total_amount,
-        delivery_charge: 0,
-        final_amount: total_amount,
-        advance_paid: 0,
-        balance_due: total_amount,
-        payment_status, // here this value should be dynamic
-        order_status: "pending",
+        delivery_charge: delivery_charge || 0,
+        final_amount: final_amount || 0,
+        advance_paid: advance_paid || 0,
+        balance_due: balance_due || 0,
+        payment_status: payment_status || "unpaid",
+        order_status: order_status || "pending",
         notes,
         order_date: new Date(order_date),
       });

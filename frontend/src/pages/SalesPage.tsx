@@ -1463,13 +1463,15 @@ const SalesPage: React.FC = () => {
                 <label className="block text-sm font-semibold text-red-400">
                   Search Customer
                 </label>
-                <button
-                  onClick={() => setShowAddCustomerModal(true)}
-                  className="text-red-400 hover:text-red-300 font-bold text-lg transition-colors"
-                  title="Add new customer"
-                >
-                  +
-                </button>
+                {!editingOrderId && (
+                  <button
+                    onClick={() => setShowAddCustomerModal(true)}
+                    className="text-red-400 hover:text-red-300 font-bold text-lg transition-colors"
+                    title="Add new customer"
+                  >
+                    +
+                  </button>
+                )}
               </div>
               <div className="relative space-y-2">
                 <input
@@ -1552,13 +1554,15 @@ const SalesPage: React.FC = () => {
                   <label className="block text-sm font-semibold text-red-400">
                     Add Products
                   </label>
-                  <button
-                    onClick={handleAddProductClick}
-                    className="text-red-400 hover:text-red-300 font-bold text-lg transition-colors"
-                    title="Add new product"
-                  >
-                    +
-                  </button>
+                  {!editingOrderId && (
+                    <button
+                      onClick={handleAddProductClick}
+                      className="text-red-400 hover:text-red-300 font-bold text-lg transition-colors"
+                      title="Add new product"
+                    >
+                      +
+                    </button>
+                  )}
                 </div>
                 <div className="relative">
                   <input

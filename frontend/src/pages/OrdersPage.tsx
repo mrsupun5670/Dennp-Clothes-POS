@@ -672,7 +672,7 @@ const OrdersPage: React.FC = () => {
                       Mobile
                     </p>
                     <p className="text-gray-200 font-medium">
-                      {selectedOrder.recipient_phone}
+                      {selectedOrder.customer_mobile}
                     </p>
                   </div>
                   <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">

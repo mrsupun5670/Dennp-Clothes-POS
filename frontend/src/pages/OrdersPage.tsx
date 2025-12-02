@@ -34,6 +34,7 @@ interface Order {
   order_date: string;
   recipient_name?: string;
   recipient_phone?: string;
+  recipient_phone1?: string;
   customer_mobile?: string;
   delivery_line1?: string;
   delivery_line2?: string;

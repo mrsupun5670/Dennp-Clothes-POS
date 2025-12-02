@@ -1366,6 +1366,34 @@ const OrdersPage: React.FC = () => {
                   Delivery Address
                 </h3>
                 <div className="space-y-4">
+                  {/* Address Line 1 - Full width */}
+                  <div>
+                    <label className="text-xs text-gray-400 font-semibold block mb-2">
+                      Address Line 1 (Street) *
+                    </label>
+                    <input
+                      type="text"
+                      value={deliveryLine1}
+                      onChange={(e) => setDeliveryLine1(e.target.value)}
+                      placeholder="123, Galle Road"
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Address Line 2 - Full width */}
+                  <div>
+                    <label className="text-xs text-gray-400 font-semibold block mb-2">
+                      Address Line 2 (Apt/Unit)
+                    </label>
+                    <input
+                      type="text"
+                      value={deliveryLine2}
+                      onChange={(e) => setDeliveryLine2(e.target.value)}
+                      placeholder="Apartment 5B (Optional)"
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+
                   {/* Province & District in same row */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -1427,34 +1455,6 @@ const OrdersPage: React.FC = () => {
                         <option value="Matara">Matara</option>
                       </select>
                     </div>
-                  </div>
-
-                  {/* Address Line 1 - Full width */}
-                  <div>
-                    <label className="text-xs text-gray-400 font-semibold block mb-2">
-                      Address Line 1 (Street) *
-                    </label>
-                    <input
-                      type="text"
-                      value={deliveryLine1}
-                      onChange={(e) => setDeliveryLine1(e.target.value)}
-                      placeholder="123, Galle Road"
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Address Line 2 - Full width */}
-                  <div>
-                    <label className="text-xs text-gray-400 font-semibold block mb-2">
-                      Address Line 2 (Apt/Unit)
-                    </label>
-                    <input
-                      type="text"
-                      value={deliveryLine2}
-                      onChange={(e) => setDeliveryLine2(e.target.value)}
-                      placeholder="Apartment 5B (Optional)"
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
-                    />
                   </div>
 
                   {/* City & Postal Code in same row */}

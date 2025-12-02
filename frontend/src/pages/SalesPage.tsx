@@ -1412,48 +1412,50 @@ const SalesPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6 flex flex-col min-h-0">
           {/* Customer Selection */}
           <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 space-y-4">
-            {/* Customer Type Filter - Radio Buttons */}
-            <div className="flex-shrink-0">
-              <label className="block text-sm font-semibold text-red-400 mb-2">
-                Customer Type
-              </label>
-              <div className="flex gap-3">
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <input
-                    type="radio"
-                    name="customerType"
-                    value="wholesale"
-                    checked={customerTypeFilter === "wholesale"}
-                    onChange={(e) =>
-                      setCustomerTypeFilter(
-                        e.target.value as "wholesale" | "retail"
-                      )
-                    }
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
-                    🏢 Wholesale
-                  </span>
+            {/* Customer Type Filter - Radio Buttons (Hidden in edit mode) */}
+            {!editingOrderId && (
+              <div className="flex-shrink-0">
+                <label className="block text-sm font-semibold text-red-400 mb-2">
+                  Customer Type
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <input
-                    type="radio"
-                    name="customerType"
-                    value="retail"
-                    checked={customerTypeFilter === "retail"}
-                    onChange={(e) =>
-                      setCustomerTypeFilter(
-                        e.target.value as "wholesale" | "retail"
-                      )
-                    }
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
-                    👤 Retail
-                  </span>
-                </label>
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="customerType"
+                      value="wholesale"
+                      checked={customerTypeFilter === "wholesale"}
+                      onChange={(e) =>
+                        setCustomerTypeFilter(
+                          e.target.value as "wholesale" | "retail"
+                        )
+                      }
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                      🏢 Wholesale
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="customerType"
+                      value="retail"
+                      checked={customerTypeFilter === "retail"}
+                      onChange={(e) =>
+                        setCustomerTypeFilter(
+                          e.target.value as "wholesale" | "retail"
+                        )
+                      }
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                      👤 Retail
+                    </span>
+                  </label>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Search Input */}
             <div>

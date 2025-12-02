@@ -553,28 +553,57 @@ const OrdersPage: React.FC = () => {
     }
   };
 
-  const handleEditOrder = () => {
-    if (!selectedOrder) return;
+  const handleEditOrder = async () => {
+    if (!selectedOrder || !shopId) return;
 
-    // Store order data for editing in SalesPage
-    sessionStorage.setItem(
-      "editingOrder",
-      JSON.stringify({
-        orderId: selectedOrder.order_id,
-        orderNumber: selectedOrder.order_number,
-        customerId: selectedOrder.customer_id,
-        customerName: selectedOrder.recipient_name,
-        customerMobile: selectedOrder.recipient_phone,
-        items: selectedOrder.items || [],
-        totalAmount: selectedOrder.total_amount,
-        orderStatus: selectedOrder.order_status,
-        paymentMethod: selectedOrder.payment_method,
-      })
-    );
+    try {
+      // Fetch complete order items with full details
+      const itemsResponse = await fetch(
+        `${API_URL}/orders/${selectedOrder.order_id}/items?shop_id=${shopId}`
+      );
+      const itemsData = await itemsResponse.json();
+      const orderItems = itemsData.data || selectedOrder.items || [];
 
-    // Close modal and navigate to sales
-    handleCloseModal();
-    sessionStorage.setItem("navigateToSales", "true");
+      // Store order data for editing in SalesPage
+      sessionStorage.setItem(
+        "orderToEdit",
+        JSON.stringify({
+          orderId: selectedOrder.order_id,
+          orderNumber: selectedOrder.order_number,
+          customerId: selectedOrder.customer_id,
+          customerName: selectedOrder.recipient_name || selectedOrder.customer_id,
+          customerMobile: selectedOrder.customer_mobile,
+          items: orderItems.map((item: any) => ({
+            product_id: item.product_id,
+            productName: item.product_name,
+            quantity: item.quantity,
+            price: item.sold_price,
+            soldPrice: item.sold_price,
+            size: item.size_name,
+            sizeId: item.size_id,
+            color: item.color_name,
+            colorId: item.color_id,
+            productCost: item.product_cost,
+            printCost: item.print_cost,
+          })),
+          totalAmount: selectedOrder.total_amount,
+          totalPaid: selectedOrder.advance_paid,
+          balanceDue: selectedOrder.balance_due,
+          deliveryCharge: selectedOrder.delivery_charge || 0,
+          orderStatus: selectedOrder.order_status,
+          paymentMethod: selectedOrder.payment_method,
+          orderDate: selectedOrder.order_date,
+          orderNotes: selectedOrder.notes,
+        })
+      );
+
+      // Close modal and navigate to sales
+      handleCloseModal();
+      sessionStorage.setItem("navigateToSales", "true");
+    } catch (error) {
+      console.error("Error loading order details:", error);
+      alert("Failed to load order details");
+    }
   };
 
   const getStatusBadgeColor = (status: string) => {

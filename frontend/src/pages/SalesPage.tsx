@@ -319,6 +319,7 @@ const SalesPage: React.FC = () => {
   const [paidAmount, setPaidAmount] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
 
   // Track previously paid amount when editing order
   const [previouslyPaidAmount, setPreviouslyPaidAmount] = useState(0);
@@ -378,19 +379,35 @@ const SalesPage: React.FC = () => {
         };
         setSelectedCustomer(customer);
 
-        // Load cart items
+        // Load cart items with full details
         const newCartItems: CartItem[] = order.items.map(
           (item: any, idx: number) => ({
             id: `edit-${idx}-${Date.now()}`,
+            productId: item.product_id,
             productCode: `CODE-${idx}`,
             productName: item.productName,
             size: item.size || "N/A",
+            sizeId: item.sizeId,
             color: item.color || "N/A",
+            colorId: item.colorId,
             quantity: item.quantity,
-            price: item.price,
+            price: item.soldPrice || item.price,
+            productCost: item.productCost || 0,
+            printCost: item.printCost || 0,
           })
         );
         setCartItems(newCartItems);
+
+        // Set payment information
+        if (order.deliveryCharge !== undefined && order.deliveryCharge > 0) {
+          setDeliveryCharge(order.deliveryCharge);
+        }
+        if (order.paymentMethod) {
+          setPaymentMethod(order.paymentMethod);
+        }
+        if (order.orderNotes) {
+          setOrderNotes(order.orderNotes);
+        }
 
         // Clear the sessionStorage after loading
         sessionStorage.removeItem("orderToEdit");
@@ -1100,7 +1117,7 @@ const SalesPage: React.FC = () => {
         total_items: cartItems.length,
         order_status: "pending",
         total_amount: total,
-        delivery_charge: 0,
+        delivery_charge: deliveryCharge,
         final_amount: finalAmount,
         advance_paid: advancePaid,
         balance_due: balanceDue,

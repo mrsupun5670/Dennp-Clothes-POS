@@ -165,6 +165,20 @@ const OrdersPage: React.FC = () => {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
+  // Address details state
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
+  const [recipientPhone1, setRecipientPhone1] = useState("");
+  const [deliveryLine1, setDeliveryLine1] = useState("");
+  const [deliveryLine2, setDeliveryLine2] = useState("");
+  const [deliveryCity, setDeliveryCity] = useState("");
+  const [deliveryDistrict, setDeliveryDistrict] = useState("");
+  const [deliveryProvince, setDeliveryProvince] = useState("Sri Lanka");
+  const [deliveryPostalCode, setDeliveryPostalCode] = useState("");
+  const [isUpdatingAddress, setIsUpdatingAddress] = useState(false);
+  const [addressMessage, setAddressMessage] = useState("");
+
   const {
     data: orders,
     isLoading: isLoadingOrders,
@@ -283,6 +297,7 @@ const OrdersPage: React.FC = () => {
   const handleCloseModal = () => {
     setShowOrderModal(false);
     setShowReceiptPreview(false);
+    setShowAddressModal(false);
     setSelectedOrderId(null);
     setPaymentAmount("");
     setPaymentMessage("");
@@ -290,6 +305,16 @@ const OrdersPage: React.FC = () => {
     setOrderItems([]);
     setTrackingNumber("");
     setStatusMessage("");
+    setRecipientName("");
+    setRecipientPhone("");
+    setRecipientPhone1("");
+    setDeliveryLine1("");
+    setDeliveryLine2("");
+    setDeliveryCity("");
+    setDeliveryDistrict("");
+    setDeliveryProvince("Sri Lanka");
+    setDeliveryPostalCode("");
+    setAddressMessage("");
   };
 
   const handleCancelOrder = async () => {
@@ -366,6 +391,90 @@ const OrdersPage: React.FC = () => {
       setStatusMessage("❌ Failed to update order status");
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleOpenAddressModal = () => {
+    if (selectedOrder) {
+      setRecipientName(selectedOrder.recipient_name || "");
+      setRecipientPhone(selectedOrder.recipient_phone || "");
+      setRecipientPhone1(selectedOrder.recipient_phone1 || "");
+      setDeliveryLine1(selectedOrder.delivery_line1 || "");
+      setDeliveryLine2(selectedOrder.delivery_line2 || "");
+      setDeliveryCity(selectedOrder.delivery_city || "");
+      setDeliveryDistrict(selectedOrder.delivery_district || "");
+      setDeliveryProvince(selectedOrder.delivery_province || "Sri Lanka");
+      setDeliveryPostalCode(selectedOrder.delivery_postal_code || "");
+      setAddressMessage("");
+      setShowAddressModal(true);
+    }
+  };
+
+  const handleSaveAddress = async () => {
+    if (!selectedOrderId || !shopId) return;
+
+    // Validate required fields
+    if (!recipientName.trim()) {
+      setAddressMessage("❌ Please enter recipient name");
+      return;
+    }
+    if (!recipientPhone.trim()) {
+      setAddressMessage("❌ Please enter phone number");
+      return;
+    }
+    if (!deliveryLine1.trim()) {
+      setAddressMessage("❌ Please enter delivery address");
+      return;
+    }
+    if (!deliveryCity.trim()) {
+      setAddressMessage("❌ Please enter city");
+      return;
+    }
+    if (!deliveryDistrict.trim()) {
+      setAddressMessage("❌ Please select district");
+      return;
+    }
+    if (!deliveryPostalCode.trim()) {
+      setAddressMessage("❌ Please enter postal code");
+      return;
+    }
+
+    setIsUpdatingAddress(true);
+    setAddressMessage("");
+
+    try {
+      const response = await fetch(`${API_URL}/orders/${selectedOrderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop_id: shopId,
+          recipient_name: recipientName,
+          recipient_phone: recipientPhone,
+          recipient_phone1: recipientPhone1 || null,
+          delivery_line1: deliveryLine1,
+          delivery_line2: deliveryLine2 || null,
+          delivery_city: deliveryCity,
+          delivery_district: deliveryDistrict,
+          delivery_province: deliveryProvince,
+          delivery_postal_code: deliveryPostalCode,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setAddressMessage("✅ Address saved successfully!");
+        setTimeout(() => {
+          setShowAddressModal(false);
+          refetchOrders();
+        }, 1000);
+      } else {
+        setAddressMessage(`❌ Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error saving address:", error);
+      setAddressMessage("❌ Failed to save address");
+    } finally {
+      setIsUpdatingAddress(false);
     }
   };
 
@@ -933,6 +1042,73 @@ const OrdersPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Address & Delivery Details Section */}
+              <div className="border-t border-gray-700 pt-6">
+                <h3 className="text-lg font-bold text-red-400 mb-4">
+                  Address & Delivery Details
+                </h3>
+                <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 space-y-4">
+                  {/* Address Display */}
+                  {selectedOrder.delivery_line1 ? (
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs text-gray-400 font-semibold mb-2">
+                          📦 Recipient & Phone
+                        </p>
+                        <p className="text-gray-200 font-medium">
+                          {selectedOrder.recipient_name || "N/A"}
+                        </p>
+                        <p className="text-gray-300 text-sm">
+                          📱 {selectedOrder.recipient_phone || "N/A"}
+                        </p>
+                        {selectedOrder.recipient_phone1 && (
+                          <p className="text-gray-300 text-sm">
+                            📱 {selectedOrder.recipient_phone1}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-gray-400 font-semibold mb-2">
+                          📍 Delivery Address
+                        </p>
+                        <p className="text-gray-200 text-sm">
+                          {selectedOrder.delivery_line1}
+                          {selectedOrder.delivery_line2 && `, ${selectedOrder.delivery_line2}`}
+                        </p>
+                        <p className="text-gray-300 text-sm">
+                          {selectedOrder.delivery_city}
+                          {selectedOrder.delivery_district && `, ${selectedOrder.delivery_district}`}
+                        </p>
+                        <p className="text-gray-300 text-sm">
+                          {selectedOrder.delivery_province}
+                          {selectedOrder.delivery_postal_code && ` - ${selectedOrder.delivery_postal_code}`}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={handleOpenAddressModal}
+                        className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                      >
+                        ✏️ Edit Address
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="py-4 text-center">
+                      <p className="text-gray-400 mb-4">
+                        📍 No delivery address added yet
+                      </p>
+                      <button
+                        onClick={handleOpenAddressModal}
+                        className="w-full px-3 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                      >
+                        + Add Delivery Address
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Payment Summary Section with Delivery Charge */}
               <div className="border-t border-gray-700 pt-6">
                 <h3 className="text-lg font-bold text-red-400 mb-4">
@@ -1107,6 +1283,245 @@ const OrdersPage: React.FC = () => {
                   className="flex-1 min-w-[150px] bg-gray-700 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Address Edit Modal */}
+      {showAddressModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-2xl my-8">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-6 border-b border-red-600 flex justify-between items-center sticky top-0 z-20">
+              <div>
+                <h2 className="text-2xl font-bold">📍 Address & Delivery Details</h2>
+                <p className="text-red-200 text-sm mt-1">Order #{selectedOrder.order_number}</p>
+              </div>
+              <button
+                onClick={() => setShowAddressModal(false)}
+                className="text-white hover:text-red-200 transition-colors text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Recipient Information */}
+              <div>
+                <h3 className="text-lg font-bold text-red-400 mb-4">
+                  Recipient Information
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-gray-400 font-semibold block mb-2">
+                      Recipient Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                      placeholder="Enter recipient name"
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-400 font-semibold block mb-2">
+                      Primary Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      value={recipientPhone}
+                      onChange={(e) => setRecipientPhone(e.target.value)}
+                      placeholder="+94 77X XXX XXX or 077X XXX XXX"
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-400 font-semibold block mb-2">
+                      Alternative Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={recipientPhone1}
+                      onChange={(e) => setRecipientPhone1(e.target.value)}
+                      placeholder="+94 70X XXX XXX (Optional)"
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Delivery Address */}
+              <div>
+                <h3 className="text-lg font-bold text-red-400 mb-4">
+                  Delivery Address
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-gray-400 font-semibold block mb-2">
+                      Address Line 1 (Street) *
+                    </label>
+                    <input
+                      type="text"
+                      value={deliveryLine1}
+                      onChange={(e) => setDeliveryLine1(e.target.value)}
+                      placeholder="123, Galle Road"
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-400 font-semibold block mb-2">
+                      Address Line 2 (Apt/Unit)
+                    </label>
+                    <input
+                      type="text"
+                      value={deliveryLine2}
+                      onChange={(e) => setDeliveryLine2(e.target.value)}
+                      placeholder="Apartment 5B (Optional)"
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs text-gray-400 font-semibold block mb-2">
+                        City *
+                      </label>
+                      <input
+                        type="text"
+                        value={deliveryCity}
+                        onChange={(e) => setDeliveryCity(e.target.value)}
+                        placeholder="Colombo"
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-400 font-semibold block mb-2">
+                        District/Province *
+                      </label>
+                      <select
+                        value={deliveryDistrict}
+                        onChange={(e) => setDeliveryDistrict(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:border-red-500 focus:outline-none"
+                      >
+                        <option value="">Select Province</option>
+                        <option value="Western Province">Western Province</option>
+                        <option value="Central Province">Central Province</option>
+                        <option value="Southern Province">Southern Province</option>
+                        <option value="Eastern Province">Eastern Province</option>
+                        <option value="Northern Province">Northern Province</option>
+                        <option value="North Western Province">North Western Province</option>
+                        <option value="North Central Province">North Central Province</option>
+                        <option value="Uva Province">Uva Province</option>
+                        <option value="Sabaragamuwa Province">Sabaragamuwa Province</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs text-gray-400 font-semibold block mb-2">
+                        State/Province/Region *
+                      </label>
+                      <input
+                        type="text"
+                        value={deliveryProvince}
+                        onChange={(e) => setDeliveryProvince(e.target.value)}
+                        placeholder="Sri Lanka"
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-400 font-semibold block mb-2">
+                        Postal Code *
+                      </label>
+                      <input
+                        type="text"
+                        value={deliveryPostalCode}
+                        onChange={(e) => setDeliveryPostalCode(e.target.value)}
+                        placeholder="00600"
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Address Preview */}
+                  {(deliveryLine1 || deliveryCity) && (
+                    <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
+                      <p className="text-xs text-gray-400 font-semibold mb-2">
+                        📍 Complete Address Preview:
+                      </p>
+                      <p className="text-gray-200 text-sm">
+                        {deliveryLine1}
+                        {deliveryLine2 && `, ${deliveryLine2}`}
+                        <br />
+                        {deliveryCity}
+                        {deliveryDistrict && `, ${deliveryDistrict}`}
+                        <br />
+                        {deliveryProvince}
+                        {deliveryPostalCode && ` - ${deliveryPostalCode}`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Status Messages */}
+              {addressMessage && (
+                <p className={`text-sm font-semibold text-center p-3 rounded-lg ${
+                  addressMessage.includes("✅")
+                    ? "bg-green-900/30 text-green-400"
+                    : "bg-red-900/30 text-red-400"
+                }`}>
+                  {addressMessage}
+                </p>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-700 flex-wrap">
+                <button
+                  onClick={handleSaveAddress}
+                  disabled={isUpdatingAddress}
+                  className={`flex-1 min-w-[150px] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
+                    isUpdatingAddress
+                      ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                      : "bg-green-600 text-white hover:bg-green-700"
+                  }`}
+                >
+                  {isUpdatingAddress ? "⏳ Saving..." : "💾 Save Address"}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setRecipientName("");
+                    setRecipientPhone("");
+                    setRecipientPhone1("");
+                    setDeliveryLine1("");
+                    setDeliveryLine2("");
+                    setDeliveryCity("");
+                    setDeliveryDistrict("");
+                    setDeliveryProvince("Sri Lanka");
+                    setDeliveryPostalCode("");
+                  }}
+                  className="flex-1 min-w-[150px] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors bg-gray-700 text-gray-300 hover:bg-gray-600"
+                >
+                  🔄 Clear Form
+                </button>
+
+                <button
+                  onClick={() => setShowAddressModal(false)}
+                  className="flex-1 min-w-[150px] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors bg-gray-700 text-gray-300 hover:bg-gray-600"
+                >
+                  ❌ Cancel
                 </button>
               </div>
             </div>

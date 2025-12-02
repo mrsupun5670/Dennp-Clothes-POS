@@ -857,6 +857,11 @@ const SalesPage: React.FC = () => {
   );
   const total = subtotal;
 
+  // Calculate balance due when editing order (if cart items change)
+  const balanceDue = editingOrderId
+    ? Math.max(0, total - previouslyPaidAmount)
+    : 0;
+
   // Handlers
   const handleAddCustomer = () => {
     if (!newCustomer.name || !newCustomer.mobile) {
@@ -1968,14 +1973,14 @@ const SalesPage: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Calculate remaining balance */}
-                    {previouslyPaidAmount < total ? (
+                    {/* Show balance due based on updated total */}
+                    {balanceDue > 0 ? (
                       <div className="flex justify-between text-sm">
                         <span className="text-orange-400 font-semibold">
-                          Amount Due:
+                          Balance Due:
                         </span>
                         <span className="font-semibold text-orange-300">
-                          Rs. {(total - previouslyPaidAmount).toFixed(2)}
+                          Rs. {balanceDue.toFixed(2)}
                         </span>
                       </div>
                     ) : (
@@ -1995,7 +2000,7 @@ const SalesPage: React.FC = () => {
                       Amount Due:
                     </span>
                     <span className="font-semibold text-red-300">
-                      Rs. {total.toFixed(2)}
+                      Rs. {balanceDue.toFixed(2)}
                     </span>
                   </div>
                 )}

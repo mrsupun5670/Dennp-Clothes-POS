@@ -2019,7 +2019,7 @@ const SalesPage: React.FC = () => {
                   ? paidAmount
                   : bankPaymentDetails?.paidAmount || ""
               }
-              totalAmount={total}
+              totalAmount={editingOrderId ? balanceDue : total}
               previouslyPaidAmount={previouslyPaidAmount}
               bankPaymentDetails={
                 paymentMethod === "bank" ? bankPaymentDetails : null
@@ -2045,7 +2045,8 @@ const SalesPage: React.FC = () => {
                 {paidAmount &&
                   (() => {
                     const paidAmt = parseFloat(paidAmount) || 0;
-                    const balance = total - paidAmt;
+                    const amountToCompare = editingOrderId ? balanceDue : total;
+                    const balance = amountToCompare - paidAmt;
                     const isFullyPaid = balance <= 0;
 
                     return (
@@ -2053,8 +2054,8 @@ const SalesPage: React.FC = () => {
                         {isFullyPaid ? (
                           <div className="bg-green-900/40 text-green-400">
                             ✓ Fully Paid{" "}
-                            {paidAmt > total
-                              ? `(Excess: Rs. ${(paidAmt - total).toFixed(2)})`
+                            {paidAmt > amountToCompare
+                              ? `(Excess: Rs. ${(paidAmt - amountToCompare).toFixed(2)})`
                               : ""}
                           </div>
                         ) : (

@@ -365,7 +365,7 @@ const SalesPage: React.FC = () => {
         setEditingOrderId(order.orderId);
 
         // Store the amount already paid (advance payment) for balance calculation
-        setPreviouslyPaidAmount(order.totalPaid || 0);
+        setPreviouslyPaidAmount(Number(order.totalPaid) || 0);
 
         // Set customer
         const customer: Customer = {
@@ -399,8 +399,8 @@ const SalesPage: React.FC = () => {
         setCartItems(newCartItems);
 
         // Set payment information
-        if (order.deliveryCharge !== undefined && order.deliveryCharge > 0) {
-          setDeliveryCharge(order.deliveryCharge);
+        if (order.deliveryCharge !== undefined && Number(order.deliveryCharge) > 0) {
+          setDeliveryCharge(Number(order.deliveryCharge));
         }
         if (order.paymentMethod) {
           setPaymentMethod(order.paymentMethod);

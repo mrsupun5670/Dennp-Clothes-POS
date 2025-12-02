@@ -572,7 +572,7 @@ const OrdersPage: React.FC = () => {
                     title="Double-click to open details"
                   >
                     <td className="px-6 py-4 text-gray-200 font-medium font-mono">
-                      IN.{order.order_number}
+                      IN{order.order_number}
                     </td>
                     <td className="px-6 py-4 text-gray-200 font-mono">
                       {order.customer_id || "N/A"}

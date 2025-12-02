@@ -1159,54 +1159,101 @@ const OrdersPage: React.FC = () => {
                 <h3 className="text-lg font-bold text-red-400 mb-4">
                   Address & Delivery Details
                 </h3>
-                <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 space-y-4">
+                <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
                   {/* Address Display */}
                   {selectedOrder.delivery_line1 ? (
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-xs text-gray-400 font-semibold mb-2">
-                          📦 Recipient & Phone
-                        </p>
-                        <p className="text-gray-200 font-medium">
-                          {selectedOrder.recipient_name || "N/A"}
-                        </p>
-                        <p className="text-gray-300 text-sm">
-                          📱 {selectedOrder.recipient_phone || "N/A"}
-                        </p>
-                        {selectedOrder.recipient_phone1 && (
-                          <p className="text-gray-300 text-sm">
-                            📱 {selectedOrder.recipient_phone1}
+                    <div className="space-y-4">
+                      {/* Recipient Details (Left) and Address Details (Right) in 2 columns */}
+                      <div className="grid grid-cols-2 gap-6">
+                        {/* Left Column - Recipient Details */}
+                        <div>
+                          <p className="text-xs text-gray-400 font-semibold mb-3">
+                            📦 Recipient Information
                           </p>
-                        )}
+                          <div className="space-y-2">
+                            <div>
+                              <p className="text-xs text-gray-500 font-semibold mb-1">
+                                Name
+                              </p>
+                              <p className="text-gray-200 font-medium">
+                                {selectedOrder.recipient_name || "N/A"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 font-semibold mb-1">
+                                Primary Phone
+                              </p>
+                              <p className="text-gray-200">
+                                {selectedOrder.recipient_phone || "N/A"}
+                              </p>
+                            </div>
+                            {selectedOrder.recipient_phone1 && (
+                              <div>
+                                <p className="text-xs text-gray-500 font-semibold mb-1">
+                                  Alternate Phone
+                                </p>
+                                <p className="text-gray-200">
+                                  {selectedOrder.recipient_phone1}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Right Column - Address Details */}
+                        <div>
+                          <p className="text-xs text-gray-400 font-semibold mb-3">
+                            📍 Delivery Address
+                          </p>
+                          <div className="space-y-2">
+                            <div>
+                              <p className="text-xs text-gray-500 font-semibold mb-1">
+                                Street Address
+                              </p>
+                              <p className="text-gray-200 text-sm">
+                                {selectedOrder.delivery_line1}
+                                {selectedOrder.delivery_line2 && `, ${selectedOrder.delivery_line2}`}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 font-semibold mb-1">
+                                City
+                              </p>
+                              <p className="text-gray-200 text-sm">
+                                {selectedOrder.delivery_city || "N/A"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 font-semibold mb-1">
+                                District & Province
+                              </p>
+                              <p className="text-gray-200 text-sm">
+                                {selectedOrder.delivery_district}
+                                {selectedOrder.delivery_province && `, ${selectedOrder.delivery_province}`}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 font-semibold mb-1">
+                                Postal Code
+                              </p>
+                              <p className="text-gray-200 text-sm">
+                                {selectedOrder.delivery_postal_code || "N/A"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      <div>
-                        <p className="text-xs text-gray-400 font-semibold mb-2">
-                          📍 Delivery Address
-                        </p>
-                        <p className="text-gray-200 text-sm">
-                          {selectedOrder.delivery_line1}
-                          {selectedOrder.delivery_line2 && `, ${selectedOrder.delivery_line2}`}
-                        </p>
-                        <p className="text-gray-300 text-sm">
-                          {selectedOrder.delivery_city}
-                          {selectedOrder.delivery_district && `, ${selectedOrder.delivery_district}`}
-                        </p>
-                        <p className="text-gray-300 text-sm">
-                          {selectedOrder.delivery_province}
-                          {selectedOrder.delivery_postal_code && ` - ${selectedOrder.delivery_postal_code}`}
-                        </p>
-                      </div>
-
+                      {/* Edit Button - Full Width Below */}
                       <button
                         onClick={handleOpenAddressModal}
-                        className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                        className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors mt-2"
                       >
                         ✏️ Edit Address
                       </button>
                     </div>
                   ) : (
-                    <div className="py-4 text-center">
+                    <div className="py-6 text-center">
                       <p className="text-gray-400 mb-4">
                         📍 No delivery address added yet
                       </p>

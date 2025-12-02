@@ -147,12 +147,16 @@ class OrderItemModel {
         `SELECT
          oi.item_id,
          oi.order_id,
+         oi.product_id,
+         oi.color_id,
+         oi.size_id,
          oi.quantity,
          oi.sold_price,
          oi.total_price,
-         p.product_id,
          p.product_name,
          p.sku,
+         p.product_cost,
+         p.print_cost,
          c.color_name,
          s.size_name
          FROM order_items oi

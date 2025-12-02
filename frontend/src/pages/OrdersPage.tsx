@@ -557,12 +557,13 @@ const OrdersPage: React.FC = () => {
     if (!selectedOrder || !shopId) return;
 
     try {
-      // Fetch complete order items with full details
-      const itemsResponse = await fetch(
-        `${API_URL}/orders/${selectedOrder.order_id}/items?shop_id=${shopId}`
+      // Fetch complete order with items and details
+      const orderResponse = await fetch(
+        `${API_URL}/orders/${selectedOrder.order_id}?shop_id=${shopId}`
       );
-      const itemsData = await itemsResponse.json();
-      const orderItems = itemsData.data || selectedOrder.items || [];
+      const orderData = await orderResponse.json();
+      const order = orderData.data || selectedOrder;
+      const orderItems = order.items || [];
 
       // Store order data for editing in SalesPage
       sessionStorage.setItem(
@@ -575,16 +576,17 @@ const OrdersPage: React.FC = () => {
           customerMobile: selectedOrder.customer_mobile,
           items: orderItems.map((item: any) => ({
             product_id: item.product_id,
+            productId: item.product_id,
             productName: item.product_name,
             quantity: item.quantity,
             price: item.sold_price,
             soldPrice: item.sold_price,
-            size: item.size_name,
+            size: item.size_name || "N/A",
             sizeId: item.size_id,
-            color: item.color_name,
+            color: item.color_name || "N/A",
             colorId: item.color_id,
-            productCost: item.product_cost,
-            printCost: item.print_cost,
+            productCost: item.product_cost || 0,
+            printCost: item.print_cost || 0,
           })),
           totalAmount: selectedOrder.total_amount,
           totalPaid: selectedOrder.advance_paid,

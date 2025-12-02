@@ -382,16 +382,16 @@ const SalesPage: React.FC = () => {
         // Load cart items with full details
         const newCartItems: CartItem[] = order.items.map(
           (item: any, idx: number) => ({
-            id: `edit-${idx}-${Date.now()}`,
-            productId: item.product_id,
-            productCode: `CODE-${idx}`,
+            id: `edit-${idx}-${item.product_id}-${Date.now()}`,
+            productId: item.productId || item.product_id,
+            productCode: `PROD-${item.productId || item.product_id}`,
             productName: item.productName,
             size: item.size || "N/A",
             sizeId: item.sizeId,
             color: item.color || "N/A",
             colorId: item.colorId,
             quantity: item.quantity,
-            price: item.soldPrice || item.price,
+            price: item.soldPrice || item.price || 0,
             productCost: item.productCost || 0,
             printCost: item.printCost || 0,
           })

@@ -1069,148 +1069,266 @@ const SalesPage: React.FC = () => {
         newPayment = parseFloat(bankPaymentDetails?.paidAmount || "0") || 0;
       }
 
-      const totalPaidNow = editingOrderId
-        ? previouslyPaidAmount + newPayment
-        : newPayment;
-      const balance = total - totalPaidNow;
-
-      // Determine payment status and amounts based on whether paid amount is less than total
-      let paymentStatus = "";
-      let advancePaid = 0;
-      let balanceDue = 0;
-      let finalAmount = 0;
-
-      if (newPayment > 0) {
-        if (newPayment < total) {
-          // Partial payment: paid amount goes to advance_paid, difference goes to balance_due, and final_amount equals paid amount
-          paymentStatus = "partial";
-          advancePaid = newPayment;
-          balanceDue = total - newPayment;
-          finalAmount = newPayment;
-        } else {
-          // Full payment: only final_amount is set, advance_paid and balance_due are 0
-          paymentStatus = "fully_paid";
-          advancePaid = 0;
-          balanceDue = 0;
-          finalAmount = newPayment;
-        }
-      } else {
-        // No payment made
-        paymentStatus = "";
-        advancePaid = 0;
-        balanceDue = total;
-        finalAmount = 0;
-      }
-
-      // Generate order number (000001000 format)
-      const orderNumberResponse = await fetch(
-        `${API_URL}/orders/generate-number?shop_id=${shopId}`
-      );
-      const orderNumberData = await orderNumberResponse.json();
-      const orderNumber =
-        orderNumberData.orderNumber || `${String(Date.now()).slice(-9)}`;
-
       // Get Sri Lankan datetime
       const sriLankanDateTime = getSriLankanDateTime();
 
-      // Create order object (minimal data - delivery address will be added later in Orders page)
-      const orderPayload = {
-        shop_id: shopId,
-        order_number: orderNumber,
-        customer_id: selectedCustomer.customer_id,
-        user_id: null,
-        total_items: cartItems.length,
-        order_status: "pending",
-        total_amount: total,
-        delivery_charge: deliveryCharge,
-        final_amount: finalAmount,
-        advance_paid: advancePaid,
-        balance_due: balanceDue,
-        payment_status: paymentStatus,
-        payment_method: paymentMethod === "cash" ? "cash" : (bankPaymentDetails?.bank || "bank"),
-        recipient_phone: selectedCustomer.mobile || null,
-        notes: orderNotes || null,
-        order_date: sriLankanDateTime.dateString,
-        items: cartItems.map((item) => ({
-          product_id: item.productId,
-          color_id: item.colorId,
-          size_id: item.sizeId,
-          quantity: item.quantity,
-          sold_price: item.price,
-          total_price: item.price * item.quantity,
-        })),
-      };
+      let savedOrderId: number | undefined;
+      let orderNumber: string;
 
-      // Save order to database
-      const orderResponse = await fetch(`${API_URL}/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderPayload),
-      });
+      if (editingOrderId) {
+        // EDITING EXISTING ORDER
+        savedOrderId = parseInt(editingOrderId);
 
-      const orderResult = await orderResponse.json();
-      if (!orderResult.success) {
-        setMessage({
-          type: "error",
-          text: `Failed to save order: ${orderResult.error}`,
-        });
-        return;
-      }
+        // For editing: calculate total paid including previous payments
+        const totalPaidNow = previouslyPaidAmount + newPayment;
+        const newBalance = Math.max(0, total - totalPaidNow);
 
-      const savedOrderId = orderResult.data?.order_id;
-
-      // Save payment if amount is paid
-      if (newPayment > 0) {
-        if (paymentMethod === "cash") {
-          const paymentPayload = {
-            shop_id: shopId,
-            order_id: savedOrderId,
-            customer_id: selectedCustomer.customer_id,
-            payment_amount: newPayment,
-            payment_date: sriLankanDateTime.dateString,
-            payment_time: sriLankanDateTime.timeString,
-            payment_method: "cash",
-            payment_status: "completed",
-            notes: null,
-          };
-
-          await fetch(`${API_URL}/payments`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(paymentPayload),
-          });
-        } else if (paymentMethod === "bank" && bankPaymentDetails) {
-          const paymentPayload = {
-            shop_id: shopId,
-            order_id: savedOrderId,
-            customer_id: selectedCustomer.customer_id,
-            payment_amount: newPayment,
-            payment_date: sriLankanDateTime.dateString,
-            payment_time: sriLankanDateTime.timeString,
-            payment_method: bankPaymentDetails.bank || "bank",
-            payment_status: "completed",
-            notes: `Bank: ${bankPaymentDetails.bank}, Receipt: ${bankPaymentDetails.receiptNumber}`,
-          };
-
-          await fetch(`${API_URL}/payments`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(paymentPayload),
-          });
+        // Determine payment status based on new total
+        let paymentStatus = "unpaid";
+        if (totalPaidNow >= total) {
+          paymentStatus = "fully_paid";
+        } else if (totalPaidNow > 0) {
+          paymentStatus = "partial";
         }
+
+        // Update order with new total and payment information
+        const updateOrderPayload = {
+          shop_id: shopId,
+          total_items: cartItems.length,
+          total_amount: total,
+          delivery_charge: deliveryCharge,
+          final_amount: totalPaidNow,
+          advance_paid: previouslyPaidAmount,
+          balance_due: newBalance,
+          payment_status: paymentStatus,
+          payment_method: paymentMethod === "cash" ? "cash" : (bankPaymentDetails?.bank || "bank"),
+          notes: orderNotes || null,
+        };
+
+        // Update order
+        const updateResponse = await fetch(`${API_URL}/orders/${savedOrderId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updateOrderPayload),
+        });
+
+        const updateResult = await updateResponse.json();
+        if (!updateResult.success) {
+          setMessage({
+            type: "error",
+            text: `Failed to update order: ${updateResult.error}`,
+          });
+          return;
+        }
+
+        // Delete old order items and create new ones
+        // (The backend should handle this, or we handle it via a delete endpoint)
+        // For now, we'll just create new items - they should be added to the table
+        const itemsPayload = {
+          shop_id: shopId,
+          order_id: savedOrderId,
+          items: cartItems.map((item) => ({
+            product_id: item.productId,
+            color_id: item.colorId,
+            size_id: item.sizeId,
+            quantity: item.quantity,
+            sold_price: item.price,
+            total_price: item.price * item.quantity,
+          })),
+        };
+
+        const itemsResponse = await fetch(`${API_URL}/orders/${savedOrderId}/items`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(itemsPayload),
+        });
+
+        const itemsResult = await itemsResponse.json();
+        if (!itemsResult.success) {
+          setMessage({
+            type: "error",
+            text: `Failed to update order items: ${itemsResult.error}`,
+          });
+          return;
+        }
+
+        // Record the new payment if any payment is made
+        if (newPayment > 0) {
+          if (paymentMethod === "cash") {
+            const paymentPayload = {
+              shop_id: shopId,
+              order_id: savedOrderId,
+              customer_id: selectedCustomer.customer_id,
+              payment_amount: newPayment,
+              payment_date: sriLankanDateTime.dateString,
+              payment_time: sriLankanDateTime.timeString,
+              payment_method: "cash",
+              payment_status: "completed",
+              notes: null,
+            };
+
+            await fetch(`${API_URL}/payments`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(paymentPayload),
+            });
+          } else if (paymentMethod === "bank" && bankPaymentDetails) {
+            const paymentPayload = {
+              shop_id: shopId,
+              order_id: savedOrderId,
+              customer_id: selectedCustomer.customer_id,
+              payment_amount: newPayment,
+              payment_date: sriLankanDateTime.dateString,
+              payment_time: sriLankanDateTime.timeString,
+              payment_method: bankPaymentDetails.bank || "bank",
+              payment_status: "completed",
+              notes: `Bank: ${bankPaymentDetails.bank}, Receipt: ${bankPaymentDetails.receiptNumber}`,
+            };
+
+            await fetch(`${API_URL}/payments`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(paymentPayload),
+            });
+          }
+        }
+      } else {
+        // CREATING NEW ORDER
+        // Determine payment status and amounts based on whether paid amount is less than total
+        let paymentStatus = "";
+        let advancePaid = 0;
+        let balanceDue = 0;
+        let finalAmount = 0;
+
+        if (newPayment > 0) {
+          if (newPayment < total) {
+            // Partial payment
+            paymentStatus = "partial";
+            advancePaid = newPayment;
+            balanceDue = total - newPayment;
+            finalAmount = newPayment;
+          } else {
+            // Full payment
+            paymentStatus = "fully_paid";
+            advancePaid = 0;
+            balanceDue = 0;
+            finalAmount = newPayment;
+          }
+        } else {
+          // No payment made
+          paymentStatus = "";
+          advancePaid = 0;
+          balanceDue = total;
+          finalAmount = 0;
+        }
+
+        // Generate order number (000001000 format)
+        const orderNumberResponse = await fetch(
+          `${API_URL}/orders/generate-number?shop_id=${shopId}`
+        );
+        const orderNumberData = await orderNumberResponse.json();
+        orderNumber =
+          orderNumberData.orderNumber || `${String(Date.now()).slice(-9)}`;
+
+        // Create order object
+        const orderPayload = {
+          shop_id: shopId,
+          order_number: orderNumber,
+          customer_id: selectedCustomer.customer_id,
+          user_id: null,
+          total_items: cartItems.length,
+          order_status: "pending",
+          total_amount: total,
+          delivery_charge: deliveryCharge,
+          final_amount: finalAmount,
+          advance_paid: advancePaid,
+          balance_due: balanceDue,
+          payment_status: paymentStatus,
+          payment_method: paymentMethod === "cash" ? "cash" : (bankPaymentDetails?.bank || "bank"),
+          recipient_phone: selectedCustomer.mobile || null,
+          notes: orderNotes || null,
+          order_date: sriLankanDateTime.dateString,
+          items: cartItems.map((item) => ({
+            product_id: item.productId,
+            color_id: item.colorId,
+            size_id: item.sizeId,
+            quantity: item.quantity,
+            sold_price: item.price,
+            total_price: item.price * item.quantity,
+          })),
+        };
+
+        // Save order to database
+        const orderResponse = await fetch(`${API_URL}/orders`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderPayload),
+        });
+
+        const orderResult = await orderResponse.json();
+        if (!orderResult.success) {
+          setMessage({
+            type: "error",
+            text: `Failed to save order: ${orderResult.error}`,
+          });
+          return;
+        }
+
+        savedOrderId = orderResult.data?.order_id;
+
+        // Save payment if amount is paid
+        if (newPayment > 0) {
+          if (paymentMethod === "cash") {
+            const paymentPayload = {
+              shop_id: shopId,
+              order_id: savedOrderId,
+              customer_id: selectedCustomer.customer_id,
+              payment_amount: newPayment,
+              payment_date: sriLankanDateTime.dateString,
+              payment_time: sriLankanDateTime.timeString,
+              payment_method: "cash",
+              payment_status: "completed",
+              notes: null,
+            };
+
+            await fetch(`${API_URL}/payments`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(paymentPayload),
+            });
+          } else if (paymentMethod === "bank" && bankPaymentDetails) {
+            const paymentPayload = {
+              shop_id: shopId,
+              order_id: savedOrderId,
+              customer_id: selectedCustomer.customer_id,
+              payment_amount: newPayment,
+              payment_date: sriLankanDateTime.dateString,
+              payment_time: sriLankanDateTime.timeString,
+              payment_method: bankPaymentDetails.bank || "bank",
+              payment_status: "completed",
+              notes: `Bank: ${bankPaymentDetails.bank}, Receipt: ${bankPaymentDetails.receiptNumber}`,
+            };
+
+            await fetch(`${API_URL}/payments`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(paymentPayload),
+            });
+          }
+        }
+
+        // Success message
+        const paymentStatusText =
+          paymentStatus === "fully_paid"
+            ? "✓ Fully Paid"
+            : paymentStatus === "partial"
+              ? "⚠ Partially Paid"
+              : "⏳ Unpaid";
+        const displayMessage = `✓ Order ${orderNumber} created! Total: Rs. ${total.toFixed(2)} | Paid: Rs. ${finalAmount.toFixed(2)} | Status: ${paymentStatusText}${balanceDue > 0 ? ` | Balance Due: Rs. ${balanceDue.toFixed(2)}` : ""}`;
+        setMessage({ type: "success", text: displayMessage });
       }
 
-      // Success message with payment status
-      const paymentStatusText =
-        paymentStatus === "fully_paid"
-          ? "✓ Fully Paid"
-          : paymentStatus === "partial"
-            ? "⚠ Partially Paid"
-            : "⏳ Unpaid";
-      const displayMessage = `✓ Order ${orderNumber} created! Total: Rs. ${total.toFixed(2)} | Paid: Rs. ${finalAmount.toFixed(2)} | Status: ${paymentStatusText}${balanceDue > 0 ? ` | Balance Due: Rs. ${balanceDue.toFixed(2)}` : ""}`;
-      setMessage({ type: "success", text: displayMessage });
-
-      // Reset form
+      // Reset form after both create and update
       setCartItems([]);
       setPaidAmount("");
       setOrderNotes("");

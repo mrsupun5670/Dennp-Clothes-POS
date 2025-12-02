@@ -21,7 +21,8 @@ router.get('/:id', OrderController.getOrderById.bind(OrderController));
 router.post('/', OrderController.createOrder.bind(OrderController));
 router.post('/:id/payment', OrderController.recordPayment.bind(OrderController));
 
-// PUT route
+// PUT routes
 router.put('/:id', OrderController.updateOrder.bind(OrderController));
+router.put('/:id/items', OrderController.updateOrderItems.bind(OrderController));
 
 export default router;

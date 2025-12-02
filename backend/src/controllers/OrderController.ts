@@ -780,6 +780,66 @@ class OrderController {
       </html>
     `;
   }
+
+  /**
+   * PUT /orders/:id/items - Update order items (delete old, insert new)
+   */
+  async updateOrderItems(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { shop_id, items } = req.body;
+      const orderId = Number(id);
+
+      if (!shop_id) {
+        res.status(400).json({
+          success: false,
+          error: "Missing required field: shop_id",
+        });
+        return;
+      }
+
+      // Verify order exists and belongs to shop
+      const order = await OrderModel.getOrderById(orderId, shop_id);
+      if (!order) {
+        res.status(404).json({
+          success: false,
+          error: "Order not found or does not belong to this shop",
+        });
+        return;
+      }
+
+      // Delete existing order items
+      await OrderItemModel.deleteOrderItems(orderId);
+
+      // Insert new order items
+      if (items && items.length > 0) {
+        for (const item of items) {
+          await OrderItemModel.createOrderItem({
+            order_id: orderId,
+            product_id: item.product_id,
+            color_id: item.color_id || null,
+            size_id: item.size_id || null,
+            quantity: item.quantity,
+            sold_price: item.sold_price,
+            total_price: item.total_price,
+          });
+        }
+      }
+
+      logger.info("Order items updated successfully", { orderId, itemCount: items?.length });
+      res.json({
+        success: true,
+        message: "Order items updated successfully",
+      });
+    } catch (error: any) {
+      logger.error("Error updating order items:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to update order items",
+        details: error.message,
+      });
+    }
+  }
 }
 
 export default new OrderController();

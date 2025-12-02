@@ -530,7 +530,7 @@ const OrdersPage: React.FC = () => {
             <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
               <tr>
                 <th className="px-6 py-3 text-left font-semibold text-red-400">
-                  Order ID
+                  Order Number
                 </th>
                 <th className="px-6 py-3 text-left font-semibold text-red-400">
                   Customer ID
@@ -572,7 +572,7 @@ const OrdersPage: React.FC = () => {
                     title="Double-click to open details"
                   >
                     <td className="px-6 py-4 text-gray-200 font-medium font-mono">
-                      {order.order_id}
+                      {order.order_number}
                     </td>
                     <td className="px-6 py-4 text-gray-200 font-mono">
                       {order.customer_id || "N/A"}

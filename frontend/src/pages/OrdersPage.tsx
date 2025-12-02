@@ -212,6 +212,7 @@ const OrdersPage: React.FC = () => {
 
   // Fetch order items when modal opens
   useEffect(() => {
+    console.log("Selected Order:", selectedOrder);
     if (selectedOrderId && showOrderModal && !shopId) {
       return; // Don't fetch if no shopId
     }

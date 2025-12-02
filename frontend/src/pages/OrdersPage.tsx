@@ -9,8 +9,10 @@ interface OrderItem {
   quantity: number;
   sold_price: number;
   total_price: number;
-  color_id: number;
-  size_id: number;
+  color_id?: number;
+  size_id?: number;
+  color_name?: string;
+  size_name?: string;
 }
 
 interface Order {
@@ -930,6 +932,12 @@ const OrdersPage: React.FC = () => {
                             <th className="px-4 py-3 text-center text-gray-300 font-semibold">
                               Qty
                             </th>
+                            <th className="px-4 py-3 text-center text-gray-300 font-semibold">
+                              Size
+                            </th>
+                            <th className="px-4 py-3 text-center text-gray-300 font-semibold">
+                              Color
+                            </th>
                             <th className="px-4 py-3 text-right text-gray-300 font-semibold">
                               Unit Price (Rs.)
                             </th>
@@ -947,6 +955,12 @@ const OrdersPage: React.FC = () => {
                               <td className="px-4 py-3 text-center text-gray-300">
                                 {item.quantity}
                               </td>
+                              <td className="px-4 py-3 text-center text-gray-300">
+                                {item.size_name || "N/A"}
+                              </td>
+                              <td className="px-4 py-3 text-center text-gray-300">
+                                {item.color_name || "N/A"}
+                              </td>
                               <td className="px-4 py-3 text-right text-gray-400">
                                 {parseFloat(String(item.sold_price)).toFixed(2)}
                               </td>
@@ -958,7 +972,7 @@ const OrdersPage: React.FC = () => {
                             </tr>
                           ))}
                           <tr className="bg-gray-700/50 font-semibold">
-                            <td colSpan={3} className="px-4 py-3 text-right">
+                            <td colSpan={5} className="px-4 py-3 text-right">
                               Subtotal:
                             </td>
                             <td className="px-4 py-3 text-right text-red-400">

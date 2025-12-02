@@ -365,12 +365,34 @@ const OrdersPage: React.FC = () => {
   };
 
   const handleStatusUpdate = async (newStatus: "processing" | "shipped" | "delivered") => {
-    if (!selectedOrderId || !shopId) return;
+    if (!selectedOrderId || !shopId || !selectedOrder) return;
 
-    // Validate tracking number for shipped status
-    if (newStatus === "shipped" && !trackingNumber.trim()) {
-      setStatusMessage("❌ Please enter a tracking number");
-      return;
+    // Validate requirements for shipped status
+    if (newStatus === "shipped") {
+      // Check 1: Payment must be fully paid
+      if (selectedOrder.payment_status !== "fully_paid") {
+        setStatusMessage("❌ Payment must be fully paid to mark as shipped");
+        return;
+      }
+
+      // Check 2: Tracking number must be provided
+      if (!trackingNumber.trim()) {
+        setStatusMessage("❌ Please enter a tracking number");
+        return;
+      }
+
+      // Check 3: Address must be complete in database
+      const hasCompleteAddress =
+        selectedOrder.delivery_line1 &&
+        selectedOrder.delivery_city &&
+        selectedOrder.delivery_district &&
+        selectedOrder.delivery_province &&
+        selectedOrder.delivery_postal_code;
+
+      if (!hasCompleteAddress) {
+        setStatusMessage("❌ Complete delivery address is required (Line 1, City, District, Province, Postal Code)");
+        return;
+      }
     }
 
     setIsUpdatingStatus(true);

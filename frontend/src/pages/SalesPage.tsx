@@ -1953,6 +1953,54 @@ const SalesPage: React.FC = () => {
                 Rs. {total.toFixed(2)}
               </span>
             </div>
+
+            {/* Payment Status Display (when editing order) */}
+            {editingOrderId && previouslyPaidAmount !== undefined && (
+              <div className="mt-4 pt-4 border-t border-gray-700 space-y-2">
+                {previouslyPaidAmount > 0 ? (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-yellow-400 font-semibold">
+                        Already Paid:
+                      </span>
+                      <span className="font-semibold text-yellow-300">
+                        Rs. {previouslyPaidAmount.toFixed(2)}
+                      </span>
+                    </div>
+
+                    {/* Calculate remaining balance */}
+                    {previouslyPaidAmount < total ? (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-orange-400 font-semibold">
+                          Amount Due:
+                        </span>
+                        <span className="font-semibold text-orange-300">
+                          Rs. {(total - previouslyPaidAmount).toFixed(2)}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-green-400 font-semibold">
+                          Status:
+                        </span>
+                        <span className="font-semibold text-green-300">
+                          ✓ Fully Paid
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-red-400 font-semibold">
+                      Amount Due:
+                    </span>
+                    <span className="font-semibold text-red-300">
+                      Rs. {total.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* New Payment System */}

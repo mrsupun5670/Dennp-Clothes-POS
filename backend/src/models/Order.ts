@@ -36,6 +36,7 @@ export interface Order {
   recipient_phone?: string;
   recipient_phone1?: string;
   delivery_address?: any;
+  customer_mobile?: string;
 }
 
 class OrderModel {
@@ -44,11 +45,24 @@ class OrderModel {
    */
   async getAllOrders(shopId?: number): Promise<Order[]> {
     try {
-      let sql = 'SELECT * FROM orders ORDER BY created_at DESC';
+      let sql = `
+        SELECT o.*,
+               COALESCE(c.mobile, o.recipient_phone) as customer_mobile
+        FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.customer_id
+        ORDER BY o.created_at DESC
+      `;
       let params: any[] = [];
 
       if (shopId) {
-        sql = 'SELECT * FROM orders WHERE shop_id = ? ORDER BY created_at DESC';
+        sql = `
+          SELECT o.*,
+                 COALESCE(c.mobile, o.recipient_phone) as customer_mobile
+          FROM orders o
+          LEFT JOIN customers c ON o.customer_id = c.customer_id
+          WHERE o.shop_id = ?
+          ORDER BY o.created_at DESC
+        `;
         params = [shopId];
       }
 

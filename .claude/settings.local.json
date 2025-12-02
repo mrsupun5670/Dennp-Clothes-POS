@@ -60,7 +60,8 @@
       "mcp__ide__getDiagnostics",
       "Bash(cmd /c \"netstat -ano | findstr :5173\")",
       "Bash(cmd /c \"for /f \"\"tokens=5\"\" %a in (''netstat -ano ^| findstr :3002'') do taskkill /PID %a /F\")",
-      "Bash(cmd /c \"for /f \"\"tokens=5\"\" %a in (''''netstat -ano ^| findstr :3002'''') do taskkill /PID %a /F 2>&1\")"
+      "Bash(cmd /c \"for /f \"\"tokens=5\"\" %a in (''''netstat -ano ^| findstr :3002'''') do taskkill /PID %a /F 2>&1\")",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

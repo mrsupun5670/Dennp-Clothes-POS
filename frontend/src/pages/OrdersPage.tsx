@@ -34,6 +34,7 @@ interface Order {
   order_date: string;
   recipient_name?: string;
   recipient_phone?: string;
+  customer_mobile?: string;
   delivery_line1?: string;
   delivery_line2?: string;
   delivery_city?: string;
@@ -578,7 +579,7 @@ const OrdersPage: React.FC = () => {
                       {order.customer_id || "N/A"}
                     </td>
                     <td className="px-6 py-4 text-gray-400">
-                      {order.recipient_phone}
+                      {order.customer_mobile}
                     </td>
                     <td className="px-6 py-4 text-gray-400 text-sm">
                       {new Date(order.order_date).toLocaleDateString()}

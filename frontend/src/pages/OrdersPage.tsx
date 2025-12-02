@@ -47,6 +47,19 @@ interface Order {
   items?: OrderItem[];
 }
 
+// Province to Districts mapping for Sri Lanka
+const PROVINCE_DISTRICTS: { [key: string]: string[] } = {
+  "Western Province": ["Colombo", "Gampaha", "Kalutara"],
+  "Central Province": ["Kandy", "Matara", "Nuwara Eliya"],
+  "Southern Province": ["Matara", "Galle", "Hambantota"],
+  "Eastern Province": ["Batticaloa", "Ampara", "Trincomalee"],
+  "Northern Province": ["Jaffna", "Mullaitivu", "Vavuniya"],
+  "North Western Province": ["Kurunegala", "Puttalam"],
+  "North Central Province": ["Anuradhapura", "Polonnaruwa"],
+  "Uva Province": ["Badulla", "Monaragala"],
+  "Sabaragamuwa Province": ["Ratnapura", "Kegalle"],
+};
+
 // Utility function to print receipt with proper print dialog
 const printReceipt = async (orderId: number) => {
   try {
@@ -404,7 +417,7 @@ const OrdersPage: React.FC = () => {
       setDeliveryLine2(selectedOrder.delivery_line2 || "");
       setDeliveryCity(selectedOrder.delivery_city || "");
       setDeliveryDistrict(selectedOrder.delivery_district || "");
-      setDeliveryProvince(selectedOrder.delivery_province || "Sri Lanka");
+      setDeliveryProvince(selectedOrder.delivery_province || "");
       setDeliveryPostalCode(selectedOrder.delivery_postal_code || "");
       setAddressMessage("");
       setShowAddressModal(true);
@@ -1426,33 +1439,17 @@ const OrdersPage: React.FC = () => {
                         value={deliveryDistrict}
                         onChange={(e) => setDeliveryDistrict(e.target.value)}
                         className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:border-red-500 focus:outline-none"
+                        disabled={!deliveryProvince}
                       >
-                        <option value="">Select District</option>
-                        <option value="Colombo">Colombo</option>
-                        <option value="Gampaha">Gampaha</option>
-                        <option value="Kalutara">Kalutara</option>
-                        <option value="Kandy">Kandy</option>
-                        <option value="Matara">Matara</option>
-                        <option value="Galle">Galle</option>
-                        <option value="Ratnapura">Ratnapura</option>
-                        <option value="Kegalle">Kegalle</option>
-                        <option value="Nuwara Eliya">Nuwara Eliya</option>
-                        <option value="Badulla">Badulla</option>
-                        <option value="Monaragala">Monaragala</option>
-                        <option value="Jaffna">Jaffna</option>
-                        <option value="Mullaitivu">Mullaitivu</option>
-                        <option value="Batticaloa">Batticaloa</option>
-                        <option value="Ampara">Ampara</option>
-                        <option value="Matara">Matara</option>
-                        <option value="Trincomalee">Trincomalee</option>
-                        <option value="Anuradhapura">Anuradhapura</option>
-                        <option value="Polonnaruwa">Polonnaruwa</option>
-                        <option value="Kurunegala">Kurunegala</option>
-                        <option value="Puttalam">Puttalam</option>
-                        <option value="Mannar">Mannar</option>
-                        <option value="Vavuniya">Vavuniya</option>
-                        <option value="Mullativum">Mullaitivu</option>
-                        <option value="Matara">Matara</option>
+                        <option value="">
+                          {deliveryProvince ? "Select District" : "Select Province First"}
+                        </option>
+                        {deliveryProvince &&
+                          PROVINCE_DISTRICTS[deliveryProvince]?.map((district) => (
+                            <option key={district} value={district}>
+                              {district}
+                            </option>
+                          ))}
                       </select>
                     </div>
                   </div>

@@ -160,6 +160,11 @@ const OrdersPage: React.FC = () => {
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
 
+  // Delivery status update state
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+
   const {
     data: orders,
     isLoading: isLoadingOrders,
@@ -283,6 +288,8 @@ const OrdersPage: React.FC = () => {
     setPaymentMessage("");
     setReceiptHTML("");
     setOrderItems([]);
+    setTrackingNumber("");
+    setStatusMessage("");
   };
 
   const handleCancelOrder = async () => {
@@ -313,6 +320,52 @@ const OrdersPage: React.FC = () => {
       setPaymentMessage("❌ Failed to cancel order");
     } finally {
       setIsUpdatingOrder(false);
+    }
+  };
+
+  const handleStatusUpdate = async (newStatus: "processing" | "shipped" | "delivered") => {
+    if (!selectedOrderId || !shopId) return;
+
+    // Validate tracking number for shipped status
+    if (newStatus === "shipped" && !trackingNumber.trim()) {
+      setStatusMessage("❌ Please enter a tracking number");
+      return;
+    }
+
+    setIsUpdatingStatus(true);
+    setStatusMessage("");
+
+    try {
+      const response = await fetch(`${API_URL}/orders/${selectedOrderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop_id: shopId,
+          order_status: newStatus,
+          tracking_number: newStatus === "shipped" ? trackingNumber : undefined,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setStatusMessage(`✅ Order status updated to ${newStatus}!`);
+        setTrackingNumber("");
+        setTimeout(() => {
+          refetchOrders();
+          // Refresh selected order
+          const updatedOrder = orders?.find(o => o.order_id === selectedOrderId);
+          if (updatedOrder) {
+            // Update state to reflect changes
+          }
+        }, 1000);
+      } else {
+        setStatusMessage(`❌ Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      setStatusMessage("❌ Failed to update order status");
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -759,6 +812,122 @@ const OrdersPage: React.FC = () => {
                           </tr>
                         </tbody>
                       </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Delivery Status Section */}
+              <div className="border-t border-gray-700 pt-6">
+                <h3 className="text-lg font-bold text-red-400 mb-4">
+                  Delivery Status
+                </h3>
+                <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 space-y-4">
+                  {/* Current Status Display */}
+                  <div>
+                    <p className="text-xs text-gray-400 font-semibold mb-2">
+                      Current Status
+                    </p>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold inline-block ${getStatusBadgeColor(
+                      selectedOrder.order_status
+                    )}`}>
+                      {selectedOrder.order_status.toUpperCase()}
+                    </span>
+                  </div>
+
+                  {/* Status Update Controls */}
+                  {selectedOrder.order_status !== "delivered" && selectedOrder.order_status !== "cancelled" && (
+                    <div className="space-y-3">
+                      {/* Pending -> Processing */}
+                      {selectedOrder.order_status === "pending" && (
+                        <button
+                          onClick={() => handleStatusUpdate("processing")}
+                          disabled={isUpdatingStatus}
+                          className={`w-full py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
+                            isUpdatingStatus
+                              ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                              : "bg-blue-600 text-white hover:bg-blue-700"
+                          }`}
+                        >
+                          {isUpdatingStatus ? "⏳ Updating..." : "📦 Mark as Processing"}
+                        </button>
+                      )}
+
+                      {/* Processing -> Shipped */}
+                      {selectedOrder.order_status === "processing" && (
+                        <>
+                          <div>
+                            <label className="text-xs text-gray-400 font-semibold block mb-2">
+                              Tracking Number *
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Enter tracking number (e.g., TRACK123456)"
+                              value={trackingNumber}
+                              onChange={(e) => setTrackingNumber(e.target.value)}
+                              className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white placeholder-gray-400 rounded-lg focus:border-blue-500 focus:outline-none"
+                            />
+                          </div>
+                          <button
+                            onClick={() => handleStatusUpdate("shipped")}
+                            disabled={isUpdatingStatus || !trackingNumber.trim()}
+                            className={`w-full py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
+                              isUpdatingStatus || !trackingNumber.trim()
+                                ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                                : "bg-purple-600 text-white hover:bg-purple-700"
+                            }`}
+                          >
+                            {isUpdatingStatus ? "⏳ Updating..." : "🚚 Mark as Shipped"}
+                          </button>
+                        </>
+                      )}
+
+                      {/* Shipped -> Delivered */}
+                      {selectedOrder.order_status === "shipped" && (
+                        <>
+                          <div>
+                            <p className="text-xs text-gray-400 font-semibold mb-2">
+                              Tracking Number
+                            </p>
+                            <p className="bg-gray-600 px-3 py-2 rounded-lg text-gray-100 font-mono text-sm">
+                              {selectedOrder.tracking_number || "N/A"}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleStatusUpdate("delivered")}
+                            disabled={isUpdatingStatus}
+                            className={`w-full py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
+                              isUpdatingStatus
+                                ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                                : "bg-green-600 text-white hover:bg-green-700"
+                            }`}
+                          >
+                            {isUpdatingStatus ? "⏳ Updating..." : "✅ Mark as Delivered"}
+                          </button>
+                        </>
+                      )}
+
+                      {/* Status Message */}
+                      {statusMessage && (
+                        <p className={`text-sm font-semibold ${statusMessage.includes("✅") ? "text-green-400" : "text-red-400"}`}>
+                          {statusMessage}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Delivered Status - Read Only */}
+                  {selectedOrder.order_status === "delivered" && (
+                    <div>
+                      <p className="text-xs text-gray-400 font-semibold mb-2">
+                        Tracking Number
+                      </p>
+                      <p className="bg-gray-600 px-3 py-2 rounded-lg text-gray-100 font-mono text-sm">
+                        {selectedOrder.tracking_number || "N/A"}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2 italic">
+                        Order delivered - No further updates available
+                      </p>
                     </div>
                   )}
                 </div>

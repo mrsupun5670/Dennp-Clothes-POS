@@ -440,12 +440,16 @@ const OrdersPage: React.FC = () => {
       setAddressMessage("❌ Please enter delivery address");
       return;
     }
-    if (!deliveryCity.trim()) {
-      setAddressMessage("❌ Please enter city");
+    if (!deliveryProvince.trim()) {
+      setAddressMessage("❌ Please select province");
       return;
     }
     if (!deliveryDistrict.trim()) {
       setAddressMessage("❌ Please select district");
+      return;
+    }
+    if (!deliveryCity.trim()) {
+      setAddressMessage("❌ Please enter city");
       return;
     }
     if (!deliveryPostalCode.trim()) {

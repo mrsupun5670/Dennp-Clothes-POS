@@ -944,6 +944,100 @@ const OrdersPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Order Summary & Payment Section - NOW POSITIONED AFTER ITEMS */}
+              <div className="border-t border-gray-700 pt-6">
+                <h3 className="text-lg font-bold text-red-400 mb-4">
+                  Order Summary & Payment
+                </h3>
+                <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 space-y-3">
+                  {/* Subtotal */}
+                  <div className="flex justify-between items-center pb-3 border-b border-gray-600">
+                    <p className="text-gray-300">Order Subtotal:</p>
+                    <p className="text-gray-100 font-semibold">
+                      Rs.{" "}
+                      {parseFloat(String(selectedOrder.total_amount)).toFixed(
+                        2
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Delivery Charge */}
+                  {selectedOrder.delivery_charge ? (
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-600">
+                      <p className="text-gray-300">Delivery Charge:</p>
+                      <p className="text-gray-100 font-semibold">
+                        Rs.{" "}
+                        {parseFloat(
+                          String(selectedOrder.delivery_charge)
+                        ).toFixed(2)}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {/* Grand Total */}
+                  <div className="flex justify-between items-center pb-3 border-b border-gray-600 bg-gray-700/50 rounded p-2">
+                    <p className="text-red-400 font-bold text-lg">
+                      Grand Total (Amount Due):
+                    </p>
+                    <p className="text-red-400 font-bold text-xl">
+                      Rs.{" "}
+                      {(
+                        parseFloat(String(selectedOrder.total_amount)) +
+                        (parseFloat(String(selectedOrder.delivery_charge)) || 0)
+                      ).toFixed(2)}
+                    </p>
+                  </div>
+
+                  {/* Payment Breakdown */}
+                  <div className="grid grid-cols-2 gap-4 py-3">
+                    <div>
+                      <p className="text-xs text-gray-400 font-semibold mb-1">
+                        Advance Paid
+                      </p>
+                      <p className="text-green-400 font-bold text-lg">
+                        Rs.{" "}
+                        {parseFloat(String(selectedOrder.advance_paid)).toFixed(
+                          2
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      {(() => {
+                        const balanceDue =
+                          parseFloat(String(selectedOrder.balance_due)) || 0;
+                        return (
+                          <>
+                            <p className="text-xs text-gray-400 font-semibold mb-1">
+                              {balanceDue > 0
+                                ? "Balance To Be Paid"
+                                : "Balance Paid"}
+                            </p>
+                            <p
+                              className={`font-bold text-lg ${balanceDue > 0 ? "text-red-400" : "text-green-400"}`}
+                            >
+                              Rs. {balanceDue.toFixed(2)}
+                            </p>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Payment Status */}
+                  <div className="pt-2 border-t border-gray-600">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getPaymentStatusBadgeColor(
+                        selectedOrder.payment_status
+                      )}`}
+                    >
+                      {selectedOrder.payment_status
+                        .replace("_", " ")
+                        .toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Delivery Status Section */}
               <div className="border-t border-gray-700 pt-6">
                 <h3 className="text-lg font-bold text-red-400 mb-4">
@@ -1124,100 +1218,6 @@ const OrdersPage: React.FC = () => {
                       </button>
                     </div>
                   )}
-                </div>
-              </div>
-
-              {/* Payment Summary Section with Delivery Charge */}
-              <div className="border-t border-gray-700 pt-6">
-                <h3 className="text-lg font-bold text-red-400 mb-4">
-                  Order Summary & Payment
-                </h3>
-                <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 space-y-3">
-                  {/* Subtotal */}
-                  <div className="flex justify-between items-center pb-3 border-b border-gray-600">
-                    <p className="text-gray-300">Order Subtotal:</p>
-                    <p className="text-gray-100 font-semibold">
-                      Rs.{" "}
-                      {parseFloat(String(selectedOrder.total_amount)).toFixed(
-                        2
-                      )}
-                    </p>
-                  </div>
-
-                  {/* Delivery Charge */}
-                  {selectedOrder.delivery_charge ? (
-                    <div className="flex justify-between items-center pb-3 border-b border-gray-600">
-                      <p className="text-gray-300">Delivery Charge:</p>
-                      <p className="text-gray-100 font-semibold">
-                        Rs.{" "}
-                        {parseFloat(
-                          String(selectedOrder.delivery_charge)
-                        ).toFixed(2)}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  {/* Grand Total */}
-                  <div className="flex justify-between items-center pb-3 border-b border-gray-600 bg-gray-700/50 rounded p-2">
-                    <p className="text-red-400 font-bold text-lg">
-                      Grand Total (Amount Due):
-                    </p>
-                    <p className="text-red-400 font-bold text-xl">
-                      Rs.{" "}
-                      {(
-                        parseFloat(String(selectedOrder.total_amount)) +
-                        (parseFloat(String(selectedOrder.delivery_charge)) || 0)
-                      ).toFixed(2)}
-                    </p>
-                  </div>
-
-                  {/* Payment Breakdown */}
-                  <div className="grid grid-cols-2 gap-4 py-3">
-                    <div>
-                      <p className="text-xs text-gray-400 font-semibold mb-1">
-                        Advance Paid
-                      </p>
-                      <p className="text-green-400 font-bold text-lg">
-                        Rs.{" "}
-                        {parseFloat(String(selectedOrder.advance_paid)).toFixed(
-                          2
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      {(() => {
-                        const balanceDue =
-                          parseFloat(String(selectedOrder.balance_due)) || 0;
-                        return (
-                          <>
-                            <p className="text-xs text-gray-400 font-semibold mb-1">
-                              {balanceDue > 0
-                                ? "Balance To Be Paid"
-                                : "Balance Paid"}
-                            </p>
-                            <p
-                              className={`font-bold text-lg ${balanceDue > 0 ? "text-red-400" : "text-green-400"}`}
-                            >
-                              Rs. {balanceDue.toFixed(2)}
-                            </p>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-
-                  {/* Payment Status */}
-                  <div className="pt-2 border-t border-gray-600">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getPaymentStatusBadgeColor(
-                        selectedOrder.payment_status
-                      )}`}
-                    >
-                      {selectedOrder.payment_status
-                        .replace("_", " ")
-                        .toUpperCase()}
-                    </span>
-                  </div>
                 </div>
               </div>
 

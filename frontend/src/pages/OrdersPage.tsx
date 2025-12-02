@@ -110,6 +110,295 @@ const printReceipt = async (orderId: number) => {
   }
 };
 
+// Utility function to print bill in A4 portrait format
+const printBill = async (order: Order, shopName: string, shopAddress?: string, shopPhone?: string) => {
+  try {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow popups to print bill");
+      return;
+    }
+
+    // Format date and time
+    const orderDate = new Date(order.order_date);
+    const dateStr = orderDate.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const timeStr = orderDate.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+    // Calculate item totals
+    const itemsHtml = (order.items || [])
+      .map(
+        (item) => `
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">${item.product_id}</td>
+        <td style="border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px;">${item.product_name}</td>
+        <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 12px;">${item.size_name || "N/A"}</td>
+        <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 12px;">${item.color_name || "N/A"}</td>
+        <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 12px;">${item.quantity}</td>
+        <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-size: 12px;">Rs. ${parseFloat(String(item.sold_price)).toFixed(2)}</td>
+        <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-size: 12px;">Rs. ${parseFloat(String(item.total_price)).toFixed(2)}</td>
+      </tr>
+    `
+      )
+      .join("");
+
+    const billHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Bill - ${order.order_number}</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            background: white;
+          }
+          .bill-container {
+            max-width: 210mm;
+            height: 297mm;
+            margin: 0 auto;
+            padding: 15mm;
+            background: white;
+            box-sizing: border-box;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+          }
+          .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #c41e3a;
+            margin-bottom: 5px;
+          }
+          .shop-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+          }
+          .shop-details {
+            font-size: 11px;
+            color: #555;
+            line-height: 1.4;
+          }
+          .bill-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+          }
+          .meta-section {
+            flex: 1;
+          }
+          .meta-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+            text-decoration: underline;
+          }
+          .meta-detail {
+            font-size: 10px;
+            color: #555;
+            line-height: 1.5;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 12px;
+          }
+          .items-table th {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-weight: bold;
+            color: #333;
+          }
+          .items-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+          }
+          .summary-section {
+            margin-top: 15px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+          }
+          .summary-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 8px;
+            font-size: 12px;
+          }
+          .summary-label {
+            width: 200px;
+            text-align: right;
+            padding-right: 15px;
+          }
+          .summary-value {
+            width: 120px;
+            text-align: right;
+          }
+          .total-amount {
+            font-size: 16px;
+            font-weight: bold;
+            color: #c41e3a;
+            border-top: 2px solid #333;
+            padding-top: 10px;
+            margin-top: 10px;
+          }
+          .notes-section {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            font-size: 10px;
+            color: #555;
+            line-height: 1.6;
+          }
+          .notes-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+          }
+          .thank-you {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+          }
+          @media print {
+            body { margin: 0; padding: 0; }
+            .bill-container { margin: 0; padding: 15mm; height: auto; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="bill-container">
+          <!-- Header -->
+          <div class="header">
+            <div class="logo">🎽</div>
+            <div class="shop-name">${shopName || "DENNEP CLOTHES"}</div>
+            ${shopAddress ? `<div class="shop-details">${shopAddress}</div>` : ""}
+            ${shopPhone ? `<div class="shop-details">Phone: ${shopPhone}</div>` : ""}
+          </div>
+
+          <!-- Bill Meta Information -->
+          <div class="bill-meta">
+            <div class="meta-section">
+              <div class="meta-title">BILL DETAILS</div>
+              <div class="meta-detail">
+                <strong>Bill No.:</strong> ${order.order_number}<br>
+                <strong>Date:</strong> ${dateStr}<br>
+                <strong>Time:</strong> ${timeStr}
+              </div>
+            </div>
+            <div class="meta-section">
+              <div class="meta-title">CUSTOMER DETAILS</div>
+              <div class="meta-detail">
+                <strong>ID:</strong> ${order.customer_id || "N/A"}<br>
+                <strong>Name:</strong> ${order.recipient_name || "N/A"}<br>
+                <strong>Phone:</strong> ${order.recipient_phone || order.customer_mobile || "N/A"}<br>
+                ${
+                  order.delivery_line1
+                    ? `<strong>Address:</strong> ${order.delivery_line1}${order.delivery_line2 ? ", " + order.delivery_line2 : ""}<br>` +
+                      (order.delivery_city ? order.delivery_city : "") +
+                      (order.delivery_district ? ", " + order.delivery_district : "") +
+                      (order.delivery_province ? ", " + order.delivery_province : "") +
+                      (order.delivery_postal_code ? " - " + order.delivery_postal_code : "")
+                    : ""
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Items Table -->
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Item Name</th>
+                <th>Size</th>
+                <th>Color</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <!-- Summary Section -->
+          <div class="summary-section">
+            <div class="summary-row">
+              <div class="summary-label">Subtotal:</div>
+              <div class="summary-value">Rs. ${parseFloat(String(order.total_amount)).toFixed(2)}</div>
+            </div>
+            ${
+              order.delivery_charge
+                ? `<div class="summary-row">
+                <div class="summary-label">Delivery Charge:</div>
+                <div class="summary-value">Rs. ${parseFloat(String(order.delivery_charge)).toFixed(2)}</div>
+              </div>`
+                : ""
+            }
+            <div class="summary-row total-amount">
+              <div class="summary-label">TOTAL BILL AMOUNT:</div>
+              <div class="summary-value">Rs. ${parseFloat(String(order.final_amount)).toFixed(2)}</div>
+            </div>
+          </div>
+
+          <!-- Notes Section -->
+          <div class="notes-section">
+            <div class="notes-title">IMPORTANT NOTES:</div>
+            <div>✓ No payments returns without original bill and items in good condition</div>
+            <div>✓ Products are non-refundable after 7 days of purchase</div>
+            <div>✓ Damaged items must be reported within 24 hours of delivery</div>
+            <div>✓ For exchanges, items must be unused and with original packaging</div>
+            <div style="margin-top: 10px; font-weight: bold; color: #c41e3a;">Thank you for purchasing from DENNEP CLOTHES!</div>
+            <div style="margin-top: 5px;">We appreciate your business and look forward to serving you again.</div>
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+            setTimeout(() => window.close(), 500);
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(billHTML);
+    printWindow.document.close();
+  } catch (error) {
+    console.error("Error printing bill:", error);
+    alert("Failed to print bill. Please try again.");
+  }
+};
+
 // Utility function to export receipt as image
 const exportReceiptAsImage = async (
   orderId: number,
@@ -1346,6 +1635,23 @@ const OrdersPage: React.FC = () => {
                     }`}
                   >
                     💾 Save as PNG
+                  </button>
+                )}
+
+                {/* Print Bill Button - Only for Processing */}
+                {selectedOrder.order_status === "processing" && (
+                  <button
+                    onClick={() =>
+                      printBill(
+                        selectedOrder,
+                        "DENNEP CLOTHES",
+                        "Shop Address Here",
+                        "+94 XXX XXXXXX"
+                      )
+                    }
+                    className="flex-1 min-w-[150px] bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    🖨️ Print Bill
                   </button>
                 )}
 

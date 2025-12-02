@@ -107,7 +107,9 @@ class OrderModel {
         advance_paid,
         balance_due,
         payment_status,
+        payment_method,
         order_status,
+        recipient_phone,
         notes,
         order_date,
       } = orderData;
@@ -115,8 +117,8 @@ class OrderModel {
       const results = await query(
         `INSERT INTO orders
         (order_number, shop_id, customer_id, user_id, total_items, total_amount, delivery_charge, final_amount,
-         advance_paid, balance_due, payment_status, order_status, notes, order_date)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         advance_paid, balance_due, payment_status, payment_method, order_status, recipient_phone, notes, order_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           order_number,
           shop_id,
@@ -129,7 +131,9 @@ class OrderModel {
           advance_paid,
           balance_due,
           payment_status,
+          payment_method || null,
           order_status,
+          recipient_phone || null,
           notes || null,
           order_date,
         ]
@@ -172,7 +176,9 @@ class OrderModel {
         'advance_paid',
         'balance_due',
         'payment_status',
+        'payment_method',
         'order_status',
+        'recipient_phone',
         'notes',
         'tracking_number',
       ];

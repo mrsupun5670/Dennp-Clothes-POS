@@ -175,7 +175,7 @@ const OrdersPage: React.FC = () => {
   const [deliveryLine2, setDeliveryLine2] = useState("");
   const [deliveryCity, setDeliveryCity] = useState("");
   const [deliveryDistrict, setDeliveryDistrict] = useState("");
-  const [deliveryProvince, setDeliveryProvince] = useState("Sri Lanka");
+  const [deliveryProvince, setDeliveryProvince] = useState("");
   const [deliveryPostalCode, setDeliveryPostalCode] = useState("");
   const [isUpdatingAddress, setIsUpdatingAddress] = useState(false);
   const [addressMessage, setAddressMessage] = useState("");
@@ -1366,6 +1366,66 @@ const OrdersPage: React.FC = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="text-xs text-gray-400 font-semibold block mb-2">
+                      Province *
+                    </label>
+                    <select
+                      value={deliveryProvince}
+                      onChange={(e) => setDeliveryProvince(e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:border-red-500 focus:outline-none"
+                    >
+                      <option value="">Select Province</option>
+                      <option value="Western Province">Western Province</option>
+                      <option value="Central Province">Central Province</option>
+                      <option value="Southern Province">Southern Province</option>
+                      <option value="Eastern Province">Eastern Province</option>
+                      <option value="Northern Province">Northern Province</option>
+                      <option value="North Western Province">North Western Province</option>
+                      <option value="North Central Province">North Central Province</option>
+                      <option value="Uva Province">Uva Province</option>
+                      <option value="Sabaragamuwa Province">Sabaragamuwa Province</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-400 font-semibold block mb-2">
+                      District *
+                    </label>
+                    <select
+                      value={deliveryDistrict}
+                      onChange={(e) => setDeliveryDistrict(e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:border-red-500 focus:outline-none"
+                    >
+                      <option value="">Select District</option>
+                      <option value="Colombo">Colombo</option>
+                      <option value="Gampaha">Gampaha</option>
+                      <option value="Kalutara">Kalutara</option>
+                      <option value="Kandy">Kandy</option>
+                      <option value="Matara">Matara</option>
+                      <option value="Galle">Galle</option>
+                      <option value="Ratnapura">Ratnapura</option>
+                      <option value="Kegalle">Kegalle</option>
+                      <option value="Nuwara Eliya">Nuwara Eliya</option>
+                      <option value="Badulla">Badulla</option>
+                      <option value="Monaragala">Monaragala</option>
+                      <option value="Jaffna">Jaffna</option>
+                      <option value="Mullaitivu">Mullaitivu</option>
+                      <option value="Batticaloa">Batticaloa</option>
+                      <option value="Ampara">Ampara</option>
+                      <option value="Matara">Matara</option>
+                      <option value="Trincomalee">Trincomalee</option>
+                      <option value="Anuradhapura">Anuradhapura</option>
+                      <option value="Polonnaruwa">Polonnaruwa</option>
+                      <option value="Kurunegala">Kurunegala</option>
+                      <option value="Puttalam">Puttalam</option>
+                      <option value="Mannar">Mannar</option>
+                      <option value="Vavuniya">Vavuniya</option>
+                      <option value="Mullativum">Mullaitivu</option>
+                      <option value="Matara">Matara</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-400 font-semibold block mb-2">
                       Address Line 1 (Street) *
                     </label>
                     <input
@@ -1406,43 +1466,6 @@ const OrdersPage: React.FC = () => {
 
                     <div>
                       <label className="text-xs text-gray-400 font-semibold block mb-2">
-                        District/Province *
-                      </label>
-                      <select
-                        value={deliveryDistrict}
-                        onChange={(e) => setDeliveryDistrict(e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:border-red-500 focus:outline-none"
-                      >
-                        <option value="">Select Province</option>
-                        <option value="Western Province">Western Province</option>
-                        <option value="Central Province">Central Province</option>
-                        <option value="Southern Province">Southern Province</option>
-                        <option value="Eastern Province">Eastern Province</option>
-                        <option value="Northern Province">Northern Province</option>
-                        <option value="North Western Province">North Western Province</option>
-                        <option value="North Central Province">North Central Province</option>
-                        <option value="Uva Province">Uva Province</option>
-                        <option value="Sabaragamuwa Province">Sabaragamuwa Province</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-gray-400 font-semibold block mb-2">
-                        State/Province/Region *
-                      </label>
-                      <input
-                        type="text"
-                        value={deliveryProvince}
-                        onChange={(e) => setDeliveryProvince(e.target.value)}
-                        placeholder="Sri Lanka"
-                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-gray-400 font-semibold block mb-2">
                         Postal Code *
                       </label>
                       <input
@@ -1467,8 +1490,7 @@ const OrdersPage: React.FC = () => {
                         <br />
                         {deliveryCity}
                         {deliveryDistrict && `, ${deliveryDistrict}`}
-                        <br />
-                        {deliveryProvince}
+                        {deliveryProvince && `, ${deliveryProvince}`}
                         {deliveryPostalCode && ` - ${deliveryPostalCode}`}
                       </p>
                     </div>
@@ -1510,7 +1532,7 @@ const OrdersPage: React.FC = () => {
                     setDeliveryLine2("");
                     setDeliveryCity("");
                     setDeliveryDistrict("");
-                    setDeliveryProvince("Sri Lanka");
+                    setDeliveryProvince("");
                     setDeliveryPostalCode("");
                   }}
                   className="flex-1 min-w-[150px] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors bg-gray-700 text-gray-300 hover:bg-gray-600"

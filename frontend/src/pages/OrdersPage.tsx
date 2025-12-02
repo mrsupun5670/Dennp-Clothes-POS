@@ -151,6 +151,9 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
       second: "2-digit",
     });
 
+    // Format invoice number: IN + order_id
+    const invoiceNumber = `IN${order.order_id}`;
+
     // Build customer address string
     const addressParts = [
       order.delivery_line1,
@@ -220,6 +223,12 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
           .logo {
             font-size: 32px;
             margin-bottom: 5px;
+          }
+          .shop-info img {
+            max-width: 60px;
+            max-height: 60px;
+            margin-bottom: 10px;
+            display: block;
           }
           .shop-name {
             font-size: 20px;
@@ -397,7 +406,7 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
           <!-- Header -->
           <div class="header">
             <div class="shop-info">
-              <div class="logo">🎽</div>
+              <img src="dennep png.png" alt="Logo" style="max-width: 60px; max-height: 60px; margin-bottom: 10px;">
               <div class="shop-name">${shopName || "DENNEP CLOTHES"}</div>
               <div class="shop-details">
                 ${shopAddress ? `${shopAddress}<br>` : ""}
@@ -406,11 +415,6 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
             </div>
             <div class="invoice-header">
               <div class="invoice-title">INVOICE</div>
-              <div class="invoice-no">
-                <strong>Invoice #:</strong> ${order.order_number}<br>
-                <strong>Date:</strong> ${dateStr}<br>
-                <strong>Time:</strong> ${timeStr}
-              </div>
             </div>
           </div>
 
@@ -418,13 +422,13 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
           <div class="content">
             <div class="bill-details">
               <div class="section-title">Bill Details</div>
-              <div class="detail-row"><strong>Bill No.:</strong> ${order.order_number}</div>
+              <div class="detail-row"><strong>Invoice No.:</strong> ${invoiceNumber}</div>
               <div class="detail-row"><strong>Date:</strong> ${dateStr}</div>
               <div class="detail-row"><strong>Time:</strong> ${timeStr}</div>
             </div>
             <div class="customer-details">
               <div class="section-title">Customer Details</div>
-              <div class="detail-row"><strong>Customer ID:</strong> ${order.customer_id || "N/A"}</div>
+              <div class="detail-row"><strong>Customer ID:</strong> C${order.customer_id || "N/A"}</div>
               <div class="detail-row"><strong>Name:</strong> ${order.recipient_name || "N/A"}</div>
               <div class="detail-row"><strong>Phone:</strong> ${order.recipient_phone || order.customer_mobile || "N/A"}</div>
               <div class="detail-row" style="font-size: 10px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">

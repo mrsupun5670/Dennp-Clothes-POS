@@ -390,10 +390,10 @@ const SalesPage: React.FC = () => {
             sizeId: item.sizeId,
             color: item.color || "N/A",
             colorId: item.colorId,
-            quantity: item.quantity,
-            price: item.soldPrice || item.price || 0,
-            productCost: item.productCost || 0,
-            printCost: item.printCost || 0,
+            quantity: Number(item.quantity) || 0,
+            price: Number(item.soldPrice || item.price || 0),
+            productCost: Number(item.productCost || 0),
+            printCost: Number(item.printCost || 0),
           })
         );
         setCartItems(newCartItems);

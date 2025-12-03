@@ -596,6 +596,7 @@ const OrdersPage: React.FC = () => {
   const [deliveryDistrict, setDeliveryDistrict] = useState("");
   const [deliveryProvince, setDeliveryProvince] = useState("");
   const [deliveryPostalCode, setDeliveryPostalCode] = useState("");
+  const [deliveryCharge, setDeliveryCharge] = useState("");
   const [isUpdatingAddress, setIsUpdatingAddress] = useState(false);
   const [addressMessage, setAddressMessage] = useState("");
 
@@ -847,6 +848,7 @@ const OrdersPage: React.FC = () => {
       setDeliveryDistrict(selectedOrder.delivery_district || "");
       setDeliveryProvince(selectedOrder.delivery_province || "");
       setDeliveryPostalCode(selectedOrder.delivery_postal_code || "");
+      setDeliveryCharge(String(selectedOrder.delivery_charge || ""));
       setAddressMessage("");
       setShowAddressModal(true);
     }
@@ -903,12 +905,13 @@ const OrdersPage: React.FC = () => {
           delivery_district: deliveryDistrict,
           delivery_province: deliveryProvince,
           delivery_postal_code: deliveryPostalCode,
+          delivery_charge: deliveryCharge ? parseFloat(deliveryCharge) : 0,
         }),
       });
 
       const result = await response.json();
       if (result.success) {
-        setAddressMessage("✅ Address saved successfully!");
+        setAddressMessage("✅ Address and delivery charge saved successfully!");
         setTimeout(() => {
           setShowAddressModal(false);
           refetchOrders();
@@ -1985,23 +1988,24 @@ const OrdersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Address Preview */}
-                  {(deliveryLine1 || deliveryCity) && (
-                    <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
-                      <p className="text-xs text-gray-400 font-semibold mb-2">
-                        📍 Complete Address Preview:
-                      </p>
-                      <p className="text-gray-200 text-sm">
-                        {deliveryLine1}
-                        {deliveryLine2 && `, ${deliveryLine2}`}
-                        <br />
-                        {deliveryCity}
-                        {deliveryDistrict && `, ${deliveryDistrict}`}
-                        {deliveryProvince && `, ${deliveryProvince}`}
-                        {deliveryPostalCode && ` - ${deliveryPostalCode}`}
-                      </p>
-                    </div>
-                  )}
+                  {/* Delivery Charge Input */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-semibold text-red-400 mb-2">
+                      Delivery Charge (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Enter delivery charge (e.g., 150)"
+                      value={deliveryCharge}
+                      onChange={(e) => setDeliveryCharge(e.target.value)}
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      💡 Leave blank or 0 for no delivery charge
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -2041,6 +2045,7 @@ const OrdersPage: React.FC = () => {
                     setDeliveryDistrict("");
                     setDeliveryProvince("");
                     setDeliveryPostalCode("");
+                    setDeliveryCharge("");
                   }}
                   className="flex-1 min-w-[150px] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors bg-gray-700 text-gray-300 hover:bg-gray-600"
                 >

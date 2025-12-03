@@ -184,488 +184,245 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
 
     const billHTML = `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
       <head>
         <meta charset="UTF-8">
-        <title>Invoice - ${invoiceNumber}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Invoice #${invoiceNumber}</title>
+        <script src="https://cdn.tailwindcss.com"></script>
         <style>
           @page {
-            size: A4;
-            margin: 0;
-          }
-          * {
+            size: A4 portrait;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
           }
           body {
-            font-family: Arial, sans-serif;
-            background: white;
-            color: #333;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
           }
-          .page {
+          * {
+            box-sizing: border-box;
+          }
+          .invoice-container {
             width: 210mm;
             height: 297mm;
             background: white;
             display: flex;
             flex-direction: column;
             position: relative;
+            margin: 0 auto;
           }
-          /* Top striped background */
-          .header-bg {
-            background: repeating-linear-gradient(
-              45deg,
-              #3a3a3a,
-              #3a3a3a 10px,
-              #454545 10px,
-              #454545 20px
-            );
-            color: white;
-            padding: 25px 30px;
+          /* Red wave divider */
+          .wave-divider {
             position: relative;
-            z-index: 1;
-          }
-          .header-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 50px;
-            align-items: center;
-          }
-          .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-          }
-          .logo {
-            width: 50px;
-            height: 50px;
+            height: 20px;
             background: white;
-            border-radius: 3px;
-            padding: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            overflow: hidden;
           }
-          .logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-          }
-          .company-name {
-            font-size: 20px;
-            font-weight: bold;
-            letter-spacing: 1px;
-          }
-          .company-subtitle {
-            font-size: 9px;
-            opacity: 0.8;
-          }
-          .invoice-right {
-            text-align: right;
-            font-size: 32px;
-            font-weight: bold;
-            letter-spacing: 2px;
-          }
-          /* Red Wave divider */
-          .wave {
-            position: absolute;
-            bottom: -15px;
-            left: 0;
-            right: 0;
-            height: 30px;
-            background: white;
-            z-index: 2;
-          }
-          .wave::after {
+          .wave-divider::after {
             content: '';
             position: absolute;
-            top: -15px;
+            top: -10px;
             left: 0;
             right: 0;
-            height: 30px;
-            background: #c41e3a;
-            clip-path: polygon(0 50%, 2% 48%, 4% 46%, 6% 45%, 8% 45%, 10% 46%, 12% 48%, 14% 50%, 16% 52%, 18% 54%, 20% 55%, 22% 55%, 24% 54%, 26% 52%, 28% 50%, 30% 48%, 32% 47%, 34% 47%, 36% 48%, 38% 50%, 40% 52%, 42% 54%, 44% 55%, 46% 55%, 48% 54%, 50% 52%, 52% 50%, 54% 48%, 56% 47%, 58% 47%, 60% 48%, 62% 50%, 64% 52%, 66% 54%, 68% 55%, 70% 55%, 72% 54%, 74% 52%, 76% 50%, 78% 48%, 80% 47%, 82% 47%, 84% 48%, 86% 50%, 88% 52%, 90% 54%, 92% 55%, 94% 55%, 96% 54%, 98% 52%, 100% 50%, 100% 0%, 0% 0%);
-          }
-          /* Main content area */
-          .main-content {
-            flex: 1;
-            padding: 40px 30px 30px;
-            display: flex;
-            flex-direction: column;
-          }
-          /* Info section */
-          .info-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 50px;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #ddd;
-          }
-          .info-group {
-            font-size: 12px;
-          }
-          .info-group-title {
-            font-weight: bold;
-            color: #c41e3a;
-            margin-bottom: 8px;
-            font-size: 11px;
-            text-transform: uppercase;
-          }
-          .info-item {
-            margin-bottom: 4px;
-            line-height: 1.6;
-          }
-          .info-label {
-            font-weight: bold;
-            display: inline;
-          }
-          .info-value {
-            color: #666;
-            display: inline;
-          }
-          .info-right {
-            text-align: right;
-          }
-          /* Table */
-          table {
             width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            font-size: 11px;
-          }
-          table thead {
-            background: #c41e3a;
-            color: white;
-          }
-          table th {
-            padding: 10px 8px;
-            text-align: left;
-            font-weight: bold;
-            font-size: 10px;
-          }
-          table th:nth-child(2),
-          table th:nth-child(3),
-          table th:nth-child(4) {
-            text-align: center;
-          }
-          table tbody tr {
-            border-bottom: 1px solid #ddd;
-          }
-          table tbody tr:nth-child(even) {
-            background: #f8f8f8;
-          }
-          table td {
-            padding: 10px 8px;
-            color: #333;
-          }
-          table td:nth-child(2),
-          table td:nth-child(3),
-          table td:nth-child(4) {
-            text-align: center;
-          }
-          table td:nth-child(1) {
-            width: 25%;
-          }
-          table td:nth-child(2) {
-            width: 25%;
-          }
-          table td:nth-child(3) {
-            width: 20%;
-          }
-          table td:nth-child(4) {
-            width: 30%;
-          }
-          /* Totals section */
-          .totals-section {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 20px;
-          }
-          .totals-box {
-            width: 280px;
-            font-size: 11px;
-          }
-          .total-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 12px;
-            border-bottom: 1px solid #ddd;
-          }
-          .total-row.grand-total {
-            background: #333;
-            color: white;
-            font-weight: bold;
-            padding: 12px;
-            margin-top: 5px;
-          }
-          .total-label {
-            font-weight: bold;
-            color: #333;
-          }
-          .total-row.grand-total .total-label {
-            color: white;
-          }
-          /* Payment section */
-          .payment-section {
-            margin-bottom: 20px;
-            padding: 12px;
-            background: #f5f5f5;
-            font-size: 10px;
-          }
-          .payment-item {
-            margin-bottom: 4px;
-          }
-          .payment-label {
-            font-weight: bold;
-          }
-          /* Notes section */
-          .notes-section {
-            margin-bottom: 20px;
-            font-size: 10px;
-          }
-          .notes-title {
-            font-weight: bold;
-            margin-bottom: 6px;
-            color: #333;
-          }
-          .note-item {
-            margin-bottom: 3px;
-            color: #666;
-            line-height: 1.4;
-          }
-          /* Footer */
-          .footer-top {
-            text-align: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #ddd;
-            font-size: 12px;
-            font-weight: bold;
-            color: #333;
-          }
-          .signature-section {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            font-size: 10px;
-            text-align: center;
-          }
-          .signature-box {
-            width: 45%;
-          }
-          .signature-line {
-            border-top: 1px solid #333;
-            margin-top: 40px;
-            margin-bottom: 5px;
-          }
-          .contact-section {
-            background: #f5f5f5;
-            padding: 15px 30px;
-            font-size: 9px;
-            line-height: 1.6;
-            color: #333;
-          }
-          .contact-title {
-            font-weight: bold;
-            color: #c41e3a;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-          }
-          .contact-item {
-            margin-bottom: 4px;
-          }
-          .contact-item-label {
-            display: inline-block;
-            min-width: 70px;
-            font-weight: bold;
-          }
-          /* Bottom striped footer */
-          .footer-stripe {
-            background: repeating-linear-gradient(
-              45deg,
-              #3a3a3a,
-              #3a3a3a 10px,
-              #454545 10px,
-              #454545 20px
-            );
             height: 40px;
-            position: relative;
+            background: #dc2626;
+            clip-path: polygon(
+              0% 50%, 1% 48%, 2% 46%, 3% 45%, 4% 45%, 5% 46%, 6% 48%, 7% 50%,
+              8% 52%, 9% 54%, 10% 55%, 11% 55%, 12% 54%, 13% 52%, 14% 50%,
+              15% 48%, 16% 47%, 17% 47%, 18% 48%, 19% 50%, 20% 52%, 21% 54%,
+              22% 55%, 23% 55%, 24% 54%, 25% 52%, 26% 50%, 27% 48%, 28% 47%,
+              29% 47%, 30% 48%, 31% 50%, 32% 52%, 33% 54%, 34% 55%, 35% 55%,
+              36% 54%, 37% 52%, 38% 50%, 39% 48%, 40% 47%, 41% 47%, 42% 48%,
+              43% 50%, 44% 52%, 45% 54%, 46% 55%, 47% 55%, 48% 54%, 49% 52%,
+              50% 50%, 51% 48%, 52% 47%, 53% 47%, 54% 48%, 55% 50%, 56% 52%,
+              57% 54%, 58% 55%, 59% 55%, 60% 54%, 61% 52%, 62% 50%, 63% 48%,
+              64% 47%, 65% 47%, 66% 48%, 67% 50%, 68% 52%, 69% 54%, 70% 55%,
+              71% 55%, 72% 54%, 73% 52%, 74% 50%, 75% 48%, 76% 47%, 77% 47%,
+              78% 48%, 79% 50%, 80% 52%, 81% 54%, 82% 55%, 83% 55%, 84% 54%,
+              85% 52%, 86% 50%, 87% 48%, 88% 47%, 89% 47%, 90% 48%, 91% 50%,
+              92% 52%, 93% 54%, 94% 55%, 95% 55%, 96% 54%, 97% 52%, 98% 50%,
+              99% 48%, 100% 50%, 100% 0%, 0% 0%
+            );
           }
-          .footer-wave {
-            position: absolute;
-            top: -15px;
-            left: 0;
-            right: 0;
-            height: 30px;
-            background: white;
-          }
-          .footer-wave::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 30px;
-            background: #c41e3a;
-            clip-path: polygon(0 50%, 2% 52%, 4% 54%, 6% 55%, 8% 55%, 10% 54%, 12% 52%, 14% 50%, 16% 48%, 18% 46%, 20% 45%, 22% 45%, 24% 46%, 26% 48%, 28% 50%, 30% 52%, 32% 53%, 34% 53%, 36% 52%, 38% 50%, 40% 48%, 42% 46%, 44% 45%, 46% 45%, 48% 46%, 50% 48%, 52% 50%, 54% 52%, 56% 53%, 58% 53%, 60% 52%, 62% 50%, 64% 48%, 66% 46%, 68% 45%, 70% 45%, 72% 46%, 74% 48%, 76% 50%, 78% 52%, 80% 53%, 82% 53%, 84% 52%, 86% 50%, 88% 48%, 90% 46%, 92% 45%, 94% 45%, 96% 46%, 98% 48%, 100% 50%, 100% 100%, 0% 100%);
+          .diagonal-stripes {
+            background: repeating-linear-gradient(
+              45deg,
+              #2d2d2d,
+              #2d2d2d 10px,
+              #404040 10px,
+              #404040 20px
+            );
           }
           @media print {
-            body { margin: 0; padding: 0; }
-            .page { margin: 0; padding: 0; }
-            @page { margin: 0; }
+            .invoice-container {
+              margin: 0;
+              width: 210mm;
+              height: 297mm;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+            }
           }
         </style>
       </head>
-      <body>
-        <div class="page">
-          <!-- Header with Striped Background -->
-          <div class="header-bg">
-            <div class="header-content">
-              <div class="logo-section">
-                <div class="logo">
-                  <img src="dennep png.png" alt="Logo">
+      <body class="bg-gray-50">
+        <div class="invoice-container">
+          <!-- Top Header with Diagonal Stripes -->
+          <div class="diagonal-stripes px-8 py-6">
+            <div class="flex justify-between items-center">
+              <!-- Left: Logo + Company Name -->
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-white rounded flex items-center justify-center flex-shrink-0">
+                  <img src="dennep png.png" alt="Dennep Logo" class="w-12 h-12 object-contain">
                 </div>
-                <div>
-                  <div class="company-name">DENNEP CLOTHES</div>
-                  <div class="company-subtitle">Quality Fashion</div>
+                <div class="text-white">
+                  <h1 class="text-xl font-bold tracking-wide leading-tight">DENNEP<br>CLOTHES</h1>
+                  <p class="text-xs opacity-80">Premium Fashion</p>
                 </div>
               </div>
-              <div class="invoice-right">INVOICE</div>
+
+              <!-- Right: INVOICE Text -->
+              <div class="text-white">
+                <h2 class="text-4xl font-bold tracking-widest">INVOICE</h2>
+              </div>
             </div>
-            <div class="wave"></div>
           </div>
 
+          <!-- Red Wave Divider -->
+          <div class="wave-divider"></div>
+
           <!-- Main Content -->
-          <div class="main-content">
-            <!-- Invoice Details -->
-            <div class="info-section">
-              <div class="info-group">
-                <div class="info-group-title">Invoice To:</div>
-                <div class="info-item">
-                  <span class="info-label">${order.recipient_name || "Customer"}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">${order.recipient_phone || order.customer_mobile || ""}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-value">${order.delivery_line1 || ""}</span>
-                </div>
+          <div class="flex-1 px-8 py-8 flex flex-col">
+            <!-- Invoice Details Section -->
+            <div class="grid grid-cols-2 gap-16 mb-6 pb-4 border-b border-gray-300">
+              <!-- Left: Invoice To -->
+              <div>
+                <h3 class="text-sm font-bold text-red-600 uppercase tracking-wide mb-3">Invoice To:</h3>
+                <p class="text-sm font-bold text-gray-800">${order.recipient_name || "Customer Name"}</p>
+                <p class="text-xs text-gray-600">${order.recipient_phone || order.customer_mobile || ""}</p>
+                <p class="text-xs text-gray-600">${order.delivery_line1 || ""}</p>
               </div>
-              <div class="info-group info-right">
-                <div style="background: #c41e3a; color: white; padding: 8px 12px; display: inline-block; margin-bottom: 8px; font-size: 10px; font-weight: bold;">
+
+              <!-- Right: Invoice Details -->
+              <div class="text-right">
+                <div class="inline-block bg-red-600 text-white px-3 py-2 rounded text-xs font-bold mb-3">
                   INVOICE NO #${order.order_id}
                 </div>
-                <div class="info-item">
-                  <span class="info-label">Account No</span><br>
-                  <span class="info-value">${order.order_id}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">Invoice Date</span><br>
-                  <span class="info-value">${dateStr}</span>
+                <div class="text-xs space-y-1">
+                  <div><span class="font-bold">Account No</span><br><span class="text-gray-600">${order.order_id}</span></div>
+                  <div><span class="font-bold">Invoice Date</span><br><span class="text-gray-600">${dateStr}</span></div>
                 </div>
               </div>
             </div>
 
             <!-- Items Table -->
-            <table>
-              <thead>
-                <tr>
-                  <th>Item description</th>
-                  <th>Qty</th>
-                  <th>Unit Price</th>
-                  <th>Total Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${(order.items || [])
-                  .map(
-                    (item) => `
-                  <tr>
-                    <td>${item.product_name || ""}<br><span style="font-size: 9px; color: #999;">Size: ${item.size_name || "—"} | Color: ${item.color_name || "—"}</span></td>
-                    <td>${item.quantity}</td>
-                    <td>Rs. ${parseFloat(String(item.sold_price)).toFixed(2)}</td>
-                    <td>Rs. ${parseFloat(String(item.total_price)).toFixed(2)}</td>
+            <div class="mb-6">
+              <table class="w-full text-xs">
+                <thead>
+                  <tr class="bg-red-600 text-white">
+                    <th class="text-left px-3 py-3 font-bold">Item Description</th>
+                    <th class="text-center px-3 py-3 font-bold">Qty</th>
+                    <th class="text-right px-3 py-3 font-bold">Unit Price</th>
+                    <th class="text-right px-3 py-3 font-bold">Total Price</th>
                   </tr>
-                `
-                  )
-                  .join("")}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  ${(order.items || [])
+                    .map((item) => {
+                      return `
+                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                      <td class="px-3 py-2">
+                        <p class="font-semibold text-gray-800">${item.product_name || ""}</p>
+                        <p class="text-gray-500 text-xs">Size: ${item.size_name || "—"} | Color: ${item.color_name || "—"}</p>
+                      </td>
+                      <td class="text-center px-3 py-2">${item.quantity}</td>
+                      <td class="text-right px-3 py-2">Rs. ${parseFloat(String(item.sold_price)).toFixed(2)}</td>
+                      <td class="text-right px-3 py-2 font-semibold">Rs. ${parseFloat(String(item.total_price)).toFixed(2)}</td>
+                    </tr>
+                  `;
+                    })
+                    .join("")}
+                </tbody>
+              </table>
+            </div>
 
-            <!-- Totals -->
-            <div class="totals-section">
-              <div class="totals-box">
-                <div class="total-row">
-                  <span class="total-label">Sub Total</span>
+            <!-- Amount Summary (Right-aligned box) -->
+            <div class="flex justify-end mb-6">
+              <div class="w-72 text-sm">
+                <div class="flex justify-between py-2 border-b border-gray-200">
+                  <span class="font-bold">Sub Total</span>
                   <span>Rs. ${parseFloat(String(order.total_amount)).toFixed(2)}</span>
                 </div>
                 ${
                   order.delivery_charge
-                    ? `<div class="total-row">
-                      <span class="total-label">Delivery</span>
+                    ? `<div class="flex justify-between py-2 border-b border-gray-200">
+                      <span class="font-bold">Delivery</span>
                       <span>Rs. ${parseFloat(String(order.delivery_charge)).toFixed(2)}</span>
                     </div>`
                     : ""
                 }
-                <div class="total-row grand-total">
-                  <span class="total-label">GRAND TOTAL</span>
+                <div class="flex justify-between py-2 bg-gray-800 text-white px-3 rounded font-bold">
+                  <span>GRAND TOTAL</span>
                   <span>Rs. ${parseFloat(String(order.final_amount)).toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             <!-- Payment Method -->
-            <div class="payment-section">
-              <div class="payment-item"><span class="payment-label">Payment method</span></div>
-              <div class="payment-item">Account: Bank Transfer - DENNEP CLOTHES</div>
-              <div class="payment-item">Payment Date: ${dateStr}</div>
+            <div class="bg-gray-100 px-4 py-3 rounded mb-4 text-xs">
+              <p class="font-bold mb-1">Payment method</p>
+              <p class="text-gray-700">Account: Bank Transfer - DENNEP CLOTHES</p>
+              <p class="text-gray-700">Payment Date: ${dateStr}</p>
             </div>
 
-            <!-- Notes -->
-            <div class="notes-section">
-              <div class="notes-title">Thanks for your business!</div>
-              <div class="note-item">Terms & Conditions: Returns accepted within 7 days with original invoice and unused items in original packaging. Report damages within 24 hours of delivery. No payment returns - all sales are final unless agreed otherwise.</div>
+            <!-- Terms & Conditions -->
+            <div class="mb-4 text-xs">
+              <p class="font-bold mb-2 text-gray-800">Thanks for your business!</p>
+              <p class="text-gray-600 leading-relaxed">
+                Terms & Conditions: Returns accepted within 7 days with original invoice and unused items in original packaging. Report damages within 24 hours of delivery. No payment returns - all sales are final unless agreed otherwise.
+              </p>
             </div>
 
-            <!-- Signature -->
-            <div class="signature-section">
-              <div class="signature-box">
-                <div class="signature-line"></div>
-                <div>AUTHORIZED SIGNATURE</div>
+            <!-- Signature Section -->
+            <div class="flex justify-between my-6 text-xs text-center">
+              <div class="w-1/3">
+                <div class="border-t border-gray-800 mb-2" style="margin-top: 50px;"></div>
+                <p class="font-bold">AUTHORIZED SIGNATURE</p>
               </div>
-              <div class="signature-box">
-                <div class="signature-line"></div>
-                <div>CUSTOMER SIGNATURE</div>
-              </div>
-            </div>
-
-            <!-- Contact Info -->
-            <div class="contact-section">
-              <div class="contact-title">CONTACT</div>
-              <div class="contact-item">
-                <span class="contact-item-label">Phone</span>${shopPhone || "+94 XX XXX XXXX"}
-              </div>
-              <div class="contact-item">
-                <span class="contact-item-label">Website</span>${shopAddress || "www.dennepclothes.com"}
-              </div>
-              <div class="contact-item">
-                <span class="contact-item-label">Address</span>Colombo, Sri Lanka
+              <div class="w-1/3"></div>
+              <div class="w-1/3">
+                <div class="border-t border-gray-800 mb-2" style="margin-top: 50px;"></div>
+                <p class="font-bold">CUSTOMER SIGNATURE</p>
               </div>
             </div>
           </div>
 
-          <!-- Footer Stripe -->
-          <div class="footer-stripe">
-            <div class="footer-wave"></div>
+          <!-- Footer Contact Section -->
+          <div class="bg-gray-100 px-8 py-4 text-xs">
+            <h3 class="text-sm font-bold text-red-600 uppercase tracking-wide mb-2">CONTACT</h3>
+            <div class="grid grid-cols-2 gap-4 text-gray-700">
+              <div><span class="font-bold">Phone</span><br>${shopPhone || "+94 XX XXX XXXX"}</div>
+              <div><span class="font-bold">Website</span><br>${shopAddress || "www.dennepclothes.com"}</div>
+              <div><span class="font-bold">Address</span><br>Colombo, Sri Lanka</div>
+            </div>
           </div>
+
+          <!-- Bottom Wave + Stripes -->
+          <div class="wave-divider mt-auto"></div>
+          <div class="diagonal-stripes h-10"></div>
         </div>
 
         <script>
-          window.onload = function() {
-            window.print();
-            setTimeout(() => window.close(), 500);
-          }
+          window.addEventListener('load', () => {
+            setTimeout(() => {
+              window.print();
+              setTimeout(() => window.close(), 500);
+            }, 500);
+          });
         </script>
       </body>
       </html>

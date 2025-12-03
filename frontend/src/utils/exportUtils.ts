@@ -1333,10 +1333,13 @@ export const generateOrderBillHTML = (data: {
   subtotal: number;
   total: number;
   paidAmount: string;
+  orderNumber?: string;
+  shopName?: string;
 }) => {
-  const { selectedCustomer, cartItems, subtotal, total, paidAmount } = data;
+  const { selectedCustomer, cartItems, subtotal, total, paidAmount, orderNumber, shopName } = data;
   const paid = parseFloat(paidAmount) || 0;
   const balance = total - paid;
+  const invoiceNumber = orderNumber ? `IN${orderNumber}` : `IN${Math.floor(Math.random() * 100000)}`;
 
   return `
     <!DOCTYPE html>
@@ -1360,10 +1363,27 @@ export const generateOrderBillHTML = (data: {
           background: white;
           color: #1a1a1a;
           line-height: 1.4;
+          position: relative;
         }
         .invoice {
           background: white;
           padding: 0;
+          position: relative;
+          z-index: 1;
+        }
+        .watermark {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-45deg);
+          font-size: 120px;
+          font-weight: 700;
+          color: rgba(211, 47, 47, 0.08);
+          white-space: nowrap;
+          z-index: 0;
+          pointer-events: none;
+          letter-spacing: 20px;
+          text-transform: uppercase;
         }
         .invoice-header {
           background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
@@ -1579,9 +1599,10 @@ export const generateOrderBillHTML = (data: {
       </style>
     </head>
     <body>
+      <div class="watermark">DENNP</div>
       <div class="invoice">
         <div class="invoice-header">
-          <div class="company-name">DENNP CLOTHES</div>
+          <div class="company-name">${shopName || 'DENNP CLOTHES'}</div>
           <div class="company-subtitle">Premium Apparel & Printing Solutions</div>
           <div class="invoice-type">Order Invoice</div>
         </div>
@@ -1597,7 +1618,7 @@ export const generateOrderBillHTML = (data: {
           </div>
           <div class="meta-item">
             <div class="meta-label">Invoice #</div>
-            <div class="meta-value">${Math.floor(Math.random() * 100000)}</div>
+            <div class="meta-value">${invoiceNumber}</div>
           </div>
         </div>
 

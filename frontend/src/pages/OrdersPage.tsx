@@ -1787,8 +1787,23 @@ const OrdersPage: React.FC = () => {
                 )}
 
                 {/* Print Receipt Button - Only for Shipped and Delivered */}
-                {(selectedOrder.order_status === "shipped" ||
-                  selectedOrder.order_status === "delivered") && (
+                {selectedOrder.order_status === "shipped" && (
+                  <button
+                    onClick={() =>
+                      printBill(
+                        selectedOrder,
+                        "DENNEP CLOTHES",
+                        "Shop Address Here",
+                        "+94 XXX XXXXXX"
+                      )
+                    }
+                    className="flex-1 min-w-[150px] bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    🖨️ Print Bill
+                  </button>
+                )}
+
+                {selectedOrder.order_status === "delivered" && (
                   <button
                     onClick={() => printReceipt(selectedOrder.order_id)}
                     disabled={!receiptHTML}
@@ -1799,28 +1814,6 @@ const OrdersPage: React.FC = () => {
                     }`}
                   >
                     🖨️ Print Bill
-                  </button>
-                )}
-
-                {/* Save as PNG Button - Only for Shipped and Delivered */}
-                {(selectedOrder.order_status === "shipped" ||
-                  selectedOrder.order_status === "delivered") && (
-                  <button
-                    onClick={() =>
-                      exportReceiptAsImage(
-                        selectedOrder.order_id,
-                        selectedOrder.recipient_phone,
-                        "png"
-                      )
-                    }
-                    disabled={!receiptHTML}
-                    className={`flex-1 min-w-[150px] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
-                      !receiptHTML
-                        ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                        : "bg-indigo-600 text-white hover:bg-indigo-700"
-                    }`}
-                  >
-                    💾 Save as PNG
                   </button>
                 )}
 

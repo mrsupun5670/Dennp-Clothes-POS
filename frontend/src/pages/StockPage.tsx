@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getProducts } from '../services/productService';
+import { saveAsPDF, generateProductsHTML } from '../utils/exportUtils';
 
 interface Product {
   product_id: number;
@@ -51,6 +52,18 @@ const StockPage: React.FC = () => {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Stock</h1>
+      <div className="flex gap-3 mb-4">
+        <button
+          onClick={() => {
+            const html = generateProductsHTML(products);
+            saveAsPDF(html, 'stock_report', 'products');
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
+          title="Download as PDF"
+        >
+          📄 Export PDF
+        </button>
+      </div>
       {products.length === 0 ? (
         <p>No products found.</p>
       ) : (

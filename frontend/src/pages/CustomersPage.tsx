@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
-import { printContent, saveAsPDF, generateCustomersHTML } from "../utils/exportUtils";
+import { saveAsPDF, generateCustomersHTML } from "../utils/exportUtils";
 
 interface Customer {
   customer_id: number;
@@ -354,22 +354,12 @@ const CustomersPage: React.FC = () => {
           <button
             onClick={() => {
               const html = generateCustomersHTML(filteredCustomers);
-              printContent(html, 'Customers Report');
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
-            title="Print directly"
-          >
-            🖨️ Print
-          </button>
-          <button
-            onClick={() => {
-              const html = generateCustomersHTML(filteredCustomers);
               saveAsPDF(html, 'customers_report', 'customers');
             }}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
-            title="Save as image"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
+            title="Download as PDF"
           >
-            💾 Save Image
+            📄 Export PDF
           </button>
           <button
             onClick={handleAddClick}

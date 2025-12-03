@@ -7,7 +7,7 @@ import {
   deleteInventoryItem,
   InventoryItem,
 } from "../services/inventoryService";
-import { printContent, saveAsPDF, generateInventoryHTML } from "../utils/exportUtils";
+import { saveAsPDF, generateInventoryHTML } from "../utils/exportUtils";
 
 const InventoryPage: React.FC = () => {
   const { shopId } = useShop();
@@ -264,22 +264,12 @@ const InventoryPage: React.FC = () => {
           <button
             onClick={() => {
               const html = generateInventoryHTML(filteredMaterials);
-              printContent(html, 'Inventory Report');
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
-            title="Print directly"
-          >
-            🖨️ Print
-          </button>
-          <button
-            onClick={() => {
-              const html = generateInventoryHTML(filteredMaterials);
               saveAsPDF(html, 'inventory_report', 'inventory');
             }}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
-            title="Save as image"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
+            title="Download as PDF"
           >
-            💾 Save Image
+            📄 Export PDF
           </button>
           <button
             onClick={handleAddClick}

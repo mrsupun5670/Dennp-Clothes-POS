@@ -87,7 +87,20 @@ const ReportsPage: React.FC = () => {
     const loadReportsData = async () => {
       try {
         setLoading(true);
-        const { startDate, endDate } = getDateRange(timePeriod);
+
+        // If custom range is selected but no dates are chosen, show all items
+        let startDate: string;
+        let endDate: string;
+
+        if (timePeriod === "custom" && (!customFromDate || !customToDate)) {
+          // Show all data - use a wide date range
+          startDate = "2000-01-01";
+          endDate = new Date().toISOString().split('T')[0];
+        } else {
+          const dateRange = getDateRange(timePeriod);
+          startDate = dateRange.startDate;
+          endDate = dateRange.endDate;
+        }
 
         const [items, breakdown, details] = await Promise.all([
           getSoldItems(shopId, startDate, endDate),
@@ -109,7 +122,7 @@ const ReportsPage: React.FC = () => {
     };
 
     loadReportsData();
-  }, [shopId, timePeriod]);
+  }, [shopId, timePeriod, customFromDate, customToDate]);
 
   // Filter sold items by search
   const filteredSoldItems = useMemo(() => {

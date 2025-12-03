@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useShop } from "../context/ShopContext";
 import { getSoldItems, getCostBreakdown, getCostDetails, getMultiPeriodBreakdown } from "../services/reportsService";
 import type { SoldItem, CostBreakdown, CostDetails } from "../services/reportsService";
-import { saveAsPDF, generateSalesReportHTML, generateProductCostsReportHTML, generateDeliveryCostsReportHTML, generateProfitsReportHTML } from "../utils/exportUtils";
+import { printContent, generateSalesReportHTML, generateProductCostsReportHTML, generateDeliveryCostsReportHTML, generateProfitsReportHTML } from "../utils/exportUtils";
 
 type TimePeriod = "today" | "week" | "month" | "3months" | "12months" | "custom";
 type ReportView = "sold-items" | "costs";
@@ -218,12 +218,12 @@ const ReportsPage: React.FC = () => {
               <button
                 onClick={() => {
                   const html = generateSalesReportHTML(filteredSoldItems);
-                  saveAsPDF(html, 'sales_report', 'reports');
+                  printContent(html, 'Sales Report');
                 }}
                 className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
-                title="Export Sales Report"
+                title="Print Sales Report"
               >
-                📄 Export Sales
+                🖨️ Print Sales
               </button>
             )}
             {currentView === "costs" && (
@@ -231,32 +231,32 @@ const ReportsPage: React.FC = () => {
                 <button
                   onClick={() => {
                     const html = generateProductCostsReportHTML(costBreakdown || {});
-                    saveAsPDF(html, 'product_costs_report', 'reports');
+                    printContent(html, 'Product Costs Report');
                   }}
                   className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
-                  title="Export Product Costs"
+                  title="Print Product Costs"
                 >
-                  📄 Product Costs
+                  🖨️ Product Costs
                 </button>
                 <button
                   onClick={() => {
                     const html = generateDeliveryCostsReportHTML(costBreakdown || {});
-                    saveAsPDF(html, 'delivery_costs_report', 'reports');
+                    printContent(html, 'Delivery Costs Report');
                   }}
                   className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
-                  title="Export Delivery Costs"
+                  title="Print Delivery Costs"
                 >
-                  📄 Delivery Costs
+                  🖨️ Delivery Costs
                 </button>
                 <button
                   onClick={() => {
                     const html = generateProfitsReportHTML(costBreakdown || {});
-                    saveAsPDF(html, 'profits_report', 'reports');
+                    printContent(html, 'Profits Report');
                   }}
                   className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
-                  title="Export Profits Report"
+                  title="Print Profits Report"
                 >
-                  📄 Profits
+                  🖨️ Profits
                 </button>
               </>
             )}

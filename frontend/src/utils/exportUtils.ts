@@ -165,7 +165,7 @@ export const saveAsPDF = async (
  */
 export const generateInventoryHTML = (materials: any[]) => {
   const totalItems = materials.reduce((sum, m) => sum + m.quantity_in_stock, 0);
-  const totalValue = materials.reduce((sum, m) => sum + (m.quantity_in_stock * m.unit_cost), 0);
+  const totalValue = materials.reduce((sum, m) => sum + (m.quantity_in_stock * parseFloat(String(m.unit_cost))), 0);
 
   return `
     <!DOCTYPE html>
@@ -331,8 +331,8 @@ export const generateInventoryHTML = (materials: any[]) => {
             <tr>
               <td>${m.item_name}</td>
               <td class="text-right">${m.quantity_in_stock}</td>
-              <td class="text-right">Rs. ${m.unit_cost.toFixed(2)}</td>
-              <td class="text-right"><strong>Rs. ${(m.quantity_in_stock * m.unit_cost).toFixed(2)}</strong></td>
+              <td class="text-right">Rs. ${parseFloat(String(m.unit_cost)).toFixed(2)}</td>
+              <td class="text-right"><strong>Rs. ${(m.quantity_in_stock * parseFloat(String(m.unit_cost))).toFixed(2)}</strong></td>
               <td>${new Date(m.updated_at).toLocaleDateString()}</td>
             </tr>
           `).join('')}

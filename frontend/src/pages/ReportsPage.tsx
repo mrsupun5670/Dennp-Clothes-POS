@@ -207,16 +207,6 @@ const ReportsPage: React.FC = () => {
                     className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
                   />
                 </div>
-                <button
-                  onClick={() => {
-                    // Reload data with new custom dates
-                    loadDataRef.current = false;
-                  }}
-                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-semibold transition-colors"
-                  title="Apply custom date range"
-                >
-                  Apply 🔄
-                </button>
               </div>
             )}
           </div>

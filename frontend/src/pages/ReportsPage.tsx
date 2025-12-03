@@ -162,50 +162,51 @@ const ReportsPage: React.FC = () => {
 
           <div className="flex items-end gap-3">
             <div className="space-y-1">
-              <label className="block text-xs font-semibold text-red-400">Time Period</label>
+              <label className="block text-xs font-semibold text-red-400">Quick Period</label>
               <select value={timePeriod} onChange={(e) => setTimePeriod(e.target.value as TimePeriod)} className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none">
                 <option value="today">Today</option>
                 <option value="week">Last 7 Days</option>
                 <option value="month">Last Month</option>
                 <option value="3months">Last 3 Months</option>
                 <option value="12months">Last 12 Months</option>
-                <option value="custom">Custom Range</option>
               </select>
             </div>
 
-            {/* Custom Date Range Pickers */}
-            {timePeriod === "custom" && (
-              <div className="flex items-end gap-2">
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-red-400">From Date</label>
-                  <input
-                    type="date"
-                    value={customFromDate}
-                    onChange={(e) => setCustomFromDate(e.target.value)}
-                    className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-red-400">To Date</label>
-                  <input
-                    type="date"
-                    value={customToDate}
-                    onChange={(e) => setCustomToDate(e.target.value)}
-                    className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                  />
-                </div>
-                <button
-                  onClick={() => {
-                    // Reload data with new custom dates
-                    loadDataRef.current = false;
-                  }}
-                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-semibold transition-colors"
-                  title="Apply custom date range"
-                >
-                  Apply 🔄
-                </button>
+            {/* Custom Date Range Pickers - Always Visible */}
+            <div className="flex items-end gap-2">
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-red-400">From Date</label>
+                <input
+                  type="date"
+                  value={customFromDate}
+                  onChange={(e) => setCustomFromDate(e.target.value)}
+                  className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                />
               </div>
-            )}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-red-400">To Date</label>
+                <input
+                  type="date"
+                  value={customToDate}
+                  onChange={(e) => setCustomToDate(e.target.value)}
+                  className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  // Reload data with new custom dates
+                  if (customFromDate && customToDate) {
+                    setTimePeriod("custom");
+                    loadDataRef.current = false;
+                  }
+                }}
+                className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Apply custom date range"
+                disabled={!customFromDate || !customToDate}
+              >
+                Apply 🔄
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -7,8 +7,11 @@ import {
 import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
-import { printContent, saveAsPDF, generateProductsHTML } from "../utils/exportUtils";
-
+import {
+  printContent,
+  saveAsPDF,
+  generateProductsHTML,
+} from "../utils/exportUtils";
 
 /**
  * The main Products Page component.
@@ -43,11 +46,17 @@ const ProductsPage: React.FC = () => {
 
   // Modal-specific error/success messages
   const [sizeModalMessage, setSizeModalMessage] = useState("");
-  const [sizeModalMessageType, setSizeModalMessageType] = useState<"error" | "success" | "">("");
+  const [sizeModalMessageType, setSizeModalMessageType] = useState<
+    "error" | "success" | ""
+  >("");
   const [colorModalMessage, setColorModalMessage] = useState("");
-  const [colorModalMessageType, setColorModalMessageType] = useState<"error" | "success" | "">("");
+  const [colorModalMessageType, setColorModalMessageType] = useState<
+    "error" | "success" | ""
+  >("");
   const [categoryModalMessage, setCategoryModalMessage] = useState("");
-  const [categoryModalMessageType, setCategoryModalMessageType] = useState<"error" | "success" | "">("");
+  const [categoryModalMessageType, setCategoryModalMessageType] = useState<
+    "error" | "success" | ""
+  >("");
   const [formData, setFormData] = useState({
     code: "",
     name: "",
@@ -143,13 +152,17 @@ const ProductsPage: React.FC = () => {
     { enabled: shopId !== null }
   );
 
-  const { data: categorySizes, refetch: refetchCategorySizes } = useQuery<any[]>(
+  const { data: categorySizes, refetch: refetchCategorySizes } = useQuery<
+    any[]
+  >(
     ["categorySizes", selectedCategory, shopId],
     async () => {
       if (!shopId || !selectedCategory) {
         throw new Error("Shop ID and Category ID are required");
       }
-      const response = await fetch(`${API_URL}/sizes/by-category/${selectedCategory}?shop_id=${shopId}`);
+      const response = await fetch(
+        `${API_URL}/sizes/by-category/${selectedCategory}?shop_id=${shopId}`
+      );
       const result = await response.json();
       if (result.success) {
         return result.data;
@@ -197,10 +210,16 @@ const ProductsPage: React.FC = () => {
 
           for (const product of dbProducts) {
             try {
-              const stockData = await getProductStockDetails(product.product_id, shopId);
+              const stockData = await getProductStockDetails(
+                product.product_id,
+                shopId
+              );
               newMap.set(product.product_id, stockData || []);
             } catch (error) {
-              console.error(`Failed to fetch stock for product ${product.product_id}:`, error);
+              console.error(
+                `Failed to fetch stock for product ${product.product_id}:`,
+                error
+              );
               // Set empty array as fallback
               newMap.set(product.product_id, []);
             }
@@ -377,14 +396,18 @@ const ProductsPage: React.FC = () => {
       const productNameTrim = formData.name.trim().toLowerCase();
 
       // Check for duplicate product code
-      const duplicateCode = dbProducts.some((p: any) => p.product_id?.toString() === productCode);
+      const duplicateCode = dbProducts.some(
+        (p: any) => p.product_id?.toString() === productCode
+      );
       if (duplicateCode) {
         showNotification("A product with this code already exists.", "error");
         return;
       }
 
       // Check for duplicate product name
-      const duplicateName = dbProducts.some((p: any) => p.product_name?.toLowerCase() === productNameTrim);
+      const duplicateName = dbProducts.some(
+        (p: any) => p.product_name?.toLowerCase() === productNameTrim
+      );
       if (duplicateName) {
         showNotification("A product with this name already exists.", "error");
         return;
@@ -453,14 +476,11 @@ const ProductsPage: React.FC = () => {
       for (const colorName of uniqueColors) {
         let colorId = colorIdMap.get(colorName);
         if (!colorId) {
-          const colorResponse = await fetch(
-            `${API_URL}/colors`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ shop_id: shopId, color_name: colorName }),
-            }
-          );
+          const colorResponse = await fetch(`${API_URL}/colors`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ shop_id: shopId, color_name: colorName }),
+          });
           const colorResult = await colorResponse.json();
           if (colorResult.success && colorResult.data.color_id) {
             colorId = colorResult.data.color_id;
@@ -472,14 +492,15 @@ const ProductsPage: React.FC = () => {
       for (const sizeName of uniqueSizes) {
         let sizeId = sizeIdMap.get(sizeName);
         if (!sizeId) {
-          const sizeResponse = await fetch(
-            `${API_URL}/sizes`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ shop_id: shopId, size_name: sizeName, size_type_id: 1 }),
-            }
-          );
+          const sizeResponse = await fetch(`${API_URL}/sizes`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              shop_id: shopId,
+              size_name: sizeName,
+              size_type_id: 1,
+            }),
+          });
           const sizeResult = await sizeResponse.json();
           if (sizeResult.success && sizeResult.data.size_id) {
             sizeId = sizeResult.data.size_id;
@@ -489,7 +510,11 @@ const ProductsPage: React.FC = () => {
       }
 
       // 2. Build stock payload with resolved color/size IDs
-      const stockPayload: Array<{ sizeId: number; colorId: number; quantity: number }> = [];
+      const stockPayload: Array<{
+        sizeId: number;
+        colorId: number;
+        quantity: number;
+      }> = [];
 
       for (const row of stockRows) {
         if (row.size && row.color && row.qty > 0) {
@@ -546,19 +571,19 @@ const ProductsPage: React.FC = () => {
           product_id: productCode, // Use product code as product_id (numeric string)
           stock: stockPayload, // Include stock data
         };
-        const createResponse = await fetch(
-          `${API_URL}/products`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(createPayload),
-          }
-        );
+        const createResponse = await fetch(`${API_URL}/products`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(createPayload),
+        });
         const createResult = await createResponse.json();
 
         // Handle duplicate product code or name (409 Conflict)
         if (createResponse.status === 409) {
-          throw new Error(createResult.error || "Product with this code or name already exists");
+          throw new Error(
+            createResult.error ||
+              "Product with this code or name already exists"
+          );
         }
 
         if (!createResult.success || !createResult.data.product_id) {
@@ -571,28 +596,22 @@ const ProductsPage: React.FC = () => {
       for (const colorName of uniqueColors) {
         const colorId = colorIdMap.get(colorName);
         if (colorId) {
-          await fetch(
-            `${API_URL}/products/${productId}/colors`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ color_id: colorId }),
-            }
-          );
+          await fetch(`${API_URL}/products/${productId}/colors`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ color_id: colorId }),
+          });
         }
       }
 
       for (const sizeName of uniqueSizes) {
         const sizeId = sizeIdMap.get(sizeName);
         if (sizeId) {
-          await fetch(
-            `${API_URL}/products/${productId}/sizes`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ size_id: sizeId }),
-            }
-          );
+          await fetch(`${API_URL}/products/${productId}/sizes`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ size_id: sizeId }),
+          });
         }
       }
 
@@ -606,7 +625,13 @@ const ProductsPage: React.FC = () => {
       );
 
       // Refresh all dependent lists
-      await Promise.all([refetchProducts(), refetchColors(), refetchSizes(), refetchCategories(), refetchCategorySizes()]);
+      await Promise.all([
+        refetchProducts(),
+        refetchColors(),
+        refetchSizes(),
+        refetchCategories(),
+        refetchCategorySizes(),
+      ]);
 
       handleCloseModal();
     } catch (error: any) {
@@ -650,14 +675,22 @@ const ProductsPage: React.FC = () => {
     if (!trimmedSize) {
       setSizeModalMessage("Size name is required");
       setSizeModalMessageType("error");
-      setTimeout(() => { setSizeModalMessage(""); setSizeModalMessageType(""); }, 3000);
+      setTimeout(() => {
+        setSizeModalMessage("");
+        setSizeModalMessageType("");
+      }, 3000);
       return;
     }
 
-    if (getAllSizes().some((s) => s.toLowerCase() === trimmedSize.toLowerCase())) {
+    if (
+      getAllSizes().some((s) => s.toLowerCase() === trimmedSize.toLowerCase())
+    ) {
       setSizeModalMessage(`Size "${trimmedSize}" already exists`);
       setSizeModalMessageType("error");
-      setTimeout(() => { setSizeModalMessage(""); setSizeModalMessageType(""); }, 3000);
+      setTimeout(() => {
+        setSizeModalMessage("");
+        setSizeModalMessageType("");
+      }, 3000);
       return;
     }
 
@@ -669,7 +702,10 @@ const ProductsPage: React.FC = () => {
       if (!selectedCat) {
         setSizeModalMessage("Category not found");
         setSizeModalMessageType("error");
-        setTimeout(() => { setSizeModalMessage(""); setSizeModalMessageType(""); }, 3000);
+        setTimeout(() => {
+          setSizeModalMessage("");
+          setSizeModalMessageType("");
+        }, 3000);
         return;
       }
 
@@ -696,12 +732,18 @@ const ProductsPage: React.FC = () => {
       } else {
         setSizeModalMessage(result.error || "Failed to add size");
         setSizeModalMessageType("error");
-        setTimeout(() => { setSizeModalMessage(""); setSizeModalMessageType(""); }, 3000);
+        setTimeout(() => {
+          setSizeModalMessage("");
+          setSizeModalMessageType("");
+        }, 3000);
       }
     } catch (error) {
       setSizeModalMessage("Error adding size");
       setSizeModalMessageType("error");
-      setTimeout(() => { setSizeModalMessage(""); setSizeModalMessageType(""); }, 3000);
+      setTimeout(() => {
+        setSizeModalMessage("");
+        setSizeModalMessageType("");
+      }, 3000);
     }
   };
 
@@ -711,14 +753,22 @@ const ProductsPage: React.FC = () => {
     if (!trimmedColor) {
       setColorModalMessage("Color name is required");
       setColorModalMessageType("error");
-      setTimeout(() => { setColorModalMessage(""); setColorModalMessageType(""); }, 3000);
+      setTimeout(() => {
+        setColorModalMessage("");
+        setColorModalMessageType("");
+      }, 3000);
       return;
     }
 
-    if (getAllColors().some((c) => c.toLowerCase() === trimmedColor.toLowerCase())) {
+    if (
+      getAllColors().some((c) => c.toLowerCase() === trimmedColor.toLowerCase())
+    ) {
       setColorModalMessage(`Color "${trimmedColor}" already exists`);
       setColorModalMessageType("error");
-      setTimeout(() => { setColorModalMessage(""); setColorModalMessageType(""); }, 3000);
+      setTimeout(() => {
+        setColorModalMessage("");
+        setColorModalMessageType("");
+      }, 3000);
       return;
     }
 
@@ -746,12 +796,18 @@ const ProductsPage: React.FC = () => {
       } else {
         setColorModalMessage(result.error || "Failed to add color");
         setColorModalMessageType("error");
-        setTimeout(() => { setColorModalMessage(""); setColorModalMessageType(""); }, 3000);
+        setTimeout(() => {
+          setColorModalMessage("");
+          setColorModalMessageType("");
+        }, 3000);
       }
     } catch (error) {
       setColorModalMessage("Error adding color");
       setColorModalMessageType("error");
-      setTimeout(() => { setColorModalMessage(""); setColorModalMessageType(""); }, 3000);
+      setTimeout(() => {
+        setColorModalMessage("");
+        setColorModalMessageType("");
+      }, 3000);
     }
   };
 
@@ -761,15 +817,18 @@ const ProductsPage: React.FC = () => {
     if (!trimmedCategory) {
       setCategoryModalMessage("Category name is required");
       setCategoryModalMessageType("error");
-      setTimeout(() => { setCategoryModalMessage(""); setCategoryModalMessageType(""); }, 3000);
+      setTimeout(() => {
+        setCategoryModalMessage("");
+        setCategoryModalMessageType("");
+      }, 3000);
       return;
     }
 
     try {
       const sizeTypeMap: { [key: string]: number } = {
-        "alphabetic": 2,
-        "numerical": 1,
-        "other": 3,
+        alphabetic: 2,
+        numerical: 1,
+        other: 3,
       };
 
       const response = await fetch(`${API_URL}/categories`, {
@@ -783,7 +842,9 @@ const ProductsPage: React.FC = () => {
       });
       const result = await response.json();
       if (result.success) {
-        setCategoryModalMessage(`Category "${trimmedCategory}" added successfully`);
+        setCategoryModalMessage(
+          `Category "${trimmedCategory}" added successfully`
+        );
         setCategoryModalMessageType("success");
         setTimeout(() => {
           setNewCategory("");
@@ -796,12 +857,18 @@ const ProductsPage: React.FC = () => {
       } else {
         setCategoryModalMessage(result.error || "Failed to add category");
         setCategoryModalMessageType("error");
-        setTimeout(() => { setCategoryModalMessage(""); setCategoryModalMessageType(""); }, 3000);
+        setTimeout(() => {
+          setCategoryModalMessage("");
+          setCategoryModalMessageType("");
+        }, 3000);
       }
     } catch (error) {
       setCategoryModalMessage("Error adding category");
       setCategoryModalMessageType("error");
-      setTimeout(() => { setCategoryModalMessage(""); setCategoryModalMessageType(""); }, 3000);
+      setTimeout(() => {
+        setCategoryModalMessage("");
+        setCategoryModalMessageType("");
+      }, 3000);
     }
   };
 
@@ -835,8 +902,14 @@ const ProductsPage: React.FC = () => {
         .join(", ");
 
       // Fallback to original colors/sizes if no stock details
-      const finalColors = colorDisplay || (p.colors?.map((c: any) => c.color_name).join(", ") || "N/A");
-      const finalSizes = sizeDisplay || (p.sizes?.map((s: any) => s.size_name).join(", ") || "N/A");
+      const finalColors =
+        colorDisplay ||
+        p.colors?.map((c: any) => c.color_name).join(", ") ||
+        "N/A";
+      const finalSizes =
+        sizeDisplay ||
+        p.sizes?.map((s: any) => s.size_name).join(", ") ||
+        "N/A";
 
       return {
         id: p.product_id,
@@ -915,30 +988,23 @@ const ProductsPage: React.FC = () => {
             </span>
           </div>
           <p className="text-gray-400 mt-2">
-            {shopId ? `Shop #${shopId} - Manage your products` : "Select a shop to view products"}
+            {shopId
+              ? `Shop #${shopId} - Manage your products`
+              : "Select a shop to view products"}
           </p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => {
               const html = generateProductsHTML(filteredAndSortedProducts);
-              printContent(html, 'Products Report');
+              printContent(html, "Products Report");
             }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
             title="Print directly"
           >
             🖨️ Print
           </button>
-          <button
-            onClick={() => {
-              const html = generateProductsHTML(filteredAndSortedProducts);
-              saveAsPDF(html, 'products_report', 'products');
-            }}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
-            title="Save as PDF"
-          >
-            💾 Save PDF
-          </button>
+
           <button
             onClick={handleAddProductClick}
             className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-semibold"
@@ -1076,7 +1142,9 @@ const ProductsPage: React.FC = () => {
                     <td className="px-6 py-4 text-gray-200 font-medium">
                       {product.name}
                     </td>
-                    <td className="px-6 py-4 text-gray-300">{product.colors}</td>
+                    <td className="px-6 py-4 text-gray-300">
+                      {product.colors}
+                    </td>
                     <td className="px-6 py-4 text-gray-300 text-xs">
                       {product.sizes}
                     </td>
@@ -1084,7 +1152,9 @@ const ProductsPage: React.FC = () => {
                       {product.cost.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-right text-gray-300 font-semibold">
-                      {product.printCost ? product.printCost.toFixed(2) : "0.00"}
+                      {product.printCost
+                        ? product.printCost.toFixed(2)
+                        : "0.00"}
                     </td>
                     <td className="px-6 py-4 text-right text-red-400 font-semibold">
                       {product.retailPrice.toFixed(2)}
@@ -1137,7 +1207,8 @@ const ProductsPage: React.FC = () => {
                 {/* Product Code */}
                 <div>
                   <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Product Code (Numeric) <span className="text-red-500">*</span>
+                    Product Code (Numeric){" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -1477,11 +1548,13 @@ const ProductsPage: React.FC = () => {
                         />
                       </div>
                       {sizeModalMessage && (
-                        <div className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
-                          sizeModalMessageType === "error"
-                            ? "bg-red-600/20 text-red-300 border-red-600/50"
-                            : "bg-green-600/20 text-green-300 border-green-600/50"
-                        }`}>
+                        <div
+                          className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                            sizeModalMessageType === "error"
+                              ? "bg-red-600/20 text-red-300 border-red-600/50"
+                              : "bg-green-600/20 text-green-300 border-green-600/50"
+                          }`}
+                        >
                           {sizeModalMessage}
                         </div>
                       )}
@@ -1541,11 +1614,13 @@ const ProductsPage: React.FC = () => {
                         />
                       </div>
                       {colorModalMessage && (
-                        <div className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
-                          colorModalMessageType === "error"
-                            ? "bg-red-600/20 text-red-300 border-red-600/50"
-                            : "bg-green-600/20 text-green-300 border-green-600/50"
-                        }`}>
+                        <div
+                          className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                            colorModalMessageType === "error"
+                              ? "bg-red-600/20 text-red-300 border-red-600/50"
+                              : "bg-green-600/20 text-green-300 border-green-600/50"
+                          }`}
+                        >
                           {colorModalMessage}
                         </div>
                       )}
@@ -1611,20 +1686,28 @@ const ProductsPage: React.FC = () => {
                         </label>
                         <select
                           value={newCategorySizeType}
-                          onChange={(e) => setNewCategorySizeType(e.target.value)}
+                          onChange={(e) =>
+                            setNewCategorySizeType(e.target.value)
+                          }
                           className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
                         >
-                          <option value="alphabetic">Alphabetic (e.g., S, M, L, XL, ...)</option>
-                          <option value="numerical">Numerical (e.g., 1, 2, 3, ...)</option>
+                          <option value="alphabetic">
+                            Alphabetic (e.g., S, M, L, XL, ...)
+                          </option>
+                          <option value="numerical">
+                            Numerical (e.g., 1, 2, 3, ...)
+                          </option>
                           <option value="other">Other</option>
                         </select>
                       </div>
                       {categoryModalMessage && (
-                        <div className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
-                          categoryModalMessageType === "error"
-                            ? "bg-red-600/20 text-red-300 border-red-600/50"
-                            : "bg-green-600/20 text-green-300 border-green-600/50"
-                        }`}>
+                        <div
+                          className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                            categoryModalMessageType === "error"
+                              ? "bg-red-600/20 text-red-300 border-red-600/50"
+                              : "bg-green-600/20 text-green-300 border-green-600/50"
+                          }`}
+                        >
                           {categoryModalMessage}
                         </div>
                       )}

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getProducts } from '../services/productService';
+import { printContent, generateProductsHTML } from '../utils/exportUtils';
 
 interface Product {
   product_id: number;
@@ -10,6 +12,7 @@ interface Product {
 }
 
 const StockPage: React.FC = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +54,25 @@ const StockPage: React.FC = () => {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Stock</h1>
+      <div className="flex gap-3 mb-4">
+        <button
+          onClick={() => navigate('/add-product')}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
+          title="Add Product"
+        >
+          ➕ Add Product
+        </button>
+        <button
+          onClick={() => {
+            const html = generateProductsHTML(products);
+            printContent(html, 'Stock Report');
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
+          title="Print Report"
+        >
+          🖨️ Print
+        </button>
+      </div>
       {products.length === 0 ? (
         <p>No products found.</p>
       ) : (

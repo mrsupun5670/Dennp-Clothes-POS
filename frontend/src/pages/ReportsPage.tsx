@@ -49,16 +49,16 @@ const ReportsPage: React.FC = () => {
           startDate.setDate(today.getDate() - 7);
           break;
         case "month":
-          // Go back to the 1st of current month
-          startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+          // Go back 30 days
+          startDate.setDate(today.getDate() - 30);
           break;
         case "3months":
-          // Go back 3 months to the 1st
-          startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+          // Go back 90 days
+          startDate.setDate(today.getDate() - 90);
           break;
         case "12months":
-          // Go back 12 months to the 1st
-          startDate = new Date(today.getFullYear() - 1, today.getMonth(), 1);
+          // Go back 365 days
+          startDate.setDate(today.getDate() - 365);
           break;
       }
     }

@@ -201,108 +201,116 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
           body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: white;
-            color: #222;
+            color: #333;
           }
           .page {
             width: 210mm;
             height: 297mm;
             background: white;
-            padding: 15px;
             display: flex;
             flex-direction: column;
           }
-          /* Top Banner */
-          .banner {
-            background: linear-gradient(90deg, #c41e3a 0%, #e85d47 100%);
-            padding: 20px;
-            border-radius: 6px;
+          /* Header with Logo and Shop Info */
+          .header {
+            background: #2a2a2a;
             color: white;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
+            padding: 20px 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
             align-items: center;
+            border-bottom: 4px solid #c41e3a;
           }
-          .banner-left {
+          .header-left {
             display: flex;
             align-items: center;
             gap: 15px;
           }
-          .banner-logo {
-            width: 50px;
-            height: 50px;
+          .logo-box {
+            width: 70px;
+            height: 70px;
             background: white;
-            border-radius: 6px;
-            padding: 4px;
+            border-radius: 4px;
+            padding: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
           }
-          .banner-logo img {
+          .logo-box img {
             width: 100%;
             height: 100%;
             object-fit: contain;
           }
-          .banner-text h1 {
-            font-size: 22px;
+          .shop-info h1 {
+            font-size: 24px;
             font-weight: 700;
             margin-bottom: 2px;
+            letter-spacing: 0.5px;
           }
-          .banner-text p {
-            font-size: 10px;
+          .shop-info p {
+            font-size: 11px;
             opacity: 0.9;
+            line-height: 1.4;
           }
-          .banner-right {
+          .header-right {
             text-align: right;
           }
-          .banner-right h2 {
-            font-size: 28px;
+          .invoice-title {
+            font-size: 36px;
             font-weight: 700;
+            color: #fff;
             margin-bottom: 5px;
             letter-spacing: 2px;
           }
-          .banner-right p {
-            font-size: 11px;
-            opacity: 0.9;
+          .invoice-num {
+            background: #c41e3a;
+            color: white;
+            padding: 6px 15px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+            border-radius: 3px;
           }
-          /* Main Content */
-          .main {
+          /* Content Area */
+          .content {
             flex: 1;
+            padding: 25px 30px;
             display: flex;
             flex-direction: column;
           }
-          /* Top Section */
-          .top-section {
+          /* Top Info Section */
+          .top-info {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #c41e3a;
+            gap: 40px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
           }
-          .info-box h3 {
-            font-size: 10px;
+          .info-section h3 {
+            font-size: 11px;
             font-weight: 700;
             color: #c41e3a;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
           }
-          .info-row {
+          .info-item {
             display: flex;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             font-size: 11px;
           }
-          .info-row label {
+          .info-label {
             font-weight: 600;
-            color: #222;
-            min-width: 65px;
+            color: #333;
+            min-width: 60px;
           }
-          .info-row value {
-            color: #555;
+          .info-value {
+            color: #666;
             flex: 1;
           }
           /* Items Table */
-          .items-box {
+          .items-section {
             margin-bottom: 20px;
           }
           .items-title {
@@ -310,46 +318,47 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
             font-weight: 700;
             color: #c41e3a;
             text-transform: uppercase;
-            margin-bottom: 8px;
             letter-spacing: 1px;
+            margin-bottom: 10px;
           }
           table {
             width: 100%;
             border-collapse: collapse;
             font-size: 10px;
+            margin-bottom: 15px;
           }
           table thead {
-            background: linear-gradient(90deg, #c41e3a 0%, #e85d47 100%);
+            background: #c41e3a;
             color: white;
           }
-          table th {
-            padding: 10px 6px;
+          table thead th {
+            padding: 10px;
             text-align: left;
             font-weight: 600;
             border: none;
           }
-          table th:nth-child(1),
-          table th:nth-child(4),
-          table th:nth-child(5),
-          table th:nth-child(6),
-          table th:nth-child(7) {
+          table thead th:nth-child(3),
+          table thead th:nth-child(4),
+          table thead th:nth-child(5),
+          table thead th:nth-child(6),
+          table thead th:nth-child(7) {
             text-align: center;
           }
-          table th:nth-child(6),
-          table th:nth-child(7) {
+          table thead th:nth-child(6),
+          table thead th:nth-child(7) {
             text-align: right;
           }
           table tbody tr {
             border-bottom: 1px solid #e8e8e8;
           }
           table tbody tr:nth-child(even) {
-            background: #f5f5f5;
+            background: #f9f9f9;
           }
           table td {
-            padding: 9px 6px;
+            padding: 10px;
             color: #333;
           }
-          table td:nth-child(1),
+          table td:nth-child(3),
           table td:nth-child(4),
           table td:nth-child(5),
           table td:nth-child(6),
@@ -364,132 +373,167 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
           .amount-section {
             display: flex;
             justify-content: flex-end;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
           }
           .amount-box {
-            width: 280px;
+            width: 250px;
           }
           .amount-row {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
+            padding: 8px 12px;
             font-size: 11px;
             border-bottom: 1px solid #e0e0e0;
           }
           .amount-row.total {
-            background: linear-gradient(90deg, #c41e3a 0%, #e85d47 100%);
+            background: #c41e3a;
             color: white;
-            padding: 12px 8px;
-            margin: 0 -8px;
+            padding: 12px;
             font-size: 13px;
             font-weight: 700;
             border: none;
+            border-radius: 3px;
           }
-          .amount-row label {
+          .amount-label {
             font-weight: 600;
-            color: #222;
+            color: #333;
           }
-          .amount-row.total label {
+          .amount-row.total .amount-label {
             color: white;
           }
-          /* Notes */
-          .notes-box {
-            background: #f9f9f9;
-            border: 1px solid #e0e0e0;
+          /* Payment Method Section */
+          .payment-section {
+            background: #f5f5f5;
+            padding: 12px 15px;
+            border-radius: 3px;
+            margin-bottom: 15px;
+            font-size: 10px;
+          }
+          .payment-section p {
+            margin-bottom: 4px;
+            color: #555;
+          }
+          .payment-label {
+            font-weight: 600;
+            color: #333;
+          }
+          /* Notes Section */
+          .notes-section {
+            background: #fff5f5;
+            border: 1px solid #ffe0e0;
             border-left: 4px solid #c41e3a;
             padding: 12px;
-            margin-bottom: 12px;
+            margin-bottom: 15px;
             border-radius: 3px;
           }
           .notes-title {
-            font-size: 9px;
+            font-size: 10px;
             font-weight: 700;
             color: #c41e3a;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 6px;
           }
-          .note {
+          .note-item {
             font-size: 9px;
             color: #666;
-            margin-bottom: 4px;
-            line-height: 1.4;
+            margin-bottom: 3px;
+            line-height: 1.3;
           }
           /* Footer */
           .footer {
             text-align: center;
-            padding-top: 10px;
+            padding-top: 12px;
             margin-top: auto;
             border-top: 1px solid #e0e0e0;
             font-size: 10px;
           }
-          .footer-msg {
+          .thank-you {
             font-weight: 700;
             color: #c41e3a;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
+            font-size: 11px;
           }
-          .footer-sub {
+          .contact-info {
             font-size: 9px;
             color: #888;
+            line-height: 1.4;
           }
           @media print {
             body { margin: 0; padding: 0; }
-            .page { margin: 0; padding: 15px; }
+            .page { margin: 0; padding: 0; }
             @page { margin: 0; }
           }
         </style>
       </head>
       <body>
         <div class="page">
-          <!-- Banner -->
-          <div class="banner">
-            <div class="banner-left">
-              <div class="banner-logo">
-                <img src="dennep png.png" alt="Logo">
+          <!-- Header -->
+          <div class="header">
+            <div class="header-left">
+              <div class="logo-box">
+                <img src="dennep png.png" alt="Dennep Logo">
               </div>
-              <div class="banner-text">
-                <h1>${shopName || "DENNEP CLOTHES"}</h1>
-                <p>${shopAddress || "Quality Clothing"}<br>${shopPhone || ""}</p>
+              <div class="shop-info">
+                <h1>DENNEP CLOTHES</h1>
+                <p>${shopAddress || "Premium Quality Clothing"}<br>${shopPhone || ""}</p>
               </div>
             </div>
-            <div class="banner-right">
-              <h2>INVOICE</h2>
-              <p>${invoiceNumber}</p>
+            <div class="header-right">
+              <div class="invoice-title">INVOICE</div>
+              <div class="invoice-num">${invoiceNumber}</div>
             </div>
           </div>
 
-          <!-- Main Content -->
-          <div class="main">
-            <!-- Top Section -->
-            <div class="top-section">
-              <div class="info-box">
-                <h3>📋 Bill Information</h3>
-                <div class="info-row"><label>Invoice</label><value>${invoiceNumber}</value></div>
-                <div class="info-row"><label>Date</label><value>${dateStr}</value></div>
-                <div class="info-row"><label>Time</label><value>${timeStr}</value></div>
+          <!-- Content -->
+          <div class="content">
+            <!-- Top Information -->
+            <div class="top-info">
+              <div class="info-section">
+                <h3>Bill Details</h3>
+                <div class="info-item">
+                  <span class="info-label">Invoice</span>
+                  <span class="info-value">${invoiceNumber}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Date</span>
+                  <span class="info-value">${dateStr}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Time</span>
+                  <span class="info-value">${timeStr}</span>
+                </div>
               </div>
-              <div class="info-box">
-                <h3>👤 Customer Details</h3>
-                <div class="info-row"><label>ID</label><value>C${order.customer_id || "—"}</value></div>
-                <div class="info-row"><label>Name</label><value>${order.recipient_name || "—"}</value></div>
-                <div class="info-row"><label>Phone</label><value>${order.recipient_phone || order.customer_mobile || "—"}</value></div>
-                <div class="info-row"><label>Address</label><value style="font-size: 9px;">${addressStr.substring(0, 38)}${addressStr.length > 38 ? "..." : ""}</value></div>
+              <div class="info-section" style="text-align: right;">
+                <h3 style="text-align: right;">Customer Information</h3>
+                <div class="info-item" style="flex-direction: row-reverse;">
+                  <span class="info-value" style="text-align: right; flex: 1; padding-right: 10px;">C${order.customer_id || "—"}</span>
+                  <span class="info-label" style="text-align: left; margin-left: 10px;">Customer ID</span>
+                </div>
+                <div class="info-item" style="flex-direction: row-reverse;">
+                  <span class="info-value" style="text-align: right; flex: 1; padding-right: 10px;">${order.recipient_name || "—"}</span>
+                  <span class="info-label" style="text-align: left; margin-left: 10px;">Name</span>
+                </div>
+                <div class="info-item" style="flex-direction: row-reverse;">
+                  <span class="info-value" style="text-align: right; flex: 1; padding-right: 10px; font-size: 10px;">${order.recipient_phone || order.customer_mobile || "—"}</span>
+                  <span class="info-label" style="text-align: left; margin-left: 10px;">Phone</span>
+                </div>
               </div>
             </div>
 
-            <!-- Items -->
-            <div class="items-box">
-              <div class="items-title">📦 Order Items</div>
+            <!-- Items Table -->
+            <div class="items-section">
+              <div class="items-title">Item Description</div>
               <table>
                 <thead>
                   <tr>
-                    <th style="width: 8%;">Code</th>
-                    <th style="width: 28%;">Item Name</th>
-                    <th style="width: 12%;">Size</th>
-                    <th style="width: 12%;">Color</th>
+                    <th style="width: 10%;">Code</th>
+                    <th style="width: 26%;">Item Description</th>
+                    <th style="width: 10%;">Size</th>
+                    <th style="width: 10%;">Color</th>
                     <th style="width: 8%;">Qty</th>
-                    <th style="width: 16%;">Unit Price</th>
-                    <th style="width: 16%;">Total</th>
+                    <th style="width: 18%;">Unit Price</th>
+                    <th style="width: 18%;">Total Price</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -498,40 +542,50 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
               </table>
             </div>
 
-            <!-- Amount -->
+            <!-- Amount Box -->
             <div class="amount-section">
               <div class="amount-box">
                 <div class="amount-row">
-                  <label>Subtotal:</label>
+                  <span class="amount-label">Sub Total</span>
                   <span>Rs. ${parseFloat(String(order.total_amount)).toFixed(2)}</span>
                 </div>
                 ${
                   order.delivery_charge
                     ? `<div class="amount-row">
-                      <label>Delivery:</label>
+                      <span class="amount-label">Delivery</span>
                       <span>Rs. ${parseFloat(String(order.delivery_charge)).toFixed(2)}</span>
                     </div>`
                     : ""
                 }
                 <div class="amount-row total">
-                  <label>TOTAL</label>
+                  <span class="amount-label">Grand Total</span>
                   <span>Rs. ${parseFloat(String(order.final_amount)).toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
+            <!-- Payment Method -->
+            <div class="payment-section">
+              <p><span class="payment-label">Payment Method:</span> Bank Transfer</p>
+              <p><span class="payment-label">Account:</span> DENNEP CLOTHES</p>
+              <p><span class="payment-label">Payment Date:</span> ${dateStr}</p>
+            </div>
+
             <!-- Notes -->
-            <div class="notes-box">
-              <div class="notes-title">⚠️ Important Notes</div>
-              <div class="note">• Returns accepted within 7 days with original invoice</div>
-              <div class="note">• Report damages within 24 hours of delivery</div>
-              <div class="note">• Exchanges require unused items in original packaging</div>
+            <div class="notes-section">
+              <div class="notes-title">Terms & Conditions</div>
+              <div class="note-item">• No Payments Returns - All sales are final unless agreed otherwise</div>
+              <div class="note-item">• Returns accepted within 7 days with original invoice and unused items</div>
+              <div class="note-item">• Report any damages within 24 hours of delivery</div>
             </div>
 
             <!-- Footer -->
             <div class="footer">
-              <div class="footer-msg">✨ Thank You for Shopping with Us!</div>
-              <div class="footer-sub">We truly appreciate your business. Visit again for premium quality clothing!</div>
+              <div class="thank-you">Thanks for your business!</div>
+              <div class="contact-info">
+                For inquiries, contact us at ${shopPhone || "contact number"}<br>
+                We appreciate your trust in DENNEP CLOTHES
+              </div>
             </div>
           </div>
         </div>

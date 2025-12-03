@@ -1342,137 +1342,290 @@ export const generateOrderBillHTML = (data: {
     <!DOCTYPE html>
     <html>
     <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Order Bill</title>
       <style>
-        @page { size: A4; margin: 0; }
-        body {
-          font-family: 'Courier New', monospace;
-          padding: 20px;
-          background: white;
-          color: #333;
+        @page {
+          size: A4 portrait;
+          margin: 25.4mm;
+        }
+        * {
           margin: 0;
-          width: 210mm;
+          padding: 0;
           box-sizing: border-box;
         }
-        .container {
-          max-width: 600px;
-          margin: 0 auto;
-          border: 2px solid #333;
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: white;
+          color: #1a1a1a;
+          line-height: 1.4;
+        }
+        .invoice {
+          background: white;
+          padding: 0;
+        }
+        .invoice-header {
+          background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+          color: white;
           padding: 20px;
-        }
-        h1 {
+          margin-bottom: 20px;
           text-align: center;
-          font-size: 24px;
+        }
+        .company-name {
+          font-size: 32px;
+          font-weight: 700;
           margin-bottom: 5px;
+          letter-spacing: 2px;
+        }
+        .company-subtitle {
+          font-size: 11px;
+          opacity: 0.9;
+          letter-spacing: 1px;
+        }
+        .invoice-type {
+          background: white;
           color: #d32f2f;
-        }
-        .header {
-          text-align: center;
-          border-bottom: 2px solid #333;
-          padding-bottom: 15px;
-          margin-bottom: 15px;
-        }
-        .date {
-          text-align: center;
+          display: inline-block;
+          padding: 6px 16px;
+          font-weight: 600;
           font-size: 12px;
-          color: #666;
+          margin-top: 10px;
+          border-radius: 3px;
+          text-transform: uppercase;
+        }
+        .invoice-meta {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 20px;
+          padding: 0 20px;
+          font-size: 11px;
+          color: #555;
+        }
+        .meta-item {
+          flex: 1;
+        }
+        .meta-label {
+          font-weight: 600;
+          color: #d32f2f;
+          text-transform: uppercase;
+          font-size: 10px;
+          margin-bottom: 4px;
+        }
+        .meta-value {
+          color: #1a1a1a;
+          font-weight: 500;
+        }
+        .divider {
+          height: 2px;
+          background: #d32f2f;
+          margin: 15px 20px;
         }
         .section {
+          padding: 0 20px;
           margin-bottom: 15px;
         }
         .section-title {
-          font-weight: bold;
-          border-bottom: 1px solid #333;
-          padding-bottom: 5px;
-          margin-bottom: 8px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #d32f2f;
+          text-transform: uppercase;
+          margin-bottom: 10px;
+          letter-spacing: 1px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #d32f2f;
+        }
+        .customer-info {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          font-size: 12px;
+          margin-bottom: 15px;
+        }
+        .info-field {
+          display: flex;
+          flex-direction: column;
+        }
+        .info-label {
+          font-weight: 600;
+          color: #666;
+          font-size: 10px;
+          text-transform: uppercase;
+          margin-bottom: 3px;
+        }
+        .info-value {
+          color: #1a1a1a;
+          font-weight: 500;
         }
         table {
           width: 100%;
           border-collapse: collapse;
+          font-size: 11px;
+          margin: 0 20px;
+        }
+        thead {
+          background: #f5f5f5;
         }
         th {
-          background-color: #f5f5f5;
           padding: 8px;
           text-align: left;
-          border-bottom: 1px solid #333;
+          font-weight: 600;
+          color: #d32f2f;
+          text-transform: uppercase;
+          font-size: 10px;
+          border-bottom: 2px solid #d32f2f;
         }
         td {
           padding: 8px;
-          border-bottom: 1px solid #ddd;
+          border-bottom: 1px solid #eee;
         }
-        .text-right { text-align: right; }
-        .totals {
-          border-top: 2px solid #333;
-          border-bottom: 2px solid #333;
-          padding: 10px 0;
-          margin: 10px 0;
+        tbody tr:last-child td {
+          border-bottom: 2px solid #d32f2f;
         }
-        .total-row {
+        .text-right {
+          text-align: right;
+        }
+        .text-center {
+          text-align: center;
+        }
+        .amount {
+          font-weight: 600;
+          color: #1a1a1a;
+        }
+        .summary {
+          padding: 0 20px;
+          margin-bottom: 15px;
+        }
+        .summary-row {
           display: flex;
           justify-content: space-between;
-          padding: 5px 0;
+          padding: 8px 0;
+          font-size: 12px;
+          border-bottom: 1px solid #eee;
+        }
+        .summary-row:last-child {
+          border-bottom: none;
+        }
+        .summary-label {
+          color: #555;
+        }
+        .summary-value {
+          font-weight: 600;
+          color: #1a1a1a;
+        }
+        .total-row {
+          background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+          padding: 12px 0;
+          margin-top: 10px;
+          border-top: 2px solid #d32f2f;
+          border-bottom: 2px solid #d32f2f;
         }
         .total-amount {
-          font-weight: bold;
-          font-size: 16px;
+          font-size: 18px;
+          font-weight: 700;
           color: #d32f2f;
         }
-        .footer {
-          text-align: center;
-          font-size: 12px;
-          margin-top: 20px;
-          color: #666;
+        .payment-status {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 8px;
         }
         .status-badge {
-          font-weight: bold;
-          padding: 5px 10px;
-          border-radius: 3px;
           display: inline-block;
+          padding: 5px 12px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
         }
         .status-paid {
-          background-color: #c8e6c9;
+          background: #e8f5e9;
           color: #2e7d32;
         }
         .status-balance {
-          background-color: #ffccbc;
-          color: #d84315;
+          background: #fff3e0;
+          color: #e65100;
         }
-        .info-line {
-          display: flex;
-          justify-content: space-between;
-          margin: 5px 0;
-          font-size: 13px;
+        .status-change {
+          background: #e3f2fd;
+          color: #1565c0;
+        }
+        .footer {
+          padding: 15px 20px;
+          text-align: center;
+          font-size: 11px;
+          color: #666;
+          border-top: 2px solid #d32f2f;
+          margin-top: 15px;
+        }
+        .thank-you {
+          font-size: 12px;
+          font-weight: 600;
+          color: #d32f2f;
+          margin-bottom: 5px;
+        }
+        .footer-note {
+          font-size: 9px;
+          color: #999;
+          margin-top: 8px;
+        }
+        .footer-line {
+          height: 1px;
+          background: #d32f2f;
+          margin: 8px 0;
+          opacity: 0.3;
         }
       </style>
     </head>
     <body>
-      <div class="container">
-        <div class="header">
-          <h1>DENNP CLOTHES</h1>
-          <p>Order Bill</p>
-          <div class="date">${new Date().toLocaleString()}</div>
+      <div class="invoice">
+        <div class="invoice-header">
+          <div class="company-name">DENNP CLOTHES</div>
+          <div class="company-subtitle">Premium Apparel & Printing Solutions</div>
+          <div class="invoice-type">Order Invoice</div>
         </div>
 
-        <div class="section">
-          <div class="section-title">Customer Information</div>
-          <div class="info-line">
-            <span>Name:</span>
-            <span>${selectedCustomer.name}</span>
+        <div class="invoice-meta">
+          <div class="meta-item">
+            <div class="meta-label">Invoice Date</div>
+            <div class="meta-value">${new Date().toLocaleDateString()}</div>
           </div>
-          <div class="info-line">
-            <span>Mobile:</span>
-            <span>${selectedCustomer.mobile}</span>
+          <div class="meta-item">
+            <div class="meta-label">Invoice Time</div>
+            <div class="meta-value">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Invoice #</div>
+            <div class="meta-value">${Math.floor(Math.random() * 100000)}</div>
           </div>
         </div>
 
+        <div class="divider"></div>
+
         <div class="section">
-          <div class="section-title">Order Items</div>
+          <div class="section-title">Bill To</div>
+          <div class="customer-info">
+            <div class="info-field">
+              <div class="info-label">Customer Name</div>
+              <div class="info-value">${selectedCustomer.name}</div>
+            </div>
+            <div class="info-field">
+              <div class="info-label">Mobile Number</div>
+              <div class="info-value">${selectedCustomer.mobile}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div style="padding: 0 20px; margin-bottom: 15px;">
           <table>
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Size</th>
-                <th>Color</th>
+                <th>Item Description</th>
+                <th class="text-center">Size</th>
+                <th class="text-center">Color</th>
                 <th class="text-right">Qty</th>
                 <th class="text-right">Price</th>
                 <th class="text-right">Total</th>
@@ -1482,55 +1635,61 @@ export const generateOrderBillHTML = (data: {
               ${cartItems.map(item => `
                 <tr>
                   <td>${item.productName}</td>
-                  <td>${item.size}</td>
-                  <td>${item.color}</td>
+                  <td class="text-center">${item.size}</td>
+                  <td class="text-center">${item.color}</td>
                   <td class="text-right">${item.quantity}</td>
-                  <td class="text-right">Rs. ${item.price.toFixed(2)}</td>
-                  <td class="text-right">Rs. ${(item.price * item.quantity).toFixed(2)}</td>
+                  <td class="text-right amount">Rs. ${item.price.toFixed(2)}</td>
+                  <td class="text-right amount">Rs. ${(item.price * item.quantity).toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
         </div>
 
-        <div class="totals">
-          <div class="total-row">
-            <span>Subtotal:</span>
-            <span>Rs. ${subtotal.toFixed(2)}</span>
+        <div class="summary">
+          <div class="summary-row">
+            <span class="summary-label">Subtotal</span>
+            <span class="summary-value">Rs. ${subtotal.toFixed(2)}</span>
           </div>
-          <div class="total-row">
-            <span class="total-amount">Total:</span>
+          <div class="summary-row total-row">
+            <span class="summary-label" style="font-size: 14px;">Grand Total</span>
             <span class="total-amount">Rs. ${total.toFixed(2)}</span>
           </div>
         </div>
 
+        <div class="divider"></div>
+
         <div class="section">
-          <div class="section-title">Payment Details</div>
-          <div class="info-line">
-            <span>Amount Paid:</span>
-            <span class="total-amount">Rs. ${paid.toFixed(2)}</span>
+          <div class="section-title">Payment Information</div>
+          <div class="summary-row">
+            <span class="summary-label">Amount Paid</span>
+            <span class="summary-value amount">Rs. ${paid.toFixed(2)}</span>
           </div>
           ${balance > 0 ? `
-            <div class="info-line">
-              <span>Balance Due:</span>
+            <div class="summary-row">
+              <span class="summary-label">Balance Due</span>
               <span class="status-badge status-balance">Rs. ${balance.toFixed(2)}</span>
             </div>
           ` : balance < 0 ? `
-            <div class="info-line">
-              <span>Change:</span>
-              <span>Rs. ${Math.abs(balance).toFixed(2)}</span>
+            <div class="summary-row">
+              <span class="summary-label">Change/Refund</span>
+              <span class="status-badge status-change">Rs. ${Math.abs(balance).toFixed(2)}</span>
             </div>
           ` : `
-            <div class="info-line">
-              <span>Status:</span>
+            <div class="summary-row">
+              <span class="summary-label">Payment Status</span>
               <span class="status-badge status-paid">✓ Fully Paid</span>
             </div>
           `}
         </div>
 
         <div class="footer">
-          <p>Thank you for your purchase!</p>
-          <p style="font-size: 11px; margin-top: 20px;">This is a computer-generated bill</p>
+          <div class="thank-you">Thank You for Your Purchase!</div>
+          <div class="footer-line"></div>
+          <div class="footer-note">
+            This is a computer-generated invoice. Please retain for your records.<br>
+            For inquiries, contact us at DENNP Clothes
+          </div>
         </div>
       </div>
     </body>

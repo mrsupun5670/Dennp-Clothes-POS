@@ -415,21 +415,24 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
           <div class="wave-divider mt-auto"></div>
           <div class="diagonal-stripes h-10"></div>
         </div>
-
-        <script>
-          window.addEventListener('load', () => {
-            setTimeout(() => {
-              window.print();
-              setTimeout(() => window.close(), 500);
-            }, 500);
-          });
-        </script>
       </body>
       </html>
     `;
 
     printWindow.document.write(billHTML);
     printWindow.document.close();
+
+    // Wait for content to be fully loaded and rendered before printing
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+        // Close after print dialog closes
+        printWindow.onafterprint = () => {
+          printWindow.close();
+        };
+      }, 1000);
+    };
   } catch (error) {
     console.error("Error printing bill:", error);
     alert("Failed to print bill. Please try again.");

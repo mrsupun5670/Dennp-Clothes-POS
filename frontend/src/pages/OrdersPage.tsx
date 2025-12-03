@@ -187,11 +187,12 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Invoice - ${order.order_number}</title>
+        <title>Invoice - ${invoiceNumber}</title>
         <style>
           @page {
             size: A4;
-            margin: 8mm;
+            margin: 0;
+            padding: 0;
           }
           * {
             margin: 0;
@@ -199,300 +200,367 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
             box-sizing: border-box;
           }
           body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: white;
+            font-family: 'Poppins', 'Segoe UI', sans-serif;
+            background: #fff;
             color: #333;
+            line-height: 1.4;
           }
-          .bill-container {
-            max-width: 210mm;
-            margin: 0 auto;
-            padding: 12mm;
-            background: white;
+          .invoice-container {
+            width: 210mm;
+            height: 297mm;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f8f8 100%);
+            position: relative;
+            overflow: hidden;
           }
-          .header {
+          .invoice-wrapper {
+            padding: 20px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+          }
+          /* Decorative Elements */
+          .top-stripe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #c41e3a 0%, #e67e5f 100%);
+          }
+          .side-accent {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background: #c41e3a;
+          }
+          /* Header */
+          .header-section {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 3px solid #c41e3a;
+            margin-bottom: 25px;
+            padding-top: 15px;
           }
-          .shop-info {
-            flex: 1;
+          .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
           }
-          .logo {
-            font-size: 32px;
-            margin-bottom: 5px;
+          .logo-section img {
+            width: 70px;
+            height: 70px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
           }
-          .shop-info img {
-            max-width: 60px;
-            max-height: 60px;
-            margin-bottom: 10px;
-            display: block;
-          }
-          .shop-name {
-            font-size: 20px;
-            font-weight: bold;
+          .shop-branding h1 {
+            font-size: 28px;
+            font-weight: 700;
             color: #c41e3a;
             margin-bottom: 3px;
+            letter-spacing: -0.5px;
           }
-          .shop-details {
-            font-size: 10px;
-            color: #666;
-            line-height: 1.6;
-          }
-          .invoice-header {
-            text-align: right;
-            flex: 1;
-          }
-          .invoice-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #c41e3a;
-            margin-bottom: 8px;
-          }
-          .invoice-no {
-            font-size: 12px;
-            color: #666;
-            line-height: 1.6;
-          }
-          .invoice-no strong {
-            color: #333;
-          }
-          .content {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-          }
-          .bill-details {
-            flex: 1;
-          }
-          .customer-details {
-            flex: 1;
-            text-align: right;
-          }
-          .section-title {
+          .shop-branding p {
             font-size: 11px;
-            font-weight: bold;
-            color: #c41e3a;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            border-bottom: 2px solid #c41e3a;
-            padding-bottom: 5px;
+            color: #666;
+            line-height: 1.5;
           }
-          .detail-row {
-            font-size: 11px;
-            color: #555;
-            line-height: 1.8;
+          .invoice-badge {
+            background: linear-gradient(135deg, #c41e3a 0%, #a01429 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            text-align: right;
+            box-shadow: 0 4px 12px rgba(196, 30, 58, 0.15);
+          }
+          .invoice-badge h2 {
+            font-size: 22px;
+            font-weight: 700;
             margin-bottom: 5px;
           }
-          .detail-row strong {
+          .invoice-badge p {
+            font-size: 10px;
+            opacity: 0.95;
+            line-height: 1.6;
+          }
+          /* Details Section */
+          .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(196, 30, 58, 0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(196, 30, 58, 0.1);
+          }
+          .detail-block h3 {
+            font-size: 10px;
+            font-weight: 700;
+            color: #c41e3a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #c41e3a;
+          }
+          .detail-item {
+            font-size: 11px;
+            margin-bottom: 6px;
+            color: #444;
+          }
+          .detail-item strong {
             color: #333;
-            min-width: 60px;
+            font-weight: 600;
+            min-width: 85px;
             display: inline-block;
           }
-          .customer-details .detail-row {
-            text-align: right;
+          /* Items Table */
+          .items-header {
+            margin-top: 15px;
+            margin-bottom: 12px;
           }
-          .customer-details .detail-row strong {
-            float: left;
+          .items-header h3 {
+            font-size: 12px;
+            font-weight: 700;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
           }
-          .items-section {
-            margin: 20px 0;
-          }
-          .items-table {
+          table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
           }
-          .items-table thead {
-            background-color: #c41e3a;
+          thead {
+            background: linear-gradient(135deg, #c41e3a 0%, #a01429 100%);
             color: white;
           }
-          .items-table th {
-            padding: 10px 8px;
+          thead th {
+            padding: 12px 8px;
             text-align: left;
-            font-size: 11px;
-            font-weight: bold;
+            font-size: 10px;
+            font-weight: 700;
             text-transform: uppercase;
+            letter-spacing: 0.3px;
           }
-          .items-table th:nth-child(1),
-          .items-table th:nth-child(4),
-          .items-table th:nth-child(5),
-          .items-table th:nth-child(6),
-          .items-table th:nth-child(7) {
+          thead th:nth-child(1),
+          thead th:nth-child(4),
+          thead th:nth-child(5),
+          thead th:nth-child(6),
+          thead th:nth-child(7) {
             text-align: center;
           }
-          .items-table th:nth-child(6),
-          .items-table th:nth-child(7) {
+          thead th:nth-child(6),
+          thead th:nth-child(7) {
             text-align: right;
           }
-          .items-table tbody tr:nth-child(even) {
-            background-color: #f9f9f9;
+          tbody td {
+            padding: 11px 8px;
+            font-size: 11px;
+            color: #444;
+            border-bottom: 1px solid #e8e8e8;
           }
-          .summary-section {
+          tbody tr:nth-child(even) {
+            background-color: rgba(196, 30, 58, 0.02);
+          }
+          tbody tr:hover {
+            background-color: rgba(196, 30, 58, 0.04);
+          }
+          tbody tr:last-child td {
+            border-bottom: none;
+          }
+          /* Summary Section */
+          .summary-container {
             display: flex;
             justify-content: flex-end;
             margin-bottom: 20px;
           }
           .summary-box {
-            width: 280px;
+            width: 320px;
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            border: 2px solid rgba(196, 30, 58, 0.15);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
           }
-          .summary-row {
+          .summary-item {
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
             font-size: 12px;
-            padding: 8px 0;
-            border-bottom: 1px solid #e0e0e0;
+            color: #555;
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
           }
-          .summary-row.total {
-            border-top: 2px solid #c41e3a;
-            border-bottom: 2px solid #c41e3a;
-            padding: 12px 0;
-            margin: 8px 0;
+          .summary-item.total {
+            background: linear-gradient(135deg, #c41e3a 0%, #a01429 100%);
+            color: white;
             font-size: 16px;
-            font-weight: bold;
-            color: #c41e3a;
+            font-weight: 700;
+            padding: 12px 8px;
+            margin: 10px -16px -16px -16px;
+            border: none;
+            border-radius: 0 0 6px 6px;
+            justify-content: space-between;
+            letter-spacing: 0.3px;
           }
-          .summary-label {
-            text-align: left;
+          .summary-item.total strong {
+            font-weight: 700;
           }
-          .summary-value {
-            text-align: right;
+          .summary-item strong {
             font-weight: 600;
+            color: #333;
           }
-          .notes-section {
-            background-color: #f5f5f5;
+          .summary-item.total strong {
+            color: white;
+          }
+          /* Notes Section */
+          .notes-box {
+            background: linear-gradient(135deg, rgba(196, 30, 58, 0.08) 0%, rgba(196, 30, 58, 0.04) 100%);
             border-left: 4px solid #c41e3a;
             padding: 12px;
-            margin: 15px 0;
-            font-size: 10px;
-            color: #666;
-            line-height: 1.6;
+            margin-bottom: 12px;
+            border-radius: 4px;
           }
-          .notes-title {
-            font-weight: bold;
+          .notes-box h4 {
+            font-size: 10px;
+            font-weight: 700;
             color: #c41e3a;
-            margin-bottom: 8px;
             text-transform: uppercase;
-            font-size: 11px;
+            margin-bottom: 8px;
+            letter-spacing: 0.3px;
           }
-          .notes-item {
-            margin-bottom: 5px;
-          }
-          .footer {
-            text-align: center;
-            padding-top: 10px;
-            border-top: 1px solid #e0e0e0;
-            margin-top: 15px;
-            font-size: 11px;
-            color: #c41e3a;
-            font-weight: bold;
-          }
-          .footer-text {
-            font-size: 10px;
+          .note-item {
+            font-size: 9px;
             color: #666;
-            margin-top: 5px;
+            margin-bottom: 4px;
+            line-height: 1.4;
+          }
+          /* Footer */
+          .footer-section {
+            margin-top: auto;
+            text-align: center;
+            padding-top: 12px;
+            border-top: 1px solid #e0e0e0;
+          }
+          .footer-thank-you {
+            font-size: 12px;
+            font-weight: 700;
+            color: #c41e3a;
+            margin-bottom: 4px;
+          }
+          .footer-tagline {
+            font-size: 9px;
+            color: #888;
+            font-style: italic;
           }
           @media print {
             body { margin: 0; padding: 0; }
-            .bill-container { margin: 0; padding: 12mm; }
-            @page { margin: 8mm; }
+            .invoice-container { margin: 0; box-shadow: none; }
+            @page { margin: 0; }
           }
         </style>
       </head>
       <body>
-        <div class="bill-container">
-          <!-- Header -->
-          <div class="header">
-            <div class="shop-info">
-              <img src="dennep png.png" alt="Logo" style="max-width: 60px; max-height: 60px; margin-bottom: 10px;">
-              <div class="shop-name">${shopName || "DENNEP CLOTHES"}</div>
-              <div class="shop-details">
-                ${shopAddress ? `${shopAddress}<br>` : ""}
-                ${shopPhone ? `Phone: ${shopPhone}` : ""}
+        <div class="invoice-container">
+          <div class="top-stripe"></div>
+          <div class="side-accent"></div>
+          <div class="invoice-wrapper">
+            <!-- Header -->
+            <div class="header-section">
+              <div class="logo-section">
+                <img src="dennep png.png" alt="Logo">
+                <div class="shop-branding">
+                  <h1>${shopName || "DENNEP CLOTHES"}</h1>
+                  <p>${shopAddress || "Quality Clothing Store"}<br>${shopPhone || ""}</p>
+                </div>
+              </div>
+              <div class="invoice-badge">
+                <h2>INVOICE</h2>
+                <p><strong>No.:</strong> ${invoiceNumber}<br><strong>Date:</strong> ${dateStr}</p>
               </div>
             </div>
-            <div class="invoice-header">
-              <div class="invoice-title">INVOICE</div>
-            </div>
-          </div>
 
-          <!-- Bill and Customer Details -->
-          <div class="content">
-            <div class="bill-details">
-              <div class="section-title">Bill Details</div>
-              <div class="detail-row"><strong>Invoice No.:</strong> ${invoiceNumber}</div>
-              <div class="detail-row"><strong>Date:</strong> ${dateStr}</div>
-              <div class="detail-row"><strong>Time:</strong> ${timeStr}</div>
-            </div>
-            <div class="customer-details">
-              <div class="section-title">Customer Details</div>
-              <div class="detail-row"><strong>Customer ID:</strong> C${order.customer_id || "N/A"}</div>
-              <div class="detail-row"><strong>Name:</strong> ${order.recipient_name || "N/A"}</div>
-              <div class="detail-row"><strong>Phone:</strong> ${order.recipient_phone || order.customer_mobile || "N/A"}</div>
-              <div class="detail-row" style="font-size: 10px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
-                <strong>Address:</strong><br>
-                ${addressStr}
+            <!-- Details Grid -->
+            <div class="details-grid">
+              <div class="detail-block">
+                <h3>Transaction Details</h3>
+                <div class="detail-item"><strong>Invoice:</strong> ${invoiceNumber}</div>
+                <div class="detail-item"><strong>Date:</strong> ${dateStr}</div>
+                <div class="detail-item"><strong>Time:</strong> ${timeStr}</div>
+              </div>
+              <div class="detail-block">
+                <h3>Customer Information</h3>
+                <div class="detail-item"><strong>Customer ID:</strong> C${order.customer_id || "—"}</div>
+                <div class="detail-item"><strong>Name:</strong> ${order.recipient_name || "—"}</div>
+                <div class="detail-item"><strong>Phone:</strong> ${order.recipient_phone || order.customer_mobile || "—"}</div>
+                <div class="detail-item"><strong>Address:</strong> ${addressStr.substring(0, 40)}${addressStr.length > 40 ? "..." : ""}</div>
               </div>
             </div>
-          </div>
 
-          <!-- Items Table -->
-          <div class="items-section">
-            <table class="items-table">
+            <!-- Items Table -->
+            <div class="items-header">
+              <h3>Order Items</h3>
+            </div>
+            <table>
               <thead>
                 <tr>
                   <th>Code</th>
-                  <th>Item Name</th>
+                  <th>Item Description</th>
                   <th>Size</th>
                   <th>Color</th>
                   <th>Qty</th>
                   <th>Unit Price</th>
-                  <th>Total</th>
+                  <th>Amount</th>
                 </tr>
               </thead>
               <tbody>
                 ${itemsHtml}
               </tbody>
             </table>
-          </div>
 
-          <!-- Summary Section -->
-          <div class="summary-section">
-            <div class="summary-box">
-              <div class="summary-row">
-                <div class="summary-label">Subtotal:</div>
-                <div class="summary-value">Rs. ${parseFloat(String(order.total_amount)).toFixed(2)}</div>
-              </div>
-              ${
-                order.delivery_charge
-                  ? `<div class="summary-row">
-                  <div class="summary-label">Delivery Charge:</div>
-                  <div class="summary-value">Rs. ${parseFloat(String(order.delivery_charge)).toFixed(2)}</div>
-                </div>`
-                  : ""
-              }
-              <div class="summary-row total">
-                <div class="summary-label">TOTAL AMOUNT</div>
-                <div class="summary-value">Rs. ${parseFloat(String(order.final_amount)).toFixed(2)}</div>
+            <!-- Summary -->
+            <div class="summary-container">
+              <div class="summary-box">
+                <div class="summary-item">
+                  <strong>Subtotal</strong>
+                  <span>Rs. ${parseFloat(String(order.total_amount)).toFixed(2)}</span>
+                </div>
+                ${
+                  order.delivery_charge
+                    ? `<div class="summary-item">
+                      <strong>Delivery</strong>
+                      <span>Rs. ${parseFloat(String(order.delivery_charge)).toFixed(2)}</span>
+                    </div>`
+                    : ""
+                }
+                <div class="summary-item total">
+                  <strong>TOTAL AMOUNT</strong>
+                  <strong>Rs. ${parseFloat(String(order.final_amount)).toFixed(2)}</strong>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Notes Section -->
-          <div class="notes-section">
-            <div class="notes-title">Important Notes:</div>
-            <div class="notes-item">✓ No payments returns without original invoice and items in good condition</div>
-            <div class="notes-item">✓ Products are non-refundable after 7 days of purchase</div>
-            <div class="notes-item">✓ Damaged items must be reported within 24 hours of delivery</div>
-            <div class="notes-item">✓ For exchanges, items must be unused and with original packaging</div>
-          </div>
+            <!-- Notes -->
+            <div class="notes-box">
+              <h4>📋 Important Notes</h4>
+              <div class="note-item">✓ Return & Exchange valid within 7 days with original invoice</div>
+              <div class="note-item">✓ Damaged items must be reported within 24 hours</div>
+              <div class="note-item">✓ Items must be unused and in original packaging for exchange</div>
+            </div>
 
-          <!-- Footer -->
-          <div class="footer">
-            Thank you for your purchase!
-            <div class="footer-text">Visit us again for quality clothing at DENNEP CLOTHES</div>
+            <!-- Footer -->
+            <div class="footer-section">
+              <div class="footer-thank-you">Thank You for Your Purchase!</div>
+              <div class="footer-tagline">Visit us again for premium quality clothing 👕👗</div>
+            </div>
           </div>
         </div>
 

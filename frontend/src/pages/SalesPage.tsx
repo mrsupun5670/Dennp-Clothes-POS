@@ -309,7 +309,7 @@ interface ColorOption {
 
 const SalesPage: React.FC = () => {
   // Shop context
-  const { shopId } = useShop();
+  const { shopId, shopName } = useShop();
 
   // State Management
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
@@ -323,6 +323,9 @@ const SalesPage: React.FC = () => {
 
   // Track previously paid amount when editing order
   const [previouslyPaidAmount, setPreviouslyPaidAmount] = useState(0);
+
+  // Track current order number for invoice generation
+  const [currentOrderNumber, setCurrentOrderNumber] = useState<string | null>(null);
 
   // New payment system states
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
@@ -1276,6 +1279,9 @@ const SalesPage: React.FC = () => {
 
         savedOrderId = orderResult.data?.order_id;
 
+        // Store the order number for invoice generation
+        setCurrentOrderNumber(orderNumber);
+
         // Save payment if amount is paid
         if (newPayment > 0) {
           if (paymentMethod === "cash") {
@@ -1397,6 +1403,8 @@ const SalesPage: React.FC = () => {
       subtotal,
       total,
       paidAmount,
+      orderNumber: currentOrderNumber || undefined,
+      shopName: shopName || undefined,
     });
 
     printContent(html, "Order Bill");
@@ -1434,6 +1442,8 @@ const SalesPage: React.FC = () => {
       subtotal,
       total,
       paidAmount,
+      orderNumber: currentOrderNumber || undefined,
+      shopName: shopName || undefined,
     });
 
     // Use Sri Lankan datetime for PDF filename

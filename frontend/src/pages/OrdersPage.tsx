@@ -192,7 +192,6 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
           @page {
             size: A4;
             margin: 0;
-            padding: 0;
           }
           * {
             margin: 0;
@@ -200,324 +199,292 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
             box-sizing: border-box;
           }
           body {
-            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: white;
-            color: #1a1a1a;
+            color: #222;
           }
-          .invoice-wrapper {
+          .page {
             width: 210mm;
             height: 297mm;
             background: white;
-            position: relative;
+            padding: 15px;
             display: flex;
             flex-direction: column;
           }
-          /* Header Background */
-          .header-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 120px;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            z-index: 0;
-          }
-          .content {
-            position: relative;
-            z-index: 1;
-            padding: 25px 30px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-          }
-          /* Top Header */
-          .header {
-            margin-bottom: 30px;
-            padding-top: 10px;
-          }
-          .header-top {
+          /* Top Banner */
+          .banner {
+            background: linear-gradient(90deg, #c41e3a 0%, #e85d47 100%);
+            padding: 20px;
+            border-radius: 6px;
+            color: white;
+            margin-bottom: 20px;
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
-          }
-          .shop-info {
-            display: flex;
-            gap: 15px;
             align-items: center;
           }
-          .logo-wrapper {
-            width: 60px;
-            height: 60px;
+          .banner-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+          }
+          .banner-logo {
+            width: 50px;
+            height: 50px;
             background: white;
-            border-radius: 8px;
-            padding: 5px;
+            border-radius: 6px;
+            padding: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
           }
-          .logo-wrapper img {
+          .banner-logo img {
             width: 100%;
             height: 100%;
             object-fit: contain;
           }
-          .brand-info h1 {
-            font-size: 24px;
+          .banner-text h1 {
+            font-size: 22px;
             font-weight: 700;
-            color: white;
-            margin-bottom: 3px;
-            letter-spacing: -0.5px;
+            margin-bottom: 2px;
           }
-          .brand-info p {
-            font-size: 11px;
-            color: rgba(255,255,255,0.8);
-            line-height: 1.4;
-          }
-          .invoice-no {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            color: white;
-            padding: 12px 18px;
-            border-radius: 6px;
-            text-align: right;
-            border: 1px solid rgba(255,255,255,0.2);
-          }
-          .invoice-no .label {
+          .banner-text p {
             font-size: 10px;
-            opacity: 0.8;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            opacity: 0.9;
           }
-          .invoice-no .number {
-            font-size: 20px;
+          .banner-right {
+            text-align: right;
+          }
+          .banner-right h2 {
+            font-size: 28px;
             font-weight: 700;
-            margin-top: 4px;
+            margin-bottom: 5px;
+            letter-spacing: 2px;
           }
-          /* Customer & Bill Info */
-          .info-grid {
+          .banner-right p {
+            font-size: 11px;
+            opacity: 0.9;
+          }
+          /* Main Content */
+          .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+          }
+          /* Top Section */
+          .top-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 25px;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 8px;
-          }
-          .info-block h3 {
-            font-size: 11px;
-            font-weight: 700;
-            color: #1a1a1a;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #c41e3a;
-          }
-          .info-item {
-            font-size: 11px;
-            margin-bottom: 8px;
-            line-height: 1.6;
-          }
-          .info-item label {
-            font-weight: 600;
-            color: #1a1a1a;
-            display: inline-block;
-            min-width: 70px;
-          }
-          .info-item value {
-            color: #555;
-          }
-          /* Items Section */
-          .items-section {
-            margin-bottom: 25px;
-          }
-          .section-title {
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-            color: #1a1a1a;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #c41e3a;
-          }
-          .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-          }
-          .items-table thead {
-            background: #f0f0f0;
-            border-top: 2px solid #c41e3a;
-            border-bottom: 2px solid #c41e3a;
-          }
-          .items-table th {
-            padding: 12px 8px;
-            text-align: left;
-            font-size: 10px;
-            font-weight: 700;
-            color: #1a1a1a;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .items-table th:nth-child(1),
-          .items-table th:nth-child(4),
-          .items-table th:nth-child(5),
-          .items-table th:nth-child(6),
-          .items-table th:nth-child(7) {
-            text-align: center;
-          }
-          .items-table th:nth-child(6),
-          .items-table th:nth-child(7) {
-            text-align: right;
-          }
-          .items-table td {
-            padding: 11px 8px;
-            font-size: 11px;
-            color: #555;
-            border-bottom: 1px solid #e5e5e5;
-          }
-          .items-table td:nth-child(1),
-          .items-table td:nth-child(4),
-          .items-table td:nth-child(5),
-          .items-table td:nth-child(6),
-          .items-table td:nth-child(7) {
-            text-align: center;
-          }
-          .items-table td:nth-child(6),
-          .items-table td:nth-child(7) {
-            text-align: right;
-          }
-          .items-table tbody tr:nth-child(odd) {
-            background: rgba(196, 30, 58, 0.02);
-          }
-          /* Summary Box */
-          .summary-wrapper {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 25px;
-          }
-          .summary-table {
-            width: 300px;
-            border-collapse: collapse;
-          }
-          .summary-table td {
-            padding: 10px 12px;
-            font-size: 12px;
-            border-bottom: 1px solid #e5e5e5;
-          }
-          .summary-table td:first-child {
-            text-align: left;
-            font-weight: 600;
-            color: #1a1a1a;
-          }
-          .summary-table td:last-child {
-            text-align: right;
-            color: #555;
-          }
-          .summary-table tr.total td {
-            background: linear-gradient(135deg, #c41e3a 0%, #a01429 100%);
-            color: white;
-            font-size: 14px;
-            font-weight: 700;
-            padding: 14px 12px;
-            border: none;
-          }
-          /* Notes */
-          .terms {
-            background: #fafafa;
-            border-left: 3px solid #c41e3a;
-            padding: 14px;
+            gap: 20px;
             margin-bottom: 20px;
-            border-radius: 4px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #c41e3a;
           }
-          .terms-title {
+          .info-box h3 {
             font-size: 10px;
             font-weight: 700;
             color: #c41e3a;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
           }
-          .terms-item {
+          .info-row {
+            display: flex;
+            margin-bottom: 6px;
+            font-size: 11px;
+          }
+          .info-row label {
+            font-weight: 600;
+            color: #222;
+            min-width: 65px;
+          }
+          .info-row value {
+            color: #555;
+            flex: 1;
+          }
+          /* Items Table */
+          .items-box {
+            margin-bottom: 20px;
+          }
+          .items-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #c41e3a;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
             font-size: 10px;
+          }
+          table thead {
+            background: linear-gradient(90deg, #c41e3a 0%, #e85d47 100%);
+            color: white;
+          }
+          table th {
+            padding: 10px 6px;
+            text-align: left;
+            font-weight: 600;
+            border: none;
+          }
+          table th:nth-child(1),
+          table th:nth-child(4),
+          table th:nth-child(5),
+          table th:nth-child(6),
+          table th:nth-child(7) {
+            text-align: center;
+          }
+          table th:nth-child(6),
+          table th:nth-child(7) {
+            text-align: right;
+          }
+          table tbody tr {
+            border-bottom: 1px solid #e8e8e8;
+          }
+          table tbody tr:nth-child(even) {
+            background: #f5f5f5;
+          }
+          table td {
+            padding: 9px 6px;
+            color: #333;
+          }
+          table td:nth-child(1),
+          table td:nth-child(4),
+          table td:nth-child(5),
+          table td:nth-child(6),
+          table td:nth-child(7) {
+            text-align: center;
+          }
+          table td:nth-child(6),
+          table td:nth-child(7) {
+            text-align: right;
+          }
+          /* Amount Section */
+          .amount-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+          }
+          .amount-box {
+            width: 280px;
+          }
+          .amount-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 11px;
+            border-bottom: 1px solid #e0e0e0;
+          }
+          .amount-row.total {
+            background: linear-gradient(90deg, #c41e3a 0%, #e85d47 100%);
+            color: white;
+            padding: 12px 8px;
+            margin: 0 -8px;
+            font-size: 13px;
+            font-weight: 700;
+            border: none;
+          }
+          .amount-row label {
+            font-weight: 600;
+            color: #222;
+          }
+          .amount-row.total label {
+            color: white;
+          }
+          /* Notes */
+          .notes-box {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-left: 4px solid #c41e3a;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 3px;
+          }
+          .notes-title {
+            font-size: 9px;
+            font-weight: 700;
+            color: #c41e3a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+          }
+          .note {
+            font-size: 9px;
             color: #666;
-            margin-bottom: 5px;
-            line-height: 1.5;
+            margin-bottom: 4px;
+            line-height: 1.4;
           }
           /* Footer */
           .footer {
-            margin-top: auto;
-            padding-top: 15px;
-            border-top: 1px solid #e5e5e5;
             text-align: center;
+            padding-top: 10px;
+            margin-top: auto;
+            border-top: 1px solid #e0e0e0;
+            font-size: 10px;
           }
-          .footer-message {
-            font-size: 11px;
+          .footer-msg {
             font-weight: 700;
-            color: #1a1a1a;
-            margin-bottom: 4px;
+            color: #c41e3a;
+            margin-bottom: 3px;
           }
-          .footer-subtext {
+          .footer-sub {
             font-size: 9px;
-            color: #999;
+            color: #888;
           }
           @media print {
-            body { margin: 0; padding: 0; background: white; }
-            .invoice-wrapper { margin: 0; box-shadow: none; }
+            body { margin: 0; padding: 0; }
+            .page { margin: 0; padding: 15px; }
             @page { margin: 0; }
           }
         </style>
       </head>
       <body>
-        <div class="invoice-wrapper">
-          <div class="header-bg"></div>
-
-          <div class="content">
-            <!-- Header -->
-            <div class="header">
-              <div class="header-top">
-                <div class="shop-info">
-                  <div class="logo-wrapper">
-                    <img src="dennep png.png" alt="Logo">
-                  </div>
-                  <div class="brand-info">
-                    <h1>${shopName || "DENNEP CLOTHES"}</h1>
-                    <p>${shopAddress || ""}<br>${shopPhone || ""}</p>
-                  </div>
-                </div>
-                <div class="invoice-no">
-                  <div class="label">Invoice</div>
-                  <div class="number">${invoiceNumber}</div>
-                </div>
+        <div class="page">
+          <!-- Banner -->
+          <div class="banner">
+            <div class="banner-left">
+              <div class="banner-logo">
+                <img src="dennep png.png" alt="Logo">
+              </div>
+              <div class="banner-text">
+                <h1>${shopName || "DENNEP CLOTHES"}</h1>
+                <p>${shopAddress || "Quality Clothing"}<br>${shopPhone || ""}</p>
               </div>
             </div>
+            <div class="banner-right">
+              <h2>INVOICE</h2>
+              <p>${invoiceNumber}</p>
+            </div>
+          </div>
 
-            <!-- Customer & Bill Info -->
-            <div class="info-grid">
-              <div class="info-block">
-                <h3>Transaction</h3>
-                <div class="info-item"><label>Invoice:</label> <value>${invoiceNumber}</value></div>
-                <div class="info-item"><label>Date:</label> <value>${dateStr}</value></div>
-                <div class="info-item"><label>Time:</label> <value>${timeStr}</value></div>
+          <!-- Main Content -->
+          <div class="main">
+            <!-- Top Section -->
+            <div class="top-section">
+              <div class="info-box">
+                <h3>📋 Bill Information</h3>
+                <div class="info-row"><label>Invoice</label><value>${invoiceNumber}</value></div>
+                <div class="info-row"><label>Date</label><value>${dateStr}</value></div>
+                <div class="info-row"><label>Time</label><value>${timeStr}</value></div>
               </div>
-              <div class="info-block">
-                <h3>Customer</h3>
-                <div class="info-item"><label>ID:</label> <value>C${order.customer_id || "—"}</value></div>
-                <div class="info-item"><label>Name:</label> <value>${order.recipient_name || "—"}</value></div>
-                <div class="info-item"><label>Phone:</label> <value>${order.recipient_phone || order.customer_mobile || "—"}</value></div>
-                <div class="info-item"><label>Address:</label> <value>${addressStr.substring(0, 35)}${addressStr.length > 35 ? "..." : ""}</value></div>
+              <div class="info-box">
+                <h3>👤 Customer Details</h3>
+                <div class="info-row"><label>ID</label><value>C${order.customer_id || "—"}</value></div>
+                <div class="info-row"><label>Name</label><value>${order.recipient_name || "—"}</value></div>
+                <div class="info-row"><label>Phone</label><value>${order.recipient_phone || order.customer_mobile || "—"}</value></div>
+                <div class="info-row"><label>Address</label><value style="font-size: 9px;">${addressStr.substring(0, 38)}${addressStr.length > 38 ? "..." : ""}</value></div>
               </div>
             </div>
 
             <!-- Items -->
-            <div class="items-section">
-              <div class="section-title">Order Items</div>
-              <table class="items-table">
+            <div class="items-box">
+              <div class="items-title">📦 Order Items</div>
+              <table>
                 <thead>
                   <tr>
                     <th style="width: 8%;">Code</th>
-                    <th style="width: 28%;">Item</th>
+                    <th style="width: 28%;">Item Name</th>
                     <th style="width: 12%;">Size</th>
                     <th style="width: 12%;">Color</th>
                     <th style="width: 8%;">Qty</th>
@@ -531,40 +498,40 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
               </table>
             </div>
 
-            <!-- Summary -->
-            <div class="summary-wrapper">
-              <table class="summary-table">
-                <tr>
-                  <td>Subtotal</td>
-                  <td>Rs. ${parseFloat(String(order.total_amount)).toFixed(2)}</td>
-                </tr>
+            <!-- Amount -->
+            <div class="amount-section">
+              <div class="amount-box">
+                <div class="amount-row">
+                  <label>Subtotal:</label>
+                  <span>Rs. ${parseFloat(String(order.total_amount)).toFixed(2)}</span>
+                </div>
                 ${
                   order.delivery_charge
-                    ? `<tr>
-                      <td>Delivery Charge</td>
-                      <td>Rs. ${parseFloat(String(order.delivery_charge)).toFixed(2)}</td>
-                    </tr>`
+                    ? `<div class="amount-row">
+                      <label>Delivery:</label>
+                      <span>Rs. ${parseFloat(String(order.delivery_charge)).toFixed(2)}</span>
+                    </div>`
                     : ""
                 }
-                <tr class="total">
-                  <td>TOTAL AMOUNT</td>
-                  <td>Rs. ${parseFloat(String(order.final_amount)).toFixed(2)}</td>
-                </tr>
-              </table>
+                <div class="amount-row total">
+                  <label>TOTAL</label>
+                  <span>Rs. ${parseFloat(String(order.final_amount)).toFixed(2)}</span>
+                </div>
+              </div>
             </div>
 
-            <!-- Terms -->
-            <div class="terms">
-              <div class="terms-title">Terms & Conditions</div>
-              <div class="terms-item">• Valid return within 7 days with original invoice</div>
-              <div class="terms-item">• Damage claim must be reported within 24 hours</div>
-              <div class="terms-item">• Exchange valid for unused items in original packaging</div>
+            <!-- Notes -->
+            <div class="notes-box">
+              <div class="notes-title">⚠️ Important Notes</div>
+              <div class="note">• Returns accepted within 7 days with original invoice</div>
+              <div class="note">• Report damages within 24 hours of delivery</div>
+              <div class="note">• Exchanges require unused items in original packaging</div>
             </div>
 
             <!-- Footer -->
             <div class="footer">
-              <div class="footer-message">Thank You for Your Business!</div>
-              <div class="footer-subtext">We value your patronage. Visit us again for quality fashion.</div>
+              <div class="footer-msg">✨ Thank You for Shopping with Us!</div>
+              <div class="footer-sub">We truly appreciate your business. Visit again for premium quality clothing!</div>
             </div>
           </div>
         </div>

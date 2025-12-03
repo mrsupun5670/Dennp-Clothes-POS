@@ -30,7 +30,7 @@ export const printContent = (htmlContent: string, title: string) => {
 export const saveAsPDF = async (
   htmlContent: string,
   fileName: string,
-  folderName: 'inventory' | 'products' | 'orders' | 'customers' | 'sales'
+  folderName: 'inventory' | 'products' | 'orders' | 'customers' | 'sales' | 'reports'
 ) => {
   try {
     // Get export path from environment variable or use default
@@ -399,6 +399,382 @@ export const generateProductsHTML = (products: any[]) => {
         </tbody>
       </table>
       <p class="footer">Total Products: ${products.length}</p>
+    </body>
+    </html>
+  `;
+};
+
+/**
+ * Generate sales report HTML
+ */
+export const generateSalesReportHTML = (items: any[]) => {
+  const totalSales = items.reduce((sum, item) => sum + (item.total_price || 0), 0);
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Sales Report</title>
+      <style>
+        @page { size: A4; margin: 0; }
+        body {
+          font-family: Arial, sans-serif;
+          padding: 20px;
+          margin: 0;
+          width: 210mm;
+          box-sizing: border-box;
+        }
+        h1 { color: #ef4444; text-align: center; margin-bottom: 10px; }
+        .date { text-align: center; color: #666; margin-bottom: 20px; }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+          page-break-inside: auto;
+        }
+        tr { page-break-inside: avoid; page-break-after: auto; }
+        th {
+          background-color: #374151;
+          color: white;
+          padding: 10px;
+          text-align: left;
+          border: 1px solid #1f2937;
+        }
+        td { padding: 8px; border: 1px solid #d1d5db; }
+        tr:nth-child(even) { background-color: #f9fafb; }
+        .text-right { text-align: right; }
+        .summary {
+          margin-top: 30px;
+          padding: 15px;
+          background-color: #f3f4f6;
+          border: 1px solid #d1d5db;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Sales Report</h1>
+      <p class="date">Generated on ${new Date().toLocaleString()}</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th class="text-right">Quantity</th>
+            <th class="text-right">Price per Unit (Rs.)</th>
+            <th class="text-right">Total (Rs.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => `
+            <tr>
+              <td>${item.product_name || 'N/A'}</td>
+              <td class="text-right">${item.quantity || 0}</td>
+              <td class="text-right">Rs. ${(item.sold_price || 0).toFixed(2)}</td>
+              <td class="text-right">Rs. ${((item.total_price || 0).toFixed(2))}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <div class="summary">
+        <p><strong>Total Sales:</strong> Rs. ${totalSales.toFixed(2)}</p>
+        <p><strong>Total Items Sold:</strong> ${items.length}</p>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+/**
+ * Generate product costs report HTML
+ */
+export const generateProductCostsReportHTML = (costs: any) => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Product Costs Report</title>
+      <style>
+        @page { size: A4; margin: 0; }
+        body {
+          font-family: Arial, sans-serif;
+          padding: 20px;
+          margin: 0;
+          width: 210mm;
+          box-sizing: border-box;
+        }
+        h1 { color: #ef4444; text-align: center; margin-bottom: 10px; }
+        .date { text-align: center; color: #666; margin-bottom: 20px; }
+        .section {
+          margin-top: 30px;
+          padding: 15px;
+          background-color: #f3f4f6;
+          border: 1px solid #d1d5db;
+        }
+        .section h2 {
+          margin-top: 0;
+          color: #374151;
+          border-bottom: 2px solid #d1d5db;
+          padding-bottom: 10px;
+        }
+        .info-line {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px 0;
+          border-bottom: 1px solid #d1d5db;
+        }
+        .info-line:last-child {
+          border-bottom: none;
+        }
+        .text-right { text-align: right; }
+        .amount { font-weight: bold; color: #ef4444; }
+      </style>
+    </head>
+    <body>
+      <h1>Product Costs Report</h1>
+      <p class="date">Generated on ${new Date().toLocaleString()}</p>
+      <div class="section">
+        <h2>Cost Breakdown</h2>
+        <div class="info-line">
+          <span>Total Product Cost:</span>
+          <span class="amount text-right">Rs. ${(costs.totalProductCost || 0).toFixed(2)}</span>
+        </div>
+        <div class="info-line">
+          <span>Total Print Cost:</span>
+          <span class="amount text-right">Rs. ${(costs.totalPrintCost || 0).toFixed(2)}</span>
+        </div>
+        <div class="info-line">
+          <span>Total Material Cost:</span>
+          <span class="amount text-right">Rs. ${(costs.totalMaterialCost || 0).toFixed(2)}</span>
+        </div>
+        <div class="info-line">
+          <span><strong>Grand Total Costs:</strong></span>
+          <span class="amount text-right"><strong>Rs. ${(costs.totalProductCost + costs.totalPrintCost + costs.totalMaterialCost || 0).toFixed(2)}</strong></span>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+/**
+ * Generate delivery costs report HTML
+ */
+export const generateDeliveryCostsReportHTML = (costs: any) => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Delivery Costs Report</title>
+      <style>
+        @page { size: A4; margin: 0; }
+        body {
+          font-family: Arial, sans-serif;
+          padding: 20px;
+          margin: 0;
+          width: 210mm;
+          box-sizing: border-box;
+        }
+        h1 { color: #ef4444; text-align: center; margin-bottom: 10px; }
+        .date { text-align: center; color: #666; margin-bottom: 20px; }
+        .section {
+          margin-top: 30px;
+          padding: 15px;
+          background-color: #f3f4f6;
+          border: 1px solid #d1d5db;
+        }
+        .section h2 {
+          margin-top: 0;
+          color: #374151;
+          border-bottom: 2px solid #d1d5db;
+          padding-bottom: 10px;
+        }
+        .info-line {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px 0;
+          border-bottom: 1px solid #d1d5db;
+        }
+        .info-line:last-child {
+          border-bottom: none;
+        }
+        .text-right { text-align: right; }
+        .amount { font-weight: bold; color: #ef4444; }
+      </style>
+    </head>
+    <body>
+      <h1>Delivery Costs Report</h1>
+      <p class="date">Generated on ${new Date().toLocaleString()}</p>
+      <div class="section">
+        <h2>Delivery Charges</h2>
+        <div class="info-line">
+          <span>Total Delivery Cost:</span>
+          <span class="amount text-right">Rs. ${(costs.totalDeliveryCost || 0).toFixed(2)}</span>
+        </div>
+        <div class="info-line">
+          <span>Number of Deliveries:</span>
+          <span class="text-right">${costs.totalDeliveries || 0}</span>
+        </div>
+        <div class="info-line">
+          <span>Average Delivery Cost:</span>
+          <span class="amount text-right">Rs. ${((costs.totalDeliveryCost || 0) / (costs.totalDeliveries || 1)).toFixed(2)}</span>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+/**
+ * Generate profits report HTML
+ */
+export const generateProfitsReportHTML = (data: any) => {
+  const totalRevenue = data.totalRevenue || 0;
+  const totalCosts = data.totalCosts || 0;
+  const totalProfit = totalRevenue - totalCosts;
+  const profitMargin = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(2) : 0;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Profits Report</title>
+      <style>
+        @page { size: A4; margin: 0; }
+        body {
+          font-family: Arial, sans-serif;
+          padding: 20px;
+          margin: 0;
+          width: 210mm;
+          box-sizing: border-box;
+        }
+        h1 { color: #ef4444; text-align: center; margin-bottom: 10px; }
+        .date { text-align: center; color: #666; margin-bottom: 20px; }
+        .section {
+          margin-top: 30px;
+          padding: 15px;
+          background-color: #f3f4f6;
+          border: 1px solid #d1d5db;
+        }
+        .section h2 {
+          margin-top: 0;
+          color: #374151;
+          border-bottom: 2px solid #d1d5db;
+          padding-bottom: 10px;
+        }
+        .info-line {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px 0;
+          border-bottom: 1px solid #d1d5db;
+        }
+        .info-line:last-child {
+          border-bottom: none;
+        }
+        .text-right { text-align: right; }
+        .amount { font-weight: bold; }
+        .profit { color: #16a34a; }
+        .loss { color: #dc2626; }
+      </style>
+    </head>
+    <body>
+      <h1>Profits Report</h1>
+      <p class="date">Generated on ${new Date().toLocaleString()}</p>
+      <div class="section">
+        <h2>Profit & Loss Summary</h2>
+        <div class="info-line">
+          <span>Total Revenue:</span>
+          <span class="amount text-right">Rs. ${totalRevenue.toFixed(2)}</span>
+        </div>
+        <div class="info-line">
+          <span>Total Costs:</span>
+          <span class="amount text-right">Rs. ${totalCosts.toFixed(2)}</span>
+        </div>
+        <div class="info-line">
+          <span><strong>Net Profit:</strong></span>
+          <span class="amount ${totalProfit >= 0 ? 'profit' : 'loss'} text-right"><strong>Rs. ${totalProfit.toFixed(2)}</strong></span>
+        </div>
+        <div class="info-line">
+          <span><strong>Profit Margin:</strong></span>
+          <span class="amount ${totalProfit >= 0 ? 'profit' : 'loss'} text-right"><strong>${profitMargin}%</strong></span>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+/**
+ * Generate orders report HTML
+ */
+export const generateOrdersHTML = (orders: any[]) => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Orders Report</title>
+      <style>
+        @page { size: A4; margin: 0; }
+        body {
+          font-family: Arial, sans-serif;
+          padding: 20px;
+          margin: 0;
+          width: 210mm;
+          box-sizing: border-box;
+        }
+        h1 { color: #ef4444; text-align: center; margin-bottom: 10px; }
+        .date { text-align: center; color: #666; margin-bottom: 20px; }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+          page-break-inside: auto;
+        }
+        tr { page-break-inside: avoid; page-break-after: auto; }
+        th {
+          background-color: #374151;
+          color: white;
+          padding: 10px;
+          text-align: left;
+          border: 1px solid #1f2937;
+        }
+        td { padding: 8px; border: 1px solid #d1d5db; }
+        tr:nth-child(even) { background-color: #f9fafb; }
+        .text-right { text-align: right; }
+        .footer {
+          margin-top: 30px;
+          color: #666;
+          font-size: 12px;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Orders Report</h1>
+      <p class="date">Generated on ${new Date().toLocaleString()}</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Order Number</th>
+            <th>Total Items</th>
+            <th class="text-right">Total Amount (Rs.)</th>
+            <th>Payment Status</th>
+            <th>Order Status</th>
+            <th>Order Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orders.map(o => `
+            <tr>
+              <td>${o.order_id}</td>
+              <td>${o.order_number}</td>
+              <td>${o.total_items}</td>
+              <td class="text-right">Rs. ${o.final_amount ? parseFloat(o.final_amount).toFixed(2) : '0.00'}</td>
+              <td>${o.payment_status}</td>
+              <td>${o.order_status}</td>
+              <td>${new Date(o.order_date).toLocaleDateString()}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <p class="footer">Total Orders: ${orders.length}</p>
     </body>
     </html>
   `;

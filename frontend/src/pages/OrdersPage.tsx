@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
+import { saveAsPDF, generateOrdersHTML } from "../utils/exportUtils";
 
 interface OrderItem {
   product_id: number;
@@ -1025,6 +1026,16 @@ const OrdersPage: React.FC = () => {
               Rs. {totalValue.toFixed(2)}
             </p>
           </div>
+          <button
+            onClick={() => {
+              const html = generateOrdersHTML(filteredOrders);
+              saveAsPDF(html, 'orders_report', 'orders');
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
+            title="Export as PDF"
+          >
+            📄 Export
+          </button>
         </div>
       </div>
 

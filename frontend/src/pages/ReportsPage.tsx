@@ -3,7 +3,7 @@ import { useShop } from "../context/ShopContext";
 import { getSoldItems, getCostBreakdown, getCostDetails, getMultiPeriodBreakdown } from "../services/reportsService";
 import type { SoldItem, CostBreakdown, CostDetails } from "../services/reportsService";
 
-type TimePeriod = "today" | "week" | "month" | "3months" | "12months";
+type TimePeriod = "today" | "week" | "month" | "3months" | "12months" | "custom";
 type ReportView = "sold-items" | "costs";
 type SortBy = "name" | "category";
 
@@ -19,6 +19,8 @@ const ReportsPage: React.FC = () => {
   const [costBreakdown, setCostBreakdown] = useState<CostBreakdown | null>(null);
   const [costDetails, setCostDetails] = useState<CostDetails[]>([]);
   const [loading, setLoading] = useState(false);
+  const [customFromDate, setCustomFromDate] = useState<string>("");
+  const [customToDate, setCustomToDate] = useState<string>("");
 
   // Use ref to prevent duplicate requests in strict mode
   const loadDataRef = useRef(false);
@@ -28,25 +30,37 @@ const ReportsPage: React.FC = () => {
     const today = new Date();
     let startDate = new Date();
 
-    switch (period) {
-      case "today":
-        startDate = new Date(today);
-        break;
-      case "week":
-        startDate.setDate(today.getDate() - 7);
-        break;
-      case "month":
-        // Go back to the 1st of current month
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        break;
-      case "3months":
-        // Go back 3 months to the 1st
-        startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1);
-        break;
-      case "12months":
-        // Go back 12 months to the 1st
-        startDate = new Date(today.getFullYear() - 1, today.getMonth(), 1);
-        break;
+    if (period === "custom") {
+      // Use custom dates if provided
+      if (customFromDate && customToDate) {
+        return {
+          startDate: customFromDate,
+          endDate: customToDate,
+        };
+      }
+      // Fall back to month if custom dates not set
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    } else {
+      switch (period) {
+        case "today":
+          startDate = new Date(today);
+          break;
+        case "week":
+          startDate.setDate(today.getDate() - 7);
+          break;
+        case "month":
+          // Go back to the 1st of current month
+          startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+          break;
+        case "3months":
+          // Go back 3 months to the 1st
+          startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+          break;
+        case "12months":
+          // Go back 12 months to the 1st
+          startDate = new Date(today.getFullYear() - 1, today.getMonth(), 1);
+          break;
+      }
     }
 
     startDate.setHours(0, 0, 0, 0);
@@ -63,7 +77,7 @@ const ReportsPage: React.FC = () => {
   useEffect(() => {
     // Reset ref when dependencies change to allow new requests
     loadDataRef.current = false;
-  }, [shopId, timePeriod]);
+  }, [shopId, timePeriod, customFromDate, customToDate]);
 
   useEffect(() => {
     // Prevent duplicate requests in React Strict Mode
@@ -146,7 +160,7 @@ const ReportsPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-3">
             <div className="space-y-1">
               <label className="block text-xs font-semibold text-red-400">Time Period</label>
               <select value={timePeriod} onChange={(e) => setTimePeriod(e.target.value as TimePeriod)} className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none">
@@ -155,8 +169,43 @@ const ReportsPage: React.FC = () => {
                 <option value="month">Last Month</option>
                 <option value="3months">Last 3 Months</option>
                 <option value="12months">Last 12 Months</option>
+                <option value="custom">Custom Range</option>
               </select>
             </div>
+
+            {/* Custom Date Range Pickers */}
+            {timePeriod === "custom" && (
+              <div className="flex items-end gap-2">
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-red-400">From Date</label>
+                  <input
+                    type="date"
+                    value={customFromDate}
+                    onChange={(e) => setCustomFromDate(e.target.value)}
+                    className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-red-400">To Date</label>
+                  <input
+                    type="date"
+                    value={customToDate}
+                    onChange={(e) => setCustomToDate(e.target.value)}
+                    className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    // Reload data with new custom dates
+                    loadDataRef.current = false;
+                  }}
+                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-semibold transition-colors"
+                  title="Apply custom date range"
+                >
+                  Apply 🔄
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

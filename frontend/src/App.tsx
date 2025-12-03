@@ -11,12 +11,11 @@ import CustomersPage from "./pages/CustomersPage";
 import OrdersPage from "./pages/OrdersPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import BankAccountsPage from "./pages/BankAccountsPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
 import StockPage from "./pages/StockPage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
 
-type PageType = "sales" | "products" | "inventory" | "customers" | "orders" | "payments" | "bankaccounts" | "analytics" | "stock" | "reports" | "settings";
+type PageType = "sales" | "products" | "inventory" | "customers" | "orders" | "payments" | "bankaccounts" | "stock" | "reports" | "settings";
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>("sales");
@@ -50,8 +49,6 @@ function App() {
         return <PaymentsPage />;
       case "bankaccounts":
         return <BankAccountsPage />;
-      case "analytics":
-        return <AnalyticsPage />;
       case "stock":
         return <StockPage />;
       case "reports":

@@ -199,7 +199,7 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
             box-sizing: border-box;
           }
           body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Arial, sans-serif;
             background: white;
             color: #333;
           }
@@ -209,255 +209,306 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
             background: white;
             display: flex;
             flex-direction: column;
+            position: relative;
           }
-          /* Header with Logo and Shop Info */
-          .header {
-            background: #2a2a2a;
+          /* Top striped background */
+          .header-bg {
+            background: repeating-linear-gradient(
+              45deg,
+              #3a3a3a,
+              #3a3a3a 10px,
+              #454545 10px,
+              #454545 20px
+            );
             color: white;
-            padding: 20px 30px;
+            padding: 25px 30px;
+            position: relative;
+            z-index: 1;
+          }
+          .header-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
+            gap: 50px;
             align-items: center;
-            border-bottom: 4px solid #c41e3a;
           }
-          .header-left {
+          .logo-section {
             display: flex;
             align-items: center;
             gap: 15px;
           }
-          .logo-box {
-            width: 70px;
-            height: 70px;
+          .logo {
+            width: 50px;
+            height: 50px;
             background: white;
-            border-radius: 4px;
-            padding: 6px;
+            border-radius: 3px;
+            padding: 5px;
             display: flex;
             align-items: center;
             justify-content: center;
           }
-          .logo-box img {
+          .logo img {
             width: 100%;
             height: 100%;
             object-fit: contain;
           }
-          .shop-info h1 {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 2px;
-            letter-spacing: 0.5px;
+          .company-name {
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 1px;
           }
-          .shop-info p {
-            font-size: 11px;
-            opacity: 0.9;
-            line-height: 1.4;
+          .company-subtitle {
+            font-size: 9px;
+            opacity: 0.8;
           }
-          .header-right {
+          .invoice-right {
             text-align: right;
-          }
-          .invoice-title {
-            font-size: 36px;
-            font-weight: 700;
-            color: #fff;
-            margin-bottom: 5px;
+            font-size: 32px;
+            font-weight: bold;
             letter-spacing: 2px;
           }
-          .invoice-num {
-            background: #c41e3a;
-            color: white;
-            padding: 6px 15px;
-            font-size: 12px;
-            font-weight: 600;
-            display: inline-block;
-            border-radius: 3px;
+          /* Red Wave divider */
+          .wave {
+            position: absolute;
+            bottom: -15px;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: white;
+            z-index: 2;
           }
-          /* Content Area */
-          .content {
+          .wave::after {
+            content: '';
+            position: absolute;
+            top: -15px;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: #c41e3a;
+            clip-path: polygon(0 50%, 2% 48%, 4% 46%, 6% 45%, 8% 45%, 10% 46%, 12% 48%, 14% 50%, 16% 52%, 18% 54%, 20% 55%, 22% 55%, 24% 54%, 26% 52%, 28% 50%, 30% 48%, 32% 47%, 34% 47%, 36% 48%, 38% 50%, 40% 52%, 42% 54%, 44% 55%, 46% 55%, 48% 54%, 50% 52%, 52% 50%, 54% 48%, 56% 47%, 58% 47%, 60% 48%, 62% 50%, 64% 52%, 66% 54%, 68% 55%, 70% 55%, 72% 54%, 74% 52%, 76% 50%, 78% 48%, 80% 47%, 82% 47%, 84% 48%, 86% 50%, 88% 52%, 90% 54%, 92% 55%, 94% 55%, 96% 54%, 98% 52%, 100% 50%, 100% 0%, 0% 0%);
+          }
+          /* Main content area */
+          .main-content {
             flex: 1;
-            padding: 25px 30px;
+            padding: 40px 30px 30px;
             display: flex;
             flex-direction: column;
           }
-          /* Top Info Section */
-          .top-info {
+          /* Info section */
+          .info-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 40px;
+            gap: 50px;
             margin-bottom: 25px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
           }
-          .info-section h3 {
-            font-size: 11px;
-            font-weight: 700;
+          .info-group {
+            font-size: 12px;
+          }
+          .info-group-title {
+            font-weight: bold;
             color: #c41e3a;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-          }
-          .info-item {
-            display: flex;
             margin-bottom: 8px;
             font-size: 11px;
+            text-transform: uppercase;
+          }
+          .info-item {
+            margin-bottom: 4px;
+            line-height: 1.6;
           }
           .info-label {
-            font-weight: 600;
-            color: #333;
-            min-width: 60px;
+            font-weight: bold;
+            display: inline;
           }
           .info-value {
             color: #666;
-            flex: 1;
+            display: inline;
           }
-          /* Items Table */
-          .items-section {
-            margin-bottom: 20px;
+          .info-right {
+            text-align: right;
           }
-          .items-title {
-            font-size: 11px;
-            font-weight: 700;
-            color: #c41e3a;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 10px;
-          }
+          /* Table */
           table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            font-size: 11px;
           }
           table thead {
             background: #c41e3a;
             color: white;
           }
-          table thead th {
-            padding: 10px;
+          table th {
+            padding: 10px 8px;
             text-align: left;
-            font-weight: 600;
-            border: none;
+            font-weight: bold;
+            font-size: 10px;
           }
-          table thead th:nth-child(3),
-          table thead th:nth-child(4),
-          table thead th:nth-child(5),
-          table thead th:nth-child(6),
-          table thead th:nth-child(7) {
+          table th:nth-child(2),
+          table th:nth-child(3),
+          table th:nth-child(4) {
             text-align: center;
-          }
-          table thead th:nth-child(6),
-          table thead th:nth-child(7) {
-            text-align: right;
           }
           table tbody tr {
-            border-bottom: 1px solid #e8e8e8;
+            border-bottom: 1px solid #ddd;
           }
           table tbody tr:nth-child(even) {
-            background: #f9f9f9;
+            background: #f8f8f8;
           }
           table td {
-            padding: 10px;
+            padding: 10px 8px;
             color: #333;
           }
+          table td:nth-child(2),
           table td:nth-child(3),
-          table td:nth-child(4),
-          table td:nth-child(5),
-          table td:nth-child(6),
-          table td:nth-child(7) {
+          table td:nth-child(4) {
             text-align: center;
           }
-          table td:nth-child(6),
-          table td:nth-child(7) {
-            text-align: right;
+          table td:nth-child(1) {
+            width: 25%;
           }
-          /* Amount Section */
-          .amount-section {
+          table td:nth-child(2) {
+            width: 25%;
+          }
+          table td:nth-child(3) {
+            width: 20%;
+          }
+          table td:nth-child(4) {
+            width: 30%;
+          }
+          /* Totals section */
+          .totals-section {
             display: flex;
             justify-content: flex-end;
             margin-bottom: 20px;
           }
-          .amount-box {
-            width: 250px;
+          .totals-box {
+            width: 280px;
+            font-size: 11px;
           }
-          .amount-row {
+          .total-row {
             display: flex;
             justify-content: space-between;
             padding: 8px 12px;
-            font-size: 11px;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #ddd;
           }
-          .amount-row.total {
-            background: #c41e3a;
+          .total-row.grand-total {
+            background: #333;
             color: white;
+            font-weight: bold;
             padding: 12px;
-            font-size: 13px;
-            font-weight: 700;
-            border: none;
-            border-radius: 3px;
+            margin-top: 5px;
           }
-          .amount-label {
-            font-weight: 600;
+          .total-label {
+            font-weight: bold;
             color: #333;
           }
-          .amount-row.total .amount-label {
+          .total-row.grand-total .total-label {
             color: white;
           }
-          /* Payment Method Section */
+          /* Payment section */
           .payment-section {
+            margin-bottom: 20px;
+            padding: 12px;
             background: #f5f5f5;
-            padding: 12px 15px;
-            border-radius: 3px;
-            margin-bottom: 15px;
             font-size: 10px;
           }
-          .payment-section p {
+          .payment-item {
             margin-bottom: 4px;
-            color: #555;
           }
           .payment-label {
-            font-weight: 600;
-            color: #333;
+            font-weight: bold;
           }
-          /* Notes Section */
+          /* Notes section */
           .notes-section {
-            background: #fff5f5;
-            border: 1px solid #ffe0e0;
-            border-left: 4px solid #c41e3a;
-            padding: 12px;
-            margin-bottom: 15px;
-            border-radius: 3px;
+            margin-bottom: 20px;
+            font-size: 10px;
           }
           .notes-title {
-            font-size: 10px;
-            font-weight: 700;
-            color: #c41e3a;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-weight: bold;
             margin-bottom: 6px;
+            color: #333;
           }
           .note-item {
-            font-size: 9px;
-            color: #666;
             margin-bottom: 3px;
-            line-height: 1.3;
+            color: #666;
+            line-height: 1.4;
           }
           /* Footer */
-          .footer {
+          .footer-top {
             text-align: center;
-            padding-top: 12px;
-            margin-top: auto;
-            border-top: 1px solid #e0e0e0;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+          }
+          .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
             font-size: 10px;
+            text-align: center;
           }
-          .thank-you {
-            font-weight: 700;
-            color: #c41e3a;
-            margin-bottom: 2px;
-            font-size: 11px;
+          .signature-box {
+            width: 45%;
           }
-          .contact-info {
+          .signature-line {
+            border-top: 1px solid #333;
+            margin-top: 40px;
+            margin-bottom: 5px;
+          }
+          .contact-section {
+            background: #f5f5f5;
+            padding: 15px 30px;
             font-size: 9px;
-            color: #888;
-            line-height: 1.4;
+            line-height: 1.6;
+            color: #333;
+          }
+          .contact-title {
+            font-weight: bold;
+            color: #c41e3a;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+          }
+          .contact-item {
+            margin-bottom: 4px;
+          }
+          .contact-item-label {
+            display: inline-block;
+            min-width: 70px;
+            font-weight: bold;
+          }
+          /* Bottom striped footer */
+          .footer-stripe {
+            background: repeating-linear-gradient(
+              45deg,
+              #3a3a3a,
+              #3a3a3a 10px,
+              #454545 10px,
+              #454545 20px
+            );
+            height: 40px;
+            position: relative;
+          }
+          .footer-wave {
+            position: absolute;
+            top: -15px;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: white;
+          }
+          .footer-wave::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: #c41e3a;
+            clip-path: polygon(0 50%, 2% 52%, 4% 54%, 6% 55%, 8% 55%, 10% 54%, 12% 52%, 14% 50%, 16% 48%, 18% 46%, 20% 45%, 22% 45%, 24% 46%, 26% 48%, 28% 50%, 30% 52%, 32% 53%, 34% 53%, 36% 52%, 38% 50%, 40% 48%, 42% 46%, 44% 45%, 46% 45%, 48% 46%, 50% 48%, 52% 50%, 54% 52%, 56% 53%, 58% 53%, 60% 52%, 62% 50%, 64% 48%, 66% 46%, 68% 45%, 70% 45%, 72% 46%, 74% 48%, 76% 50%, 78% 52%, 80% 53%, 82% 53%, 84% 52%, 86% 50%, 88% 48%, 90% 46%, 92% 45%, 94% 45%, 96% 46%, 98% 48%, 100% 50%, 100% 100%, 0% 100%);
           }
           @media print {
             body { margin: 0; padding: 0; }
@@ -468,97 +519,97 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
       </head>
       <body>
         <div class="page">
-          <!-- Header -->
-          <div class="header">
-            <div class="header-left">
-              <div class="logo-box">
-                <img src="dennep png.png" alt="Dennep Logo">
+          <!-- Header with Striped Background -->
+          <div class="header-bg">
+            <div class="header-content">
+              <div class="logo-section">
+                <div class="logo">
+                  <img src="dennep png.png" alt="Logo">
+                </div>
+                <div>
+                  <div class="company-name">DENNEP CLOTHES</div>
+                  <div class="company-subtitle">Quality Fashion</div>
+                </div>
               </div>
-              <div class="shop-info">
-                <h1>DENNEP CLOTHES</h1>
-                <p>${shopAddress || "Premium Quality Clothing"}<br>${shopPhone || ""}</p>
-              </div>
+              <div class="invoice-right">INVOICE</div>
             </div>
-            <div class="header-right">
-              <div class="invoice-title">INVOICE</div>
-              <div class="invoice-num">${invoiceNumber}</div>
-            </div>
+            <div class="wave"></div>
           </div>
 
-          <!-- Content -->
-          <div class="content">
-            <!-- Top Information -->
-            <div class="top-info">
-              <div class="info-section">
-                <h3>Bill Details</h3>
+          <!-- Main Content -->
+          <div class="main-content">
+            <!-- Invoice Details -->
+            <div class="info-section">
+              <div class="info-group">
+                <div class="info-group-title">Invoice To:</div>
                 <div class="info-item">
-                  <span class="info-label">Invoice</span>
-                  <span class="info-value">${invoiceNumber}</span>
+                  <span class="info-label">${order.recipient_name || "Customer"}</span>
                 </div>
                 <div class="info-item">
-                  <span class="info-label">Date</span>
-                  <span class="info-value">${dateStr}</span>
+                  <span class="info-label">${order.recipient_phone || order.customer_mobile || ""}</span>
                 </div>
                 <div class="info-item">
-                  <span class="info-label">Time</span>
-                  <span class="info-value">${timeStr}</span>
+                  <span class="info-value">${order.delivery_line1 || ""}</span>
                 </div>
               </div>
-              <div class="info-section" style="text-align: right;">
-                <h3 style="text-align: right;">Customer Information</h3>
-                <div class="info-item" style="flex-direction: row-reverse;">
-                  <span class="info-value" style="text-align: right; flex: 1; padding-right: 10px;">C${order.customer_id || "—"}</span>
-                  <span class="info-label" style="text-align: left; margin-left: 10px;">Customer ID</span>
+              <div class="info-group info-right">
+                <div style="background: #c41e3a; color: white; padding: 8px 12px; display: inline-block; margin-bottom: 8px; font-size: 10px; font-weight: bold;">
+                  INVOICE NO #${order.order_id}
                 </div>
-                <div class="info-item" style="flex-direction: row-reverse;">
-                  <span class="info-value" style="text-align: right; flex: 1; padding-right: 10px;">${order.recipient_name || "—"}</span>
-                  <span class="info-label" style="text-align: left; margin-left: 10px;">Name</span>
+                <div class="info-item">
+                  <span class="info-label">Account No</span><br>
+                  <span class="info-value">${order.order_id}</span>
                 </div>
-                <div class="info-item" style="flex-direction: row-reverse;">
-                  <span class="info-value" style="text-align: right; flex: 1; padding-right: 10px; font-size: 10px;">${order.recipient_phone || order.customer_mobile || "—"}</span>
-                  <span class="info-label" style="text-align: left; margin-left: 10px;">Phone</span>
+                <div class="info-item">
+                  <span class="info-label">Invoice Date</span><br>
+                  <span class="info-value">${dateStr}</span>
                 </div>
               </div>
             </div>
 
             <!-- Items Table -->
-            <div class="items-section">
-              <div class="items-title">Item Description</div>
-              <table>
-                <thead>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item description</th>
+                  <th>Qty</th>
+                  <th>Unit Price</th>
+                  <th>Total Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(order.items || [])
+                  .map(
+                    (item) => `
                   <tr>
-                    <th style="width: 10%;">Code</th>
-                    <th style="width: 26%;">Item Description</th>
-                    <th style="width: 10%;">Size</th>
-                    <th style="width: 10%;">Color</th>
-                    <th style="width: 8%;">Qty</th>
-                    <th style="width: 18%;">Unit Price</th>
-                    <th style="width: 18%;">Total Price</th>
+                    <td>${item.product_name || ""}<br><span style="font-size: 9px; color: #999;">Size: ${item.size_name || "—"} | Color: ${item.color_name || "—"}</span></td>
+                    <td>${item.quantity}</td>
+                    <td>Rs. ${parseFloat(String(item.sold_price)).toFixed(2)}</td>
+                    <td>Rs. ${parseFloat(String(item.total_price)).toFixed(2)}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  ${itemsHtml}
-                </tbody>
-              </table>
-            </div>
+                `
+                  )
+                  .join("")}
+              </tbody>
+            </table>
 
-            <!-- Amount Box -->
-            <div class="amount-section">
-              <div class="amount-box">
-                <div class="amount-row">
-                  <span class="amount-label">Sub Total</span>
+            <!-- Totals -->
+            <div class="totals-section">
+              <div class="totals-box">
+                <div class="total-row">
+                  <span class="total-label">Sub Total</span>
                   <span>Rs. ${parseFloat(String(order.total_amount)).toFixed(2)}</span>
                 </div>
                 ${
                   order.delivery_charge
-                    ? `<div class="amount-row">
-                      <span class="amount-label">Delivery</span>
+                    ? `<div class="total-row">
+                      <span class="total-label">Delivery</span>
                       <span>Rs. ${parseFloat(String(order.delivery_charge)).toFixed(2)}</span>
                     </div>`
                     : ""
                 }
-                <div class="amount-row total">
-                  <span class="amount-label">Grand Total</span>
+                <div class="total-row grand-total">
+                  <span class="total-label">GRAND TOTAL</span>
                   <span>Rs. ${parseFloat(String(order.final_amount)).toFixed(2)}</span>
                 </div>
               </div>
@@ -566,27 +617,47 @@ const printBill = async (order: Order, shopName: string, shopAddress?: string, s
 
             <!-- Payment Method -->
             <div class="payment-section">
-              <p><span class="payment-label">Payment Method:</span> Bank Transfer</p>
-              <p><span class="payment-label">Account:</span> DENNEP CLOTHES</p>
-              <p><span class="payment-label">Payment Date:</span> ${dateStr}</p>
+              <div class="payment-item"><span class="payment-label">Payment method</span></div>
+              <div class="payment-item">Account: Bank Transfer - DENNEP CLOTHES</div>
+              <div class="payment-item">Payment Date: ${dateStr}</div>
             </div>
 
             <!-- Notes -->
             <div class="notes-section">
-              <div class="notes-title">Terms & Conditions</div>
-              <div class="note-item">• No Payments Returns - All sales are final unless agreed otherwise</div>
-              <div class="note-item">• Returns accepted within 7 days with original invoice and unused items</div>
-              <div class="note-item">• Report any damages within 24 hours of delivery</div>
+              <div class="notes-title">Thanks for your business!</div>
+              <div class="note-item">Terms & Conditions: Returns accepted within 7 days with original invoice and unused items in original packaging. Report damages within 24 hours of delivery. No payment returns - all sales are final unless agreed otherwise.</div>
             </div>
 
-            <!-- Footer -->
-            <div class="footer">
-              <div class="thank-you">Thanks for your business!</div>
-              <div class="contact-info">
-                For inquiries, contact us at ${shopPhone || "contact number"}<br>
-                We appreciate your trust in DENNEP CLOTHES
+            <!-- Signature -->
+            <div class="signature-section">
+              <div class="signature-box">
+                <div class="signature-line"></div>
+                <div>AUTHORIZED SIGNATURE</div>
+              </div>
+              <div class="signature-box">
+                <div class="signature-line"></div>
+                <div>CUSTOMER SIGNATURE</div>
               </div>
             </div>
+
+            <!-- Contact Info -->
+            <div class="contact-section">
+              <div class="contact-title">CONTACT</div>
+              <div class="contact-item">
+                <span class="contact-item-label">Phone</span>${shopPhone || "+94 XX XXX XXXX"}
+              </div>
+              <div class="contact-item">
+                <span class="contact-item-label">Website</span>${shopAddress || "www.dennepclothes.com"}
+              </div>
+              <div class="contact-item">
+                <span class="contact-item-label">Address</span>Colombo, Sri Lanka
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Stripe -->
+          <div class="footer-stripe">
+            <div class="footer-wave"></div>
           </div>
         </div>
 

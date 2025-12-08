@@ -32,7 +32,18 @@
       "shell": {
         "all": false,
         "open": true,
-        "execute": true
+        "execute": true,
+        "scope": [
+          {
+            "name": "powershell-print",
+            "cmd": "powershell",
+            "args": [
+              "-NoProfile",
+              "-Command",
+              { "validator": "Start-Process -FilePath .+" }
+            ]
+          }
+        ]
       },
       "dialog": {
         "all": false,

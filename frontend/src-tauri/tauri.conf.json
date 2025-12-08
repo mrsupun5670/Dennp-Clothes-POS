@@ -40,6 +40,9 @@
         "message": true,
         "ask": true,
         "confirm": true
+      },
+      "os": {
+        "all": true
       }
     },
     "windows": [

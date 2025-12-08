@@ -1,5 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom/client";
+import { Command } from "@tauri-apps/api/shell";
+import { writeTextFile } from "@tauri-apps/api/fs";
+import { join } from "@tauri-apps/api/path";
+import { tempdir } from "@tauri-apps/api/os";
 import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
@@ -327,19 +331,13 @@ const OrdersPage: React.FC = () => {
     }
   }, [selectedOrderId, showOrderModal, shopId]);
 
-  // Print bill function - has access to orderItems state
   const printBill = async (order: Order) => {
     try {
-      console.log("Starting printBill function", order);
-      console.log("Order items from state:", orderItems);
-
-      // Validation: Check if payment is fully paid
       if (order.payment_status !== "fully_paid") {
         alert("❌ Payment must be fully paid before printing bill");
         return;
       }
 
-      // Validation: Check if complete address exists
       const hasCompleteAddress =
         order.delivery_line1 &&
         order.delivery_city &&
@@ -348,28 +346,17 @@ const OrdersPage: React.FC = () => {
         order.delivery_postal_code;
 
       if (!hasCompleteAddress) {
-        alert("❌ Complete delivery address is required to print bill (Line 1, City, District, Province, Postal Code)");
+        alert(
+          "❌ Complete delivery address is required to print bill (Line 1, City, District, Province, Postal Code)"
+        );
         return;
       }
 
-      // Check if items are loaded
       if (!orderItems || orderItems.length === 0) {
         alert("❌ Order items not loaded. Please wait for items to load.");
         return;
       }
 
-      console.log("Opening print window...");
-      const printWindow = window.open("", "_blank");
-      if (!printWindow) {
-        alert("Please allow popups to print bill");
-        return;
-      }
-      console.log("Print window opened successfully");
-
-      // Prepare order data for InvoicePrint component
-      console.log("printBill - Items being passed to invoice:", orderItems);
-
-      // Validate payment method
       const paymentMethod = orderPayments[order.order_id];
       const validPaymentMethods = ["cash", "card", "online", "bank", "other"];
       const paymentMethodValue = validPaymentMethods.includes(paymentMethod)
@@ -397,74 +384,80 @@ const OrdersPage: React.FC = () => {
         delivery_line1: order.delivery_line1,
         delivery_line2: order.delivery_line2,
         delivery_city: order.delivery_city,
-        items: orderItems
+        items: orderItems,
       };
 
-      // Generate filename with invoice number and customer ID
-      const invoiceNumber = `IN${order.order_number}`;
-      const customerId = order.customer_id
-        ? `C${String(order.customer_id).padStart(7, '0')}`
-        : 'CXXXXXX';
-      const filename = `${invoiceNumber}_${customerId}`;
+      const printContainer = document.createElement("div");
+      printContainer.style.position = "fixed";
+      printContainer.style.left = "-9999px";
+      document.body.appendChild(printContainer);
 
-      // Write initial HTML with Tailwind CDN
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${filename}</title>
-          <script src="https://cdn.tailwindcss.com"></script>
-          <style>
-            @page {
-              size: A4 portrait;
-              margin: 15mm;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-              font-family: Arial, sans-serif;
-            }
-            @media print {
-              body { margin: 0; padding: 0; background: white; }
-              * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            }
-          </style>
-        </head>
-        <body>
-          <div id="invoice-root"></div>
-        </body>
-        </html>
-      `);
-      printWindow.document.close();
+      const root = ReactDOM.createRoot(printContainer);
+      root.render(React.createElement(InvoicePrint, { order: invoiceData }));
 
-      // Wait for Tailwind to load
-      setTimeout(() => {
-        const rootElement = printWindow.document.getElementById('invoice-root');
-        if (rootElement) {
-          const root = ReactDOM.createRoot(rootElement);
-          root.render(
-            React.createElement(InvoicePrint, { order: invoiceData })
+      setTimeout(async () => {
+        try {
+          const invoiceHTML = printContainer.innerHTML;
+          const tempDirPath = await tempdir();
+          const tempFilePath = await join(
+            tempDirPath,
+            `invoice-${Date.now()}.html`
           );
 
-          // Wait for React to render, then print
-          setTimeout(() => {
-            printWindow.print();
-            printWindow.onafterprint = () => {
-              printWindow.close();
-            };
-          }, 500);
+          const fullHtml = `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Invoice</title>
+              <script src="https://cdn.tailwindcss.com"></script>
+              <style>
+                @page {
+                  size: A4 portrait;
+                  margin: 15mm;
+                }
+                body {
+                  margin: 0;
+                  padding: 0;
+                  font-family: Arial, sans-serif;
+                }
+                @media print {
+                  body { margin: 0; padding: 0; background: white; }
+                  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                }
+              </style>
+            </head>
+            <body>
+              ${invoiceHTML}
+            </body>
+            </html>
+          `;
+
+          await writeTextFile(tempFilePath, fullHtml);
+
+          const command = new Command("powershell", [
+            "-NoProfile",
+            "-Command",
+            `Start-Process -FilePath "${tempFilePath}" -Verb Print`,
+          ]);
+          const output = await command.execute();
+
+          if (output.code !== 0) {
+            alert(`Failed to print bill: ${output.stderr}`);
+          } else {
+            alert("✅ Bill sent to printer successfully!");
+          }
+        } catch (e) {
+          console.error("Error printing bill:", e);
+          alert("Failed to print bill.");
+        } finally {
+          document.body.removeChild(printContainer);
         }
       }, 1000);
-
-      console.log("Print bill completed successfully");
     } catch (error) {
-      console.error("Error printing bill:", error);
-      if (error instanceof Error) {
-        console.error("Error stack:", error.stack);
-      }
-      alert(`Failed to print bill: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
+      console.error("Error preparing for print:", error);
+      alert("Failed to prepare bill for printing.");
     }
   };
 

@@ -1,5 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom/client";
+import { Command } from "@tauri-apps/api/shell";
+import { writeTextFile } from "@tauri-apps/api/fs";
+import { join } from "@tauri-apps/api/path";
+import { tempdir } from "@tauri-apps/api/os";
 import BankPaymentModal, {
   BankPaymentData,
 } from "../components/BankPaymentModal";
@@ -1613,7 +1617,9 @@ const SalesPage: React.FC = () => {
       if (balance > 0) {
         setMessage({
           type: "error",
-          text: `Cannot print bill. Balance due: Rs. ${balance.toFixed(2)}. Full or more payment required to print.`,
+          text: `Cannot print bill. Balance due: Rs. ${balance.toFixed(
+            2
+          )}. Full or more payment required to print.`,
         });
         return;
       }
@@ -1627,7 +1633,9 @@ const SalesPage: React.FC = () => {
       if (bankBalance > 0) {
         setMessage({
           type: "error",
-          text: `Cannot print bill. Balance due: Rs. ${bankBalance.toFixed(2)}. Full or more payment required to print.`,
+          text: `Cannot print bill. Balance due: Rs. ${bankBalance.toFixed(
+            2
+          )}. Full or more payment required to print.`,
         });
         return;
       }
@@ -1646,16 +1654,6 @@ const SalesPage: React.FC = () => {
         orderNumber =
           orderNumberData.orderNumber || `${String(Date.now()).slice(-9)}`;
         setCurrentOrderNumber(orderNumber);
-      }
-
-      // Open print window and use InvoicePrint component
-      const printWindow = window.open("", "_blank");
-      if (!printWindow) {
-        setMessage({
-          type: "error",
-          text: "Please allow popups to print bill",
-        });
-        return;
       }
 
       // Calculate final amount with delivery charge
@@ -1687,195 +1685,199 @@ const SalesPage: React.FC = () => {
         })),
       };
 
-      // Generate filename with invoice number and customer ID
-      const invoiceNumber = `IN${orderNumber}`;
-      const customerId = selectedCustomer.customer_id
-        ? `C${String(selectedCustomer.customer_id).padStart(7, "0")}`
-        : "CXXXXXX";
-      const filename = `${invoiceNumber}_${customerId}`;
+      // Create a hidden div to render the invoice
+      const printContainer = document.createElement("div");
+      printContainer.style.position = "fixed";
+      printContainer.style.left = "-9999px";
+      document.body.appendChild(printContainer);
 
-      // Write initial HTML with Tailwind CDN
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${filename}</title>
-          <script src="https://cdn.tailwindcss.com"></script>
-          <style>
-            @page {
-              size: A4 portrait;
-              margin: 15mm;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-              font-family: Arial, sans-serif;
-            }
-            @media print {
-              body { margin: 0; padding: 0; background: white; }
-              * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            }
-          </style>
-        </head>
-        <body>
-          <div id="invoice-root"></div>
-        </body>
-        </html>
-      `);
-      printWindow.document.close();
+      const root = ReactDOM.createRoot(printContainer);
+      root.render(React.createElement(InvoicePrint, { order: invoiceData }));
+      
+      // Wait for rendering and then print
+      setTimeout(async () => {
+        try {
+          const invoiceHTML = printContainer.innerHTML;
+          const tempDirPath = await tempdir();
+          const tempFilePath = await join(tempDirPath, `invoice-${Date.now()}.html`);
 
-      // Wait for Tailwind to load
-      setTimeout(() => {
-        const rootElement = printWindow.document.getElementById("invoice-root");
-        if (rootElement) {
-          const root = ReactDOM.createRoot(rootElement);
-          root.render(
-            React.createElement(InvoicePrint, { order: invoiceData })
-          );
-
-          // Wait for React to render, then print
-          setTimeout(() => {
-            printWindow.print();
-
-            // Save order to database after user closes print dialog
-            printWindow.onafterprint = async () => {
-              printWindow.close();
-
-              try {
-                // Get payment amount based on payment method
-                let newPayment = 0;
-                if (paymentMethod === "cash") {
-                  newPayment = parseFloat(paidAmount) || 0;
-                } else if (paymentMethod === "bank") {
-                  newPayment =
-                    parseFloat(bankPaymentDetails?.paidAmount || "0") || 0;
+          const fullHtml = `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Invoice</title>
+              <script src="https://cdn.tailwindcss.com"></script>
+              <style>
+                @page {
+                  size: A4 portrait;
+                  margin: 15mm;
                 }
+                body {
+                  margin: 0;
+                  padding: 0;
+                  font-family: Arial, sans-serif;
+                }
+                @media print {
+                  body { margin: 0; padding: 0; background: white; }
+                  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                }
+              </style>
+            </head>
+            <body>
+              ${invoiceHTML}
+            </body>
+            </html>
+          `;
 
-                // Get Sri Lankan datetime
-                const sriLankanDateTime = getSriLankanDateTime();
+          await writeTextFile(tempFilePath, fullHtml);
 
-                // Create order payload
-                const orderPayload = {
+          // Use PowerShell to print silently on Windows
+          const command = new Command('powershell', ['-NoProfile', '-Command', `Start-Process -FilePath "${tempFilePath}" -Verb Print`]);
+          const output = await command.execute();
+
+          if (output.code !== 0) {
+            setMessage({
+              type: "error",
+              text: `Failed to print bill: ${output.stderr}`,
+            });
+          } else {
+             // Save order to database after printing
+            // Get payment amount based on payment method
+            let newPayment = 0;
+            if (paymentMethod === "cash") {
+              newPayment = parseFloat(paidAmount) || 0;
+            } else if (paymentMethod === "bank") {
+              newPayment =
+                parseFloat(bankPaymentDetails?.paidAmount || "0") || 0;
+            }
+
+            // Get Sri Lankan datetime
+            const sriLankanDateTime = getSriLankanDateTime();
+
+            // Create order payload
+            const orderPayload = {
+              shop_id: shopId,
+              order_number: orderNumber,
+              customer_id: selectedCustomer.customer_id,
+              user_id: null,
+              total_items: cartItems.length,
+              order_status: "pending",
+              total_amount: total,
+              delivery_charge: deliveryCharge,
+              final_amount: grandTotal,
+              advance_paid: newPayment,
+              balance_due: 0,
+              payment_status: "fully_paid",
+              payment_method:
+                paymentMethod === "cash"
+                  ? "cash"
+                  : bankPaymentDetails?.bank || "bank",
+              recipient_phone: selectedCustomer.mobile || null,
+              notes: orderNotes || null,
+              order_date: sriLankanDateTime.dateString,
+              items: cartItems.map((item) => ({
+                product_id: item.productId,
+                color_id: item.colorId,
+                size_id: item.sizeId,
+                quantity: item.quantity,
+                sold_price: item.price,
+                total_price: item.price * item.quantity,
+              })),
+            };
+
+            // Save order to database (this will also reduce stock quantities)
+            const orderResponse = await fetch(`${API_URL}/orders`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(orderPayload),
+            });
+
+            const orderResult = await orderResponse.json();
+            if (!orderResult.success) {
+              setMessage({
+                type: "error",
+                text: `Order printed but failed to save: ${orderResult.error}`,
+              });
+              return;
+            }
+
+            const savedOrderId = orderResult.data?.order_id;
+
+            // Save payment if amount is paid
+            if (newPayment > 0) {
+              if (paymentMethod === "cash") {
+                const paymentPayload = {
                   shop_id: shopId,
-                  order_number: orderNumber,
+                  order_id: savedOrderId,
                   customer_id: selectedCustomer.customer_id,
-                  user_id: null,
-                  total_items: cartItems.length,
-                  order_status: "pending",
-                  total_amount: total,
-                  delivery_charge: deliveryCharge,
-                  final_amount: grandTotal,
-                  advance_paid: newPayment,
-                  balance_due: 0,
-                  payment_status: "fully_paid",
-                  payment_method:
-                    paymentMethod === "cash"
-                      ? "cash"
-                      : bankPaymentDetails?.bank || "bank",
-                  recipient_phone: selectedCustomer.mobile || null,
-                  notes: orderNotes || null,
-                  order_date: sriLankanDateTime.dateString,
-                  items: cartItems.map((item) => ({
-                    product_id: item.productId,
-                    color_id: item.colorId,
-                    size_id: item.sizeId,
-                    quantity: item.quantity,
-                    sold_price: item.price,
-                    total_price: item.price * item.quantity,
-                  })),
+                  payment_amount: newPayment,
+                  payment_date: sriLankanDateTime.dateString,
+                  payment_time: sriLankanDateTime.timeString,
+                  payment_method: "cash",
+                  payment_status: "completed",
+                  notes: null,
                 };
 
-                // Save order to database (this will also reduce stock quantities)
-                const orderResponse = await fetch(`${API_URL}/orders`, {
+                await fetch(`${API_URL}/payments`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(orderPayload),
+                  body: JSON.stringify(paymentPayload),
                 });
+              } else if (paymentMethod === "bank" && bankPaymentDetails) {
+                const bankPayMethod = bankPaymentDetails.isOnlineTransfer
+                  ? "online_transfer"
+                  : "bank_deposit";
+                const notesText = bankPaymentDetails.isOnlineTransfer
+                  ? `Bank: ${bankPaymentDetails.bank}, Online Transfer, Receipt: ${bankPaymentDetails.receiptNumber}`
+                  : `Bank: ${bankPaymentDetails.bank}, Branch: ${bankPaymentDetails.branch}, Receipt: ${bankPaymentDetails.receiptNumber}`;
 
-                const orderResult = await orderResponse.json();
-                if (!orderResult.success) {
-                  setMessage({
-                    type: "error",
-                    text: `Order printed but failed to save: ${orderResult.error}`,
-                  });
-                  return;
-                }
+                const paymentPayload = {
+                  shop_id: shopId,
+                  order_id: savedOrderId,
+                  customer_id: selectedCustomer.customer_id,
+                  payment_amount: newPayment,
+                  payment_date: sriLankanDateTime.dateString,
+                  payment_time: sriLankanDateTime.timeString,
+                  payment_method: bankPayMethod,
+                  bank_name: bankPaymentDetails.bank,
+                  branch_name: bankPaymentDetails.branch || null,
+                  bank_account_id: bankPaymentDetails.bankAccountId,
+                  transaction_id: bankPaymentDetails.receiptNumber,
+                  payment_status: "completed",
+  
+                  notes: notesText,
+                };
 
-                const savedOrderId = orderResult.data?.order_id;
-
-                // Save payment if amount is paid
-                if (newPayment > 0) {
-                  if (paymentMethod === "cash") {
-                    const paymentPayload = {
-                      shop_id: shopId,
-                      order_id: savedOrderId,
-                      customer_id: selectedCustomer.customer_id,
-                      payment_amount: newPayment,
-                      payment_date: sriLankanDateTime.dateString,
-                      payment_time: sriLankanDateTime.timeString,
-                      payment_method: "cash",
-                      payment_status: "completed",
-                      notes: null,
-                    };
-
-                    await fetch(`${API_URL}/payments`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(paymentPayload),
-                    });
-                  } else if (paymentMethod === "bank" && bankPaymentDetails) {
-                    const bankPayMethod = bankPaymentDetails.isOnlineTransfer
-                      ? "online_transfer"
-                      : "bank_deposit";
-                    const notesText = bankPaymentDetails.isOnlineTransfer
-                      ? `Bank: ${bankPaymentDetails.bank}, Online Transfer, Receipt: ${bankPaymentDetails.receiptNumber}`
-                      : `Bank: ${bankPaymentDetails.bank}, Branch: ${bankPaymentDetails.branch}, Receipt: ${bankPaymentDetails.receiptNumber}`;
-
-                    const paymentPayload = {
-                      shop_id: shopId,
-                      order_id: savedOrderId,
-                      customer_id: selectedCustomer.customer_id,
-                      payment_amount: newPayment,
-                      payment_date: sriLankanDateTime.dateString,
-                      payment_time: sriLankanDateTime.timeString,
-                      payment_method: bankPayMethod,
-                      bank_name: bankPaymentDetails.bank,
-                      branch_name: bankPaymentDetails.branch || null,
-                      bank_account_id: bankPaymentDetails.bankAccountId,
-                      transaction_id: bankPaymentDetails.receiptNumber,
-                      payment_status: "completed",
-                      notes: notesText,
-                    };
-
-                    await fetch(`${API_URL}/payments`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(paymentPayload),
-                    });
-                  }
-                }
-
-                // Reset the sales page form after successful save
-                handleCancelOrder();
-
-                // Show success message
-                setMessage({
-                  type: "success",
-                  text: "✅ Order saved and printed successfully! Stock quantities updated. Form has been reset.",
-                });
-              } catch (error) {
-                console.error("Error saving order after print:", error);
-                setMessage({
-                  type: "error",
-                  text: "Order printed but failed to save to database. Please save manually.",
+                await fetch(`${API_URL}/payments`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(paymentPayload),
                 });
               }
-            };
-          }, 500);
+            }
+
+            // Reset the sales page form after successful save
+            handleCancelOrder();
+
+            // Show success message
+            setMessage({
+              type: "success",
+              text: "✅ Order saved and printed successfully! Stock quantities updated. Form has been reset.",
+            });
+          }
+        } catch(e) {
+            console.error("Error printing bill:", e);
+            setMessage({
+                type: "error",
+                text: "Failed to print bill.",
+            });
+        } finally {
+            // Clean up the hidden div
+            document.body.removeChild(printContainer);
         }
-      }, 1000);
+      }, 1000); // Delay to ensure rendering and styles are applied
     } catch (error) {
       console.error("Error preparing invoice:", error);
       setMessage({

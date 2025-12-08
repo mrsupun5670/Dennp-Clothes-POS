@@ -31,7 +31,8 @@
       },
       "shell": {
         "all": false,
-        "open": true
+        "open": true,
+        "execute": true
       },
       "dialog": {
         "all": false,

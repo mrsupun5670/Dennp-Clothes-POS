@@ -33,7 +33,12 @@
         "all": false,
         "open": true,
         "execute": true,
-        "scope": ["powershell"]
+        "scope": [
+          {
+            "name": "powershell",
+            "cmd": "powershell"
+          }
+        ]
       },
       "dialog": {
         "all": false,

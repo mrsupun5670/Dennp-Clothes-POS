@@ -12,6 +12,7 @@ const router = Router();
 router.get('/', OrderController.getAllOrders.bind(OrderController));
 router.get('/pending', OrderController.getPendingOrders.bind(OrderController));
 router.get('/summary', OrderController.getOrderSummary.bind(OrderController));
+router.get('/generate-number', OrderController.generateOrderNumber.bind(OrderController));
 router.get('/customer/:customerId', OrderController.getOrdersByCustomer.bind(OrderController));
 router.get('/:id/payments', OrderController.getOrderPayments.bind(OrderController));
 router.get('/:id/receipt', OrderController.getOrderReceipt.bind(OrderController));

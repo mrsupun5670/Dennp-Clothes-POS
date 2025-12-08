@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect } from "react";
+import ReactDOM from "react-dom/client";
 import BankPaymentModal, {
   BankPaymentData,
 } from "../components/BankPaymentModal";
 import PaymentMethodSelector from "../components/PaymentMethodSelector";
+import AddProductModal from "../components/AddProductModal";
 import {
   printContent,
   saveAsPDF,
@@ -10,6 +12,7 @@ import {
 } from "../utils/exportUtils";
 import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
+import InvoicePrint from "../components/InvoicePrint";
 
 // Utility function to get Sri Lankan timezone datetime
 const getSriLankanDateTime = () => {
@@ -93,212 +96,6 @@ interface NewCustomer {
   mobile: string;
 }
 
-// Sample data
-const SAMPLE_CUSTOMERS: Customer[] = [
-  {
-    id: "C001",
-    name: "John Doe",
-    email: "john.doe@email.com",
-    mobile: "+92 300 1234567",
-    totalSpent: 65000,
-    totalOrders: 18,
-    joined: "2023-12-01",
-  },
-  {
-    id: "C002",
-    name: "Sarah Smith",
-    email: "sarah.smith@email.com",
-    mobile: "+92 300 5678901",
-    totalSpent: 48500,
-    totalOrders: 14,
-    joined: "2024-01-15",
-  },
-  {
-    id: "C003",
-    name: "Ahmed Khan",
-    email: "ahmed.khan@email.com",
-    mobile: "+92 300 9876543",
-    totalSpent: 35000,
-    totalOrders: 9,
-    joined: "2024-02-10",
-  },
-  {
-    id: "C004",
-    name: "Priya Jayasooriya",
-    email: "priya.j@email.com",
-    mobile: "+94 77 1234567",
-    totalSpent: 42000,
-    totalOrders: 11,
-    joined: "2024-02-20",
-  },
-  {
-    id: "C005",
-    name: "Lakshmi Fernando",
-    email: "lakshmi.f@email.com",
-    mobile: "+94 71 9876543",
-    totalSpent: 52000,
-    totalOrders: 15,
-    joined: "2023-11-05",
-  },
-  {
-    id: "C006",
-    name: "Michael Brown",
-    email: "michael.brown@email.com",
-    mobile: "+92 300 1111111",
-    totalSpent: 28500,
-    totalOrders: 7,
-    joined: "2024-03-05",
-  },
-  {
-    id: "C007",
-    name: "Jessica White",
-    email: "jessica.white@email.com",
-    mobile: "+92 300 2222222",
-    totalSpent: 19500,
-    totalOrders: 5,
-    joined: "2024-03-20",
-  },
-  {
-    id: "C008",
-    name: "David Lee",
-    email: "david.lee@email.com",
-    mobile: "+92 300 3333333",
-    totalSpent: 31000,
-    totalOrders: 8,
-    joined: "2024-04-01",
-  },
-  {
-    id: "C009",
-    name: "Emily Davis",
-    email: "emily.davis@email.com",
-    mobile: "+92 300 4444444",
-    totalSpent: 55500,
-    totalOrders: 16,
-    joined: "2024-01-10",
-  },
-  {
-    id: "C010",
-    name: "Christopher Wilson",
-    email: "christopher.w@email.com",
-    mobile: "+92 300 5555555",
-    totalSpent: 38000,
-    totalOrders: 10,
-    joined: "2024-02-14",
-  },
-  {
-    id: "C011",
-    name: "Michelle Taylor",
-    email: "michelle.t@email.com",
-    mobile: "+92 300 6666666",
-    totalSpent: 44500,
-    totalOrders: 12,
-    joined: "2024-03-15",
-  },
-  {
-    id: "C012",
-    name: "Daniel Martinez",
-    email: "daniel.m@email.com",
-    mobile: "+92 300 7777777",
-    totalSpent: 35000,
-    totalOrders: 9,
-    joined: "2024-04-05",
-  },
-  {
-    id: "C013",
-    name: "Amanda Garcia",
-    email: "amanda.g@email.com",
-    mobile: "+92 300 8888888",
-    totalSpent: 22000,
-    totalOrders: 6,
-    joined: "2024-04-20",
-  },
-];
-
-const SAMPLE_PRODUCTS: Product[] = [
-  {
-    id: "P001",
-    code: "TSH-KN01",
-    name: "Cotton Crew Neck T-Shirt",
-    retailPrice: 1250,
-    category: "tshirt",
-    sizesByCategory: { tshirt: ["XS", "S", "M", "L", "XL", "XXL"] },
-    colorsByCategory: {
-      tshirt: ["Black", "White", "Navy", "Maroon", "Green", "Blue", "Gray"],
-    },
-  },
-  {
-    id: "P002",
-    code: "PLO-POL01",
-    name: "Cotton Polo Shirt",
-    retailPrice: 1600,
-    category: "shirt",
-    sizesByCategory: { shirt: ["S", "M", "L", "XL", "XXL"] },
-    colorsByCategory: {
-      shirt: ["White", "Navy", "Red", "Green", "Black", "Maroon"],
-    },
-  },
-  {
-    id: "P003",
-    code: "FRM-SHT01",
-    name: "Formal Shirt",
-    retailPrice: 1800,
-    category: "shirt",
-    sizesByCategory: {
-      shirt: ["14", "14.5", "15", "15.5", "16", "16.5", "17"],
-    },
-    colorsByCategory: {
-      shirt: ["White", "Light Blue", "Sky Blue", "Cream", "Pink"],
-    },
-  },
-  {
-    id: "P004",
-    code: "JNS-PRM01",
-    name: "Jeans Premium",
-    retailPrice: 2500,
-    category: "trouser",
-    sizesByCategory: { trouser: ["28", "30", "32", "34", "36", "38"] },
-    colorsByCategory: { trouser: ["Blue", "Black", "Dark Blue", "Light Blue"] },
-  },
-  {
-    id: "P005",
-    code: "CRG-PNT01",
-    name: "Cargo Pants",
-    retailPrice: 2200,
-    category: "trouser",
-    sizesByCategory: { trouser: ["28", "30", "32", "34", "36", "38"] },
-    colorsByCategory: { trouser: ["Khaki", "Black", "Green", "Gray"] },
-  },
-  {
-    id: "P006",
-    code: "CRP-TOP01",
-    name: "Summer Crop Top",
-    retailPrice: 950,
-    category: "tshirt",
-    sizesByCategory: { tshirt: ["XS", "S", "M", "L", "XL"] },
-    colorsByCategory: {
-      tshirt: ["Black", "White", "Pink", "Peach", "Yellow", "Red"],
-    },
-  },
-  {
-    id: "P007",
-    code: "DRS-CAS01",
-    name: "Casual Dress",
-    retailPrice: 3500,
-    category: "dress",
-    sizesByCategory: { dress: ["XS", "S", "M", "L", "XL"] },
-    colorsByCategory: { dress: ["Red", "Green", "Purple", "Blue", "Black"] },
-  },
-  {
-    id: "P008",
-    code: "JKT-WIN01",
-    name: "Winter Jacket",
-    retailPrice: 4500,
-    category: "jacket",
-    sizesByCategory: { jacket: ["S", "M", "L", "XL", "XXL"] },
-    colorsByCategory: { jacket: ["Black", "Navy", "Gray", "Brown", "Maroon"] },
-  },
-];
-
 interface SizeOption {
   [key: string]: string[];
 }
@@ -325,7 +122,9 @@ const SalesPage: React.FC = () => {
   const [previouslyPaidAmount, setPreviouslyPaidAmount] = useState(0);
 
   // Track current order number for invoice generation
-  const [currentOrderNumber, setCurrentOrderNumber] = useState<string | null>(null);
+  const [currentOrderNumber, setCurrentOrderNumber] = useState<string | null>(
+    null
+  );
 
   // New payment system states
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
@@ -366,6 +165,7 @@ const SalesPage: React.FC = () => {
       try {
         const order = JSON.parse(orderData);
         setEditingOrderId(order.orderId);
+        setCurrentOrderNumber(order.orderNumber || null);
 
         // Store the amount already paid (advance payment) for balance calculation
         setPreviouslyPaidAmount(Number(order.totalPaid) || 0);
@@ -402,7 +202,10 @@ const SalesPage: React.FC = () => {
         setCartItems(newCartItems);
 
         // Set payment information
-        if (order.deliveryCharge !== undefined && Number(order.deliveryCharge) > 0) {
+        if (
+          order.deliveryCharge !== undefined &&
+          Number(order.deliveryCharge) > 0
+        ) {
           setDeliveryCharge(Number(order.deliveryCharge));
         }
         if (order.paymentMethod) {
@@ -451,40 +254,6 @@ const SalesPage: React.FC = () => {
     wholesalePrice: "",
   });
 
-  // Size options by category
-  const sizesByCategory: SizeOption = {
-    tshirt: ["XS", "S", "M", "L", "XL", "XXL"],
-    shirt: ["15", "15.5", "16", "16.5", "17", "17.5"],
-    trouser: ["28", "30", "32", "34", "36", "38"],
-    croptop: ["XS", "S", "M", "L", "XL"],
-    jacket: ["S", "M", "L", "XL", "XXL"],
-    dress: ["XS", "S", "M", "L", "XL"],
-  };
-
-  // Color options by category
-  const colorsByCategory: ColorOption = {
-    tshirt: ["Black", "White", "Blue", "Red", "Green", "Yellow", "Gray"],
-    shirt: ["White", "Blue", "Black", "Light Blue", "Cream"],
-    trouser: ["Black", "Blue", "Gray", "Brown", "Khaki"],
-    croptop: ["Black", "White", "Red", "Pink", "Purple"],
-    jacket: ["Black", "Blue", "Brown", "Navy", "Gray"],
-    dress: ["Black", "White", "Red", "Blue", "Maroon"],
-  };
-
-  // Helper function to get all sizes including custom ones
-  const getAllSizes = () => {
-    const categoryKey = selectedCategory as keyof typeof sizesByCategory;
-    const baseSizes = sizesByCategory[categoryKey] || [];
-    return [...baseSizes, ...customSizes];
-  };
-
-  // Helper function to get all colors including custom ones
-  const getAllColors = () => {
-    const categoryKey = selectedCategory as keyof typeof colorsByCategory;
-    const baseColors = colorsByCategory[categoryKey] || [];
-    return [...baseColors, ...customColors];
-  };
-
   const updateStockRow = (
     rowId: number,
     field: "size" | "color" | "qty",
@@ -527,32 +296,25 @@ const SalesPage: React.FC = () => {
 
   const handleAddProductClick = () => {
     setShowAddProductModal(true);
-    setSelectedCategory("tshirt");
-    setStockRows([{ id: 1, size: "", color: "", qty: 0 }]);
-    setNextRowId(2);
-    setCustomSizes([]);
-    setCustomColors([]);
-    setFormData({
-      code: "",
-      name: "",
-      costPrice: "",
-      retailPrice: "",
-      wholesalePrice: "",
-    });
   };
 
   const handleCloseProductModal = () => {
     setShowAddProductModal(false);
-    setFormData({
-      code: "",
-      name: "",
-      costPrice: "",
-      retailPrice: "",
-      wholesalePrice: "",
-    });
-    setStockRows([]);
-    setCustomSizes([]);
-    setCustomColors([]);
+  };
+
+  const handleProductAdded = async () => {
+    // Reload products after adding a new one
+    try {
+      const response = await fetch(`${API_URL}/products?shop_id=${shopId}`);
+      const result = await response.json();
+      if (result.success) {
+        const data = result.data || [];
+        setAllProducts(data);
+        setProducts(data);
+      }
+    } catch (error) {
+      console.error("Error reloading products:", error);
+    }
   };
 
   // Search and Filter States
@@ -567,6 +329,26 @@ const SalesPage: React.FC = () => {
     email: "",
     mobile: "",
   });
+
+  // Customer modal state
+  const [customerFormData, setCustomerFormData] = useState({
+    customer_id: "",
+    mobile: "",
+    email: "",
+  });
+  const [customerModalError, setCustomerModalError] = useState("");
+  const [customerModalSuccess, setCustomerModalSuccess] = useState("");
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+
+  // Product modal state
+  const [productModalError, setProductModalError] = useState("");
+  const [productModalSuccess, setProductModalSuccess] = useState("");
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+
+  // Database categories, sizes, colors for product creation
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
+  const [dbSizes, setDbSizes] = useState<any[]>([]);
+  const [dbColors, setDbColors] = useState<any[]>([]);
 
   // Product Selection States
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -680,6 +462,44 @@ const SalesPage: React.FC = () => {
     };
 
     loadProducts();
+  }, [shopId]);
+
+  // Load categories, sizes, and colors for product creation
+  useEffect(() => {
+    if (!shopId) return;
+
+    const loadProductMetadata = async () => {
+      try {
+        // Load categories
+        const categoriesResponse = await fetch(
+          `${API_URL}/categories?shop_id=${shopId}`
+        );
+        const categoriesResult = await categoriesResponse.json();
+        if (categoriesResult.success) {
+          setDbCategories(categoriesResult.data || []);
+        }
+
+        // Load sizes
+        const sizesResponse = await fetch(`${API_URL}/sizes?shop_id=${shopId}`);
+        const sizesResult = await sizesResponse.json();
+        if (sizesResult.success) {
+          setDbSizes(sizesResult.data || []);
+        }
+
+        // Load colors
+        const colorsResponse = await fetch(
+          `${API_URL}/colors?shop_id=${shopId}`
+        );
+        const colorsResult = await colorsResponse.json();
+        if (colorsResult.success) {
+          setDbColors(colorsResult.data || []);
+        }
+      } catch (error) {
+        console.error("Error loading product metadata:", error);
+      }
+    };
+
+    loadProductMetadata();
   }, [shopId]);
 
   // Search products on key up - with instant local filtering
@@ -844,6 +664,48 @@ const SalesPage: React.FC = () => {
     return typeof price === "number" && !isNaN(price) ? price : 0;
   };
 
+  // Update selectedPrice when customerTypeFilter changes and a product is selected
+  useEffect(() => {
+    if (selectedProduct) {
+      const newPrice = getProductPrice(selectedProduct);
+      setSelectedPrice(String(newPrice));
+    }
+  }, [customerTypeFilter]);
+
+  // Update all cart item prices when customerTypeFilter changes
+  useEffect(() => {
+    if (cartItems.length === 0 || allProducts.length === 0) return;
+
+    // Update prices for all cart items based on customer type
+    const updatedCartItems = cartItems.map((item) => {
+      // Find the product in allProducts to get the correct price
+      const product = allProducts.find(
+        (p) => (p.id || p.product_id) === item.productId
+      );
+
+      if (product) {
+        const newPrice = getProductPrice(product);
+        // Only update if price actually changed to avoid unnecessary re-renders
+        if (item.price !== newPrice) {
+          return {
+            ...item,
+            price: newPrice,
+          };
+        }
+      }
+
+      return item;
+    });
+
+    // Only update state if something changed
+    const hasChanges = updatedCartItems.some(
+      (item, idx) => item.price !== cartItems[idx].price
+    );
+    if (hasChanges) {
+      setCartItems(updatedCartItems);
+    }
+  }, [customerTypeFilter]);
+
   // Filtered data
   const filteredCustomers = useMemo(() => {
     return customers;
@@ -861,31 +723,353 @@ const SalesPage: React.FC = () => {
   const total = subtotal;
 
   // Calculate balance due when editing order (if cart items change)
+  // Include delivery charge in the calculation: (total + delivery_charge) - advance_paid
   const balanceDue = editingOrderId
-    ? Math.max(0, total - previouslyPaidAmount)
+    ? Math.max(0, total + deliveryCharge - previouslyPaidAmount)
     : 0;
 
   // Handlers
-  const handleAddCustomer = () => {
-    if (!newCustomer.name || !newCustomer.mobile) {
-      alert("Please fill in required fields");
-      return;
+  const handleAddCustomer = async () => {
+    setIsCreatingCustomer(true);
+    setCustomerModalError("");
+    setCustomerModalSuccess("");
+
+    try {
+      // Validation
+      if (
+        !customerFormData.customer_id ||
+        String(customerFormData.customer_id).trim() === ""
+      ) {
+        setCustomerModalError("Customer ID is required");
+        setIsCreatingCustomer(false);
+        return;
+      }
+
+      if (isNaN(Number(customerFormData.customer_id))) {
+        setCustomerModalError("Customer ID must be a valid number");
+        setIsCreatingCustomer(false);
+        return;
+      }
+
+      if (
+        !customerFormData.mobile ||
+        String(customerFormData.mobile).trim() === ""
+      ) {
+        setCustomerModalError("Mobile number is required");
+        setIsCreatingCustomer(false);
+        return;
+      }
+
+      // Create customer via API
+      const response = await fetch(`${API_URL}/customers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_id: parseInt(customerFormData.customer_id),
+          shop_id: shopId,
+          mobile: customerFormData.mobile,
+          email: customerFormData.email || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setCustomerModalSuccess("Customer created successfully!");
+
+        // Reload customers list
+        const customersResponse = await fetch(
+          `${API_URL}/customers?shop_id=${shopId}`
+        );
+        const customersResult = await customersResponse.json();
+        if (customersResult.success) {
+          const data = customersResult.data || [];
+          setAllCustomers(data);
+          setCustomers(data);
+
+          // Auto-select the newly created customer
+          const newCustomer = data.find(
+            (c: any) => c.customer_id === parseInt(customerFormData.customer_id)
+          );
+          if (newCustomer) {
+            setSelectedCustomer(newCustomer);
+          }
+        }
+
+        // Close modal after short delay
+        setTimeout(() => {
+          setShowAddCustomerModal(false);
+          setCustomerFormData({ customer_id: "", mobile: "", email: "" });
+          setCustomerModalError("");
+          setCustomerModalSuccess("");
+          setIsCreatingCustomer(false);
+        }, 1000);
+      } else {
+        // Check if it's a duplicate error
+        const errorMessage = result.error || "Failed to create customer";
+        if (
+          errorMessage.includes("unique_mobile_per_shop") ||
+          errorMessage.includes("Duplicate entry")
+        ) {
+          setCustomerModalError(
+            `This mobile number (${customerFormData.mobile}) is already registered in this shop`
+          );
+        } else if (
+          errorMessage.includes("Duplicate") &&
+          errorMessage.includes("customer_id")
+        ) {
+          setCustomerModalError(
+            `Customer ID ${customerFormData.customer_id} is already used in this shop`
+          );
+        } else {
+          setCustomerModalError(errorMessage);
+        }
+        setIsCreatingCustomer(false);
+      }
+    } catch (error: any) {
+      console.error("Error creating customer:", error);
+      setCustomerModalError(
+        error.message || "Failed to create customer. Please try again."
+      );
+      setIsCreatingCustomer(false);
     }
+  };
 
-    const customer: Customer = {
-      id: `C${Date.now()}`,
-      name: newCustomer.name,
-      email: newCustomer.email,
-      mobile: newCustomer.mobile,
-      totalSpent: 0,
-      totalOrders: 0,
-      joined: new Date().toISOString().split("T")[0],
-    };
+  const handleSaveProduct = async () => {
+    setIsCreatingProduct(true);
+    setProductModalError("");
+    setProductModalSuccess("");
 
-    setCustomers([...customers, customer]);
-    setSelectedCustomer(customer);
-    setNewCustomer({ name: "", email: "", mobile: "" });
-    setShowAddCustomerModal(false);
+    try {
+      // Validation
+      const productCode = String(formData.code).trim();
+      if (!productCode) {
+        setProductModalError("Product Code is required");
+        setIsCreatingProduct(false);
+        return;
+      }
+
+      if (!/^\d+$/.test(productCode)) {
+        setProductModalError("Product Code must be numeric only");
+        setIsCreatingProduct(false);
+        return;
+      }
+
+      if (!formData.name.trim()) {
+        setProductModalError("Product Name is required");
+        setIsCreatingProduct(false);
+        return;
+      }
+
+      const cost = parseFloat(formData.costPrice);
+      const retailPrice = parseFloat(formData.retailPrice);
+      const wholesalePrice = parseFloat(formData.wholesalePrice || "0");
+
+      if (isNaN(cost) || cost < 0) {
+        setProductModalError("Valid Product Cost is required (>= 0)");
+        setIsCreatingProduct(false);
+        return;
+      }
+
+      if (isNaN(retailPrice) || retailPrice < 0) {
+        setProductModalError("Valid Retail Price is required (>= 0)");
+        setIsCreatingProduct(false);
+        return;
+      }
+
+      if (stockRows.length === 0) {
+        setProductModalError("Please add at least one stock entry");
+        setIsCreatingProduct(false);
+        return;
+      }
+
+      const hasIncompleteRows = stockRows.some(
+        (row) => !row.size || !row.color
+      );
+      if (hasIncompleteRows) {
+        setProductModalError(
+          "Please fill all size/color combinations for stock entries"
+        );
+        setIsCreatingProduct(false);
+        return;
+      }
+
+      const totalQty = stockRows.reduce((sum, row) => sum + row.qty, 0);
+      if (totalQty <= 0) {
+        setProductModalError(
+          "Product must have a total quantity greater than 0"
+        );
+        setIsCreatingProduct(false);
+        return;
+      }
+
+      // Get category ID
+      const category = dbCategories.find(
+        (cat: any) =>
+          cat.category_name.toLowerCase() === selectedCategory.toLowerCase()
+      );
+
+      if (!category) {
+        setProductModalError(`Category "${selectedCategory}" not found`);
+        setIsCreatingProduct(false);
+        return;
+      }
+
+      // Build color and size ID maps
+      const uniqueColors = stockRows
+        .map((row) => row.color)
+        .filter((c, i, a) => a.indexOf(c) === i);
+      const uniqueSizes = stockRows
+        .map((row) => row.size)
+        .filter((s, i, a) => a.indexOf(s) === i);
+
+      const colorIdMap = new Map<string, number>();
+      const sizeIdMap = new Map<string, number>();
+
+      dbColors?.forEach((c: any) => colorIdMap.set(c.color_name, c.color_id));
+      dbSizes?.forEach((s: any) => sizeIdMap.set(s.size_name, s.size_id));
+
+      // Create missing colors
+      for (const colorName of uniqueColors) {
+        let colorId = colorIdMap.get(colorName);
+        if (!colorId) {
+          const colorResponse = await fetch(`${API_URL}/colors`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ shop_id: shopId, color_name: colorName }),
+          });
+          const colorResult = await colorResponse.json();
+          if (colorResult.success && colorResult.data.color_id) {
+            colorId = colorResult.data.color_id;
+            colorIdMap.set(colorName, colorId);
+          }
+        }
+      }
+
+      // Create missing sizes
+      for (const sizeName of uniqueSizes) {
+        let sizeId = sizeIdMap.get(sizeName);
+        if (!sizeId) {
+          const sizeResponse = await fetch(`${API_URL}/sizes`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              shop_id: shopId,
+              size_name: sizeName,
+              size_type_id: category.category_id,
+            }),
+          });
+          const sizeResult = await sizeResponse.json();
+          if (sizeResult.success && sizeResult.data.size_id) {
+            sizeId = sizeResult.data.size_id;
+            sizeIdMap.set(sizeName, sizeId);
+          }
+        }
+      }
+
+      // Build stock payload
+      const stockPayload: Array<{
+        sizeId: number;
+        colorId: number;
+        quantity: number;
+      }> = [];
+
+      for (const row of stockRows) {
+        if (row.size && row.color && row.qty > 0) {
+          const colorId = colorIdMap.get(row.color);
+          const sizeId = sizeIdMap.get(row.size);
+          if (colorId && sizeId) {
+            stockPayload.push({
+              colorId,
+              sizeId,
+              quantity: row.qty,
+            });
+          }
+        }
+      }
+
+      // Create product
+      const response = await fetch(`${API_URL}/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop_id: shopId,
+          product_id: parseInt(productCode),
+          product_name: formData.name.trim(),
+          category_id: category.category_id,
+          product_cost: cost,
+          print_cost: 0,
+          retail_price: retailPrice,
+          wholesale_price: wholesalePrice,
+          stock: stockPayload,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setProductModalSuccess("Product created successfully!");
+
+        // Reload products list
+        const productsResponse = await fetch(
+          `${API_URL}/products?shop_id=${shopId}`
+        );
+        const productsResult = await productsResponse.json();
+        if (productsResult.success) {
+          const data = productsResult.data || [];
+          setAllProducts(data);
+          setProducts(data);
+        }
+
+        // Reload categories, sizes, colors
+        const categoriesResponse = await fetch(
+          `${API_URL}/categories?shop_id=${shopId}`
+        );
+        const categoriesResult = await categoriesResponse.json();
+        if (categoriesResult.success) {
+          setDbCategories(categoriesResult.data || []);
+        }
+
+        const sizesResponse = await fetch(`${API_URL}/sizes?shop_id=${shopId}`);
+        const sizesResult = await sizesResponse.json();
+        if (sizesResult.success) {
+          setDbSizes(sizesResult.data || []);
+        }
+
+        const colorsResponse = await fetch(
+          `${API_URL}/colors?shop_id=${shopId}`
+        );
+        const colorsResult = await colorsResponse.json();
+        if (colorsResult.success) {
+          setDbColors(colorsResult.data || []);
+        }
+
+        // Close modal after short delay
+        setTimeout(() => {
+          handleCloseProductModal();
+          setIsCreatingProduct(false);
+        }, 1500);
+      } else {
+        const errorMessage = result.error || "Failed to create product";
+        if (
+          errorMessage.includes("Duplicate entry") &&
+          errorMessage.includes("product_id")
+        ) {
+          setProductModalError(
+            `Product code ${productCode} is already used in this shop`
+          );
+        } else {
+          setProductModalError(errorMessage);
+        }
+        setIsCreatingProduct(false);
+      }
+    } catch (error: any) {
+      console.error("Error creating product:", error);
+      setProductModalError(
+        error.message || "Failed to create product. Please try again."
+      );
+      setIsCreatingProduct(false);
+    }
   };
 
   const handleAddProductToCart = () => {
@@ -1082,13 +1266,16 @@ const SalesPage: React.FC = () => {
         // EDITING EXISTING ORDER
         savedOrderId = parseInt(editingOrderId);
 
-        // For editing: calculate total paid including previous payments
-        const totalPaidNow = previouslyPaidAmount + newPayment;
-        const newBalance = Math.max(0, total - totalPaidNow);
+        // For editing: calculate grand total including delivery charge
+        const grandTotal = total + deliveryCharge;
 
-        // Determine payment status based on new total
+        // Calculate total paid including new payment
+        const totalPaidNow = previouslyPaidAmount + newPayment;
+        const newBalance = Math.max(0, grandTotal - totalPaidNow);
+
+        // Determine payment status based on grand total
         let paymentStatus = "unpaid";
-        if (totalPaidNow >= total) {
+        if (totalPaidNow >= grandTotal) {
           paymentStatus = "fully_paid";
         } else if (totalPaidNow > 0) {
           paymentStatus = "partial";
@@ -1100,20 +1287,26 @@ const SalesPage: React.FC = () => {
           total_items: cartItems.length,
           total_amount: total,
           delivery_charge: deliveryCharge,
-          final_amount: totalPaidNow,
-          advance_paid: previouslyPaidAmount,
+          final_amount: grandTotal, // final_amount should be grand total (total + delivery)
+          advance_paid: totalPaidNow, // advance_paid is all payments made so far
           balance_due: newBalance,
           payment_status: paymentStatus,
-          payment_method: paymentMethod === "cash" ? "cash" : (bankPaymentDetails?.bank || "bank"),
+          payment_method:
+            paymentMethod === "cash"
+              ? "cash"
+              : bankPaymentDetails?.bank || "bank",
           notes: orderNotes || null,
         };
 
         // Update order
-        const updateResponse = await fetch(`${API_URL}/orders/${savedOrderId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updateOrderPayload),
-        });
+        const updateResponse = await fetch(
+          `${API_URL}/orders/${savedOrderId}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updateOrderPayload),
+          }
+        );
 
         const updateResult = await updateResponse.json();
         if (!updateResult.success) {
@@ -1140,11 +1333,14 @@ const SalesPage: React.FC = () => {
           })),
         };
 
-        const itemsResponse = await fetch(`${API_URL}/orders/${savedOrderId}/items`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(itemsPayload),
-        });
+        const itemsResponse = await fetch(
+          `${API_URL}/orders/${savedOrderId}/items`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(itemsPayload),
+          }
+        );
 
         const itemsResult = await itemsResponse.json();
         if (!itemsResult.success) {
@@ -1157,42 +1353,61 @@ const SalesPage: React.FC = () => {
 
         // Record the new payment if any payment is made
         if (newPayment > 0) {
-          if (paymentMethod === "cash") {
-            const paymentPayload = {
-              shop_id: shopId,
-              order_id: savedOrderId,
-              customer_id: selectedCustomer.customer_id,
-              payment_amount: newPayment,
-              payment_date: sriLankanDateTime.dateString,
-              payment_time: sriLankanDateTime.timeString,
-              payment_method: "cash",
-              payment_status: "completed",
-              notes: null,
-            };
+          // Calculate remaining balance to ensure we don't record overpayment
+          const grandTotal = total + deliveryCharge;
+          const remainingBalance = Math.max(0, grandTotal - previouslyPaidAmount);
+          const actualPaymentToRecord = Math.min(newPayment, remainingBalance);
 
-            await fetch(`${API_URL}/payments`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(paymentPayload),
-            });
-          } else if (paymentMethod === "bank" && bankPaymentDetails) {
-            const paymentPayload = {
-              shop_id: shopId,
-              order_id: savedOrderId,
-              customer_id: selectedCustomer.customer_id,
-              payment_amount: newPayment,
-              payment_date: sriLankanDateTime.dateString,
-              payment_time: sriLankanDateTime.timeString,
-              payment_method: bankPaymentDetails.bank || "bank",
-              payment_status: "completed",
-              notes: `Bank: ${bankPaymentDetails.bank}, Receipt: ${bankPaymentDetails.receiptNumber}`,
-            };
+          if (actualPaymentToRecord > 0) {
+            if (paymentMethod === "cash") {
+              const paymentPayload = {
+                shop_id: shopId,
+                order_id: savedOrderId,
+                customer_id: selectedCustomer.customer_id,
+                payment_amount: actualPaymentToRecord,
+                payment_date: sriLankanDateTime.dateString,
+                payment_time: sriLankanDateTime.timeString,
+                payment_method: "cash",
+                payment_status: "completed",
+                notes: null,
+              };
 
-            await fetch(`${API_URL}/payments`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(paymentPayload),
-            });
+              await fetch(`${API_URL}/payments`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(paymentPayload),
+              });
+            } else if (paymentMethod === "bank" && bankPaymentDetails) {
+              // Determine payment method: online_transfer or bank_deposit
+              const bankPayMethod = bankPaymentDetails.isOnlineTransfer
+                ? "online_transfer"
+                : "bank_deposit";
+              const notesText = bankPaymentDetails.isOnlineTransfer
+                ? `Bank: ${bankPaymentDetails.bank}, Online Transfer, Receipt: ${bankPaymentDetails.receiptNumber}`
+                : `Bank: ${bankPaymentDetails.bank}, Branch: ${bankPaymentDetails.branch}, Receipt: ${bankPaymentDetails.receiptNumber}`;
+
+              const paymentPayload = {
+                shop_id: shopId,
+                order_id: savedOrderId,
+                customer_id: selectedCustomer.customer_id,
+                payment_amount: actualPaymentToRecord,
+                payment_date: sriLankanDateTime.dateString,
+                payment_time: sriLankanDateTime.timeString,
+                payment_method: bankPayMethod,
+                bank_name: bankPaymentDetails.bank,
+                branch_name: bankPaymentDetails.branch || null,
+                bank_account_id: bankPaymentDetails.bankAccountId,
+                transaction_id: bankPaymentDetails.receiptNumber,
+                payment_status: "completed",
+                notes: notesText,
+              };
+
+              await fetch(`${API_URL}/payments`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(paymentPayload),
+              });
+            }
           }
         }
       } else {
@@ -1204,25 +1419,28 @@ const SalesPage: React.FC = () => {
         let finalAmount = 0;
 
         if (newPayment > 0) {
-          if (newPayment < total) {
+          // Cap the payment at the order total (don't record excess as payment - it's change)
+          const actualPayment = Math.min(newPayment, total);
+
+          if (actualPayment < total) {
             // Partial payment
             paymentStatus = "partial";
-            advancePaid = newPayment;
-            balanceDue = total - newPayment;
-            finalAmount = newPayment;
+            advancePaid = actualPayment;
+            balanceDue = total - actualPayment;
+            finalAmount = total; // final_amount is always total + delivery (delivery=0 at this stage)
           } else {
-            // Full payment
+            // Full payment (payment >= total)
             paymentStatus = "fully_paid";
-            advancePaid = 0;
+            advancePaid = actualPayment;
             balanceDue = 0;
-            finalAmount = newPayment;
+            finalAmount = total; // final_amount is always total + delivery (delivery=0 at this stage)
           }
         } else {
           // No payment made
-          paymentStatus = "";
+          paymentStatus = "unpaid";
           advancePaid = 0;
           balanceDue = total;
-          finalAmount = 0;
+          finalAmount = total; // final_amount is always total + delivery (delivery=0 at this stage)
         }
 
         // Generate order number (000001000 format)
@@ -1247,7 +1465,10 @@ const SalesPage: React.FC = () => {
           advance_paid: advancePaid,
           balance_due: balanceDue,
           payment_status: paymentStatus,
-          payment_method: paymentMethod === "cash" ? "cash" : (bankPaymentDetails?.bank || "bank"),
+          payment_method:
+            paymentMethod === "cash"
+              ? "cash"
+              : bankPaymentDetails?.bank || "bank",
           recipient_phone: selectedCustomer.mobile || null,
           notes: orderNotes || null,
           order_date: sriLankanDateTime.dateString,
@@ -1284,12 +1505,15 @@ const SalesPage: React.FC = () => {
 
         // Save payment if amount is paid
         if (newPayment > 0) {
+          // Cap payment amount at order total - don't record excess (it's change given back)
+          const actualPaymentToRecord = Math.min(newPayment, total);
+
           if (paymentMethod === "cash") {
             const paymentPayload = {
               shop_id: shopId,
               order_id: savedOrderId,
               customer_id: selectedCustomer.customer_id,
-              payment_amount: newPayment,
+              payment_amount: actualPaymentToRecord,
               payment_date: sriLankanDateTime.dateString,
               payment_time: sriLankanDateTime.timeString,
               payment_method: "cash",
@@ -1303,16 +1527,28 @@ const SalesPage: React.FC = () => {
               body: JSON.stringify(paymentPayload),
             });
           } else if (paymentMethod === "bank" && bankPaymentDetails) {
+            // Determine payment method: online_transfer or bank_deposit
+            const bankPayMethod = bankPaymentDetails.isOnlineTransfer
+              ? "online_transfer"
+              : "bank_deposit";
+            const notesText = bankPaymentDetails.isOnlineTransfer
+              ? `Bank: ${bankPaymentDetails.bank}, Online Transfer, Receipt: ${bankPaymentDetails.receiptNumber}`
+              : `Bank: ${bankPaymentDetails.bank}, Branch: ${bankPaymentDetails.branch}, Receipt: ${bankPaymentDetails.receiptNumber}`;
+
             const paymentPayload = {
               shop_id: shopId,
               order_id: savedOrderId,
               customer_id: selectedCustomer.customer_id,
-              payment_amount: newPayment,
+              payment_amount: actualPaymentToRecord,
               payment_date: sriLankanDateTime.dateString,
               payment_time: sriLankanDateTime.timeString,
-              payment_method: bankPaymentDetails.bank || "bank",
+              payment_method: bankPayMethod,
+              bank_name: bankPaymentDetails.bank,
+              branch_name: bankPaymentDetails.branch || null,
+              bank_account_id: bankPaymentDetails.bankAccountId,
+              transaction_id: bankPaymentDetails.receiptNumber,
               payment_status: "completed",
-              notes: `Bank: ${bankPaymentDetails.bank}, Receipt: ${bankPaymentDetails.receiptNumber}`,
+              notes: notesText,
             };
 
             await fetch(`${API_URL}/payments`, {
@@ -1352,7 +1588,7 @@ const SalesPage: React.FC = () => {
     }
   };
 
-  const handlePrintBill = () => {
+  const handlePrintBill = async () => {
     if (!selectedCustomer || cartItems.length === 0) {
       setMessage({
         type: "error",
@@ -1397,17 +1633,256 @@ const SalesPage: React.FC = () => {
       }
     }
 
-    const html = generateOrderBillHTML({
-      selectedCustomer,
-      cartItems,
-      subtotal,
-      total,
-      paidAmount,
-      orderNumber: currentOrderNumber || undefined,
-      shopName: shopName || undefined,
-    });
+    try {
+      // Generate order number first
+      let orderNumber: string;
+      if (currentOrderNumber) {
+        orderNumber = currentOrderNumber;
+      } else {
+        const orderNumberResponse = await fetch(
+          `${API_URL}/orders/generate-number?shop_id=${shopId}`
+        );
+        const orderNumberData = await orderNumberResponse.json();
+        orderNumber =
+          orderNumberData.orderNumber || `${String(Date.now()).slice(-9)}`;
+        setCurrentOrderNumber(orderNumber);
+      }
 
-    printContent(html, "Order Bill");
+      // Open print window and use InvoicePrint component
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        setMessage({
+          type: "error",
+          text: "Please allow popups to print bill",
+        });
+        return;
+      }
+
+      // Calculate final amount with delivery charge
+      const grandTotal = subtotal + deliveryCharge;
+
+      // Prepare order data for InvoicePrint component
+      const invoiceData = {
+        order_number: orderNumber,
+        customer_id: selectedCustomer.customer_id,
+        total_items: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+        total_amount: subtotal,
+        final_amount: grandTotal,
+        advance_paid: parseFloat(paidAmount) || 0,
+        balance_due: 0,
+        payment_status: "fully_paid" as const,
+        order_date: new Date().toISOString(),
+        customer_mobile: selectedCustomer.mobile,
+        delivery_charge: deliveryCharge,
+        delivery_line1: "",
+        delivery_line2: "",
+        delivery_city: "",
+        items: cartItems.map((item) => ({
+          product_name: item.productName,
+          quantity: item.quantity,
+          sold_price: parseFloat(item.price.toFixed(2)),
+          total_price: parseFloat((item.price * item.quantity).toFixed(2)),
+          size_name: item.size,
+          color_name: item.color,
+        })),
+      };
+
+      // Generate filename with invoice number and customer ID
+      const invoiceNumber = `IN${orderNumber}`;
+      const customerId = selectedCustomer.customer_id
+        ? `C${String(selectedCustomer.customer_id).padStart(7, "0")}`
+        : "CXXXXXX";
+      const filename = `${invoiceNumber}_${customerId}`;
+
+      // Write initial HTML with Tailwind CDN
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${filename}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 15mm;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              font-family: Arial, sans-serif;
+            }
+            @media print {
+              body { margin: 0; padding: 0; background: white; }
+              * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <div id="invoice-root"></div>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+
+      // Wait for Tailwind to load
+      setTimeout(() => {
+        const rootElement = printWindow.document.getElementById("invoice-root");
+        if (rootElement) {
+          const root = ReactDOM.createRoot(rootElement);
+          root.render(
+            React.createElement(InvoicePrint, { order: invoiceData })
+          );
+
+          // Wait for React to render, then print
+          setTimeout(() => {
+            printWindow.print();
+
+            // Save order to database after user closes print dialog
+            printWindow.onafterprint = async () => {
+              printWindow.close();
+
+              try {
+                // Get payment amount based on payment method
+                let newPayment = 0;
+                if (paymentMethod === "cash") {
+                  newPayment = parseFloat(paidAmount) || 0;
+                } else if (paymentMethod === "bank") {
+                  newPayment =
+                    parseFloat(bankPaymentDetails?.paidAmount || "0") || 0;
+                }
+
+                // Get Sri Lankan datetime
+                const sriLankanDateTime = getSriLankanDateTime();
+
+                // Create order payload
+                const orderPayload = {
+                  shop_id: shopId,
+                  order_number: orderNumber,
+                  customer_id: selectedCustomer.customer_id,
+                  user_id: null,
+                  total_items: cartItems.length,
+                  order_status: "pending",
+                  total_amount: total,
+                  delivery_charge: deliveryCharge,
+                  final_amount: grandTotal,
+                  advance_paid: newPayment,
+                  balance_due: 0,
+                  payment_status: "fully_paid",
+                  payment_method:
+                    paymentMethod === "cash"
+                      ? "cash"
+                      : bankPaymentDetails?.bank || "bank",
+                  recipient_phone: selectedCustomer.mobile || null,
+                  notes: orderNotes || null,
+                  order_date: sriLankanDateTime.dateString,
+                  items: cartItems.map((item) => ({
+                    product_id: item.productId,
+                    color_id: item.colorId,
+                    size_id: item.sizeId,
+                    quantity: item.quantity,
+                    sold_price: item.price,
+                    total_price: item.price * item.quantity,
+                  })),
+                };
+
+                // Save order to database (this will also reduce stock quantities)
+                const orderResponse = await fetch(`${API_URL}/orders`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(orderPayload),
+                });
+
+                const orderResult = await orderResponse.json();
+                if (!orderResult.success) {
+                  setMessage({
+                    type: "error",
+                    text: `Order printed but failed to save: ${orderResult.error}`,
+                  });
+                  return;
+                }
+
+                const savedOrderId = orderResult.data?.order_id;
+
+                // Save payment if amount is paid
+                if (newPayment > 0) {
+                  if (paymentMethod === "cash") {
+                    const paymentPayload = {
+                      shop_id: shopId,
+                      order_id: savedOrderId,
+                      customer_id: selectedCustomer.customer_id,
+                      payment_amount: newPayment,
+                      payment_date: sriLankanDateTime.dateString,
+                      payment_time: sriLankanDateTime.timeString,
+                      payment_method: "cash",
+                      payment_status: "completed",
+                      notes: null,
+                    };
+
+                    await fetch(`${API_URL}/payments`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(paymentPayload),
+                    });
+                  } else if (paymentMethod === "bank" && bankPaymentDetails) {
+                    const bankPayMethod = bankPaymentDetails.isOnlineTransfer
+                      ? "online_transfer"
+                      : "bank_deposit";
+                    const notesText = bankPaymentDetails.isOnlineTransfer
+                      ? `Bank: ${bankPaymentDetails.bank}, Online Transfer, Receipt: ${bankPaymentDetails.receiptNumber}`
+                      : `Bank: ${bankPaymentDetails.bank}, Branch: ${bankPaymentDetails.branch}, Receipt: ${bankPaymentDetails.receiptNumber}`;
+
+                    const paymentPayload = {
+                      shop_id: shopId,
+                      order_id: savedOrderId,
+                      customer_id: selectedCustomer.customer_id,
+                      payment_amount: newPayment,
+                      payment_date: sriLankanDateTime.dateString,
+                      payment_time: sriLankanDateTime.timeString,
+                      payment_method: bankPayMethod,
+                      bank_name: bankPaymentDetails.bank,
+                      branch_name: bankPaymentDetails.branch || null,
+                      bank_account_id: bankPaymentDetails.bankAccountId,
+                      transaction_id: bankPaymentDetails.receiptNumber,
+                      payment_status: "completed",
+                      notes: notesText,
+                    };
+
+                    await fetch(`${API_URL}/payments`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(paymentPayload),
+                    });
+                  }
+                }
+
+                // Reset the sales page form after successful save
+                handleCancelOrder();
+
+                // Show success message
+                setMessage({
+                  type: "success",
+                  text: "✅ Order saved and printed successfully! Stock quantities updated. Form has been reset.",
+                });
+              } catch (error) {
+                console.error("Error saving order after print:", error);
+                setMessage({
+                  type: "error",
+                  text: "Order printed but failed to save to database. Please save manually.",
+                });
+              }
+            };
+          }, 500);
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("Error preparing invoice:", error);
+      setMessage({
+        type: "error",
+        text: "Failed to prepare invoice for printing",
+      });
+    }
   };
 
   const handleSaveBillAsImage = () => {
@@ -1446,14 +1921,14 @@ const SalesPage: React.FC = () => {
       shopName: shopName || undefined,
     });
 
-    // Use Sri Lankan datetime for PDF filename
-    const sriLankanDateTime = getSriLankanDateTime();
-    const timestamp = sriLankanDateTime.dateString.replace(/[-.]/g, "");
-    saveAsPDF(
-      html,
-      `order_bill_${selectedCustomer.name.replace(/\s+/g, "_")}_${timestamp}`,
-      "orders"
-    );
+    // Generate filename with invoice number and customer ID
+    const invoiceNumber = `IN${currentOrderNumber || Date.now()}`;
+    const customerId = selectedCustomer.customer_id
+      ? `C${String(selectedCustomer.customer_id).padStart(7, "0")}`
+      : "CXXXXXX";
+    const filename = `${invoiceNumber}_${customerId}`;
+
+    saveAsPDF(html, filename, "orders");
   };
 
   const handleCancelOrder = () => {
@@ -1503,7 +1978,7 @@ const SalesPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-bold text-red-500">
             {editingOrderId
-              ? `Edit Order: ${editingOrderId}`
+              ? `Edit Order: ${currentOrderNumber || editingOrderId}`
               : "Sales & Orders"}
           </h1>
           <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
@@ -2073,71 +2548,65 @@ const SalesPage: React.FC = () => {
           </div>
 
           {/* Totals */}
-          <div className="space-y-3 border-t border-gray-700 pt-4 mb-4">
+          <div className="space-y-2 border-t border-gray-700 pt-3 mb-3">
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Subtotal:</span>
               <span className="font-semibold text-gray-100">
                 Rs. {subtotal.toFixed(2)}
               </span>
             </div>
-            <div className="flex justify-between text-lg pt-2 border-t border-red-600">
-              <span className="font-bold text-gray-100">Total:</span>
+            {editingOrderId && deliveryCharge > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Delivery:</span>
+                <span className="font-semibold text-gray-100">
+                  Rs. {deliveryCharge.toFixed(2)}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between text-base pt-1 border-t border-red-600">
+              <span className="font-bold text-gray-100">
+                {editingOrderId && deliveryCharge > 0
+                  ? "Grand Total:"
+                  : "Total:"}
+              </span>
               <span className="font-bold text-red-500">
-                Rs. {total.toFixed(2)}
+                Rs.{" "}
+                {editingOrderId
+                  ? (total + deliveryCharge).toFixed(2)
+                  : total.toFixed(2)}
               </span>
             </div>
 
-            {/* Payment Status Display (when editing order) */}
+            {/* Payment Status Display (when editing order) - Compact */}
             {editingOrderId && previouslyPaidAmount !== undefined && (
-              <div className="mt-4 pt-4 border-t border-gray-700 space-y-2">
-                {previouslyPaidAmount > 0 ? (
-                  <>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-yellow-400 font-semibold">
-                        Already Paid:
-                      </span>
-                      <span className="font-semibold text-yellow-300">
-                        Rs. {previouslyPaidAmount.toFixed(2)}
-                      </span>
+              <div className="mt-2 pt-2 border-t border-gray-700 grid grid-cols-2 gap-2 text-xs">
+                {previouslyPaidAmount > 0 && (
+                  <div className="bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1">
+                    <div className="text-yellow-400/80">Paid</div>
+                    <div className="font-bold text-yellow-300">
+                      Rs. {previouslyPaidAmount.toFixed(2)}
                     </div>
-
-                    {/* Show balance due based on updated total */}
-                    {balanceDue > 0 ? (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-orange-400 font-semibold">
-                          Balance Due:
-                        </span>
-                        <span className="font-semibold text-orange-300">
-                          Rs. {balanceDue.toFixed(2)}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-green-400 font-semibold">
-                          Status:
-                        </span>
-                        <span className="font-semibold text-green-300">
-                          ✓ Fully Paid
-                        </span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-red-400 font-semibold">
-                      Amount Due:
-                    </span>
-                    <span className="font-semibold text-red-300">
-                      Rs. {balanceDue.toFixed(2)}
-                    </span>
                   </div>
                 )}
+                {balanceDue > 0 ? (
+                  <div className="bg-orange-900/30 border border-orange-600/40 rounded px-2 py-1">
+                    <div className="text-orange-400/80">Due</div>
+                    <div className="font-bold text-orange-300">
+                      Rs. {balanceDue.toFixed(2)}
+                    </div>
+                  </div>
+                ) : previouslyPaidAmount > 0 ? (
+                  <div className="bg-green-900/30 border border-green-600/40 rounded px-2 py-1">
+                    <div className="text-green-400/80">Status</div>
+                    <div className="font-bold text-green-300">✓ Paid</div>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
 
           {/* New Payment System */}
-          <div className="mb-4 pb-4 border-b border-gray-700">
+          <div className="mb-3 pb-3 border-b border-gray-700">
             <PaymentMethodSelector
               paymentMethod={paymentMethod}
               onPaymentMethodChange={handlePaymentMethodChange}
@@ -2157,9 +2626,14 @@ const SalesPage: React.FC = () => {
 
             {/* Cash Amount Input - Only for Cash Payment */}
             {paymentMethod === "cash" && (
-              <div className="space-y-2 mt-4">
+              <div className="space-y-1 mt-3">
                 <label className="block text-xs font-semibold text-green-400">
                   Cash Amount (Rs.) <span className="text-red-500">*</span>
+                  {editingOrderId && balanceDue > 0 && (
+                    <span className="ml-1 text-orange-400 font-normal text-[10px]">
+                      (Suggested: {balanceDue.toFixed(2)})
+                    </span>
+                  )}
                 </label>
                 <input
                   type="number"
@@ -2167,8 +2641,12 @@ const SalesPage: React.FC = () => {
                   step="0.01"
                   value={paidAmount}
                   onChange={(e) => setPaidAmount(e.target.value)}
-                  placeholder="Enter cash amount received"
-                  className="w-full px-3 py-2 bg-gray-700 border-2 border-green-600/30 text-white rounded focus:border-green-500 focus:outline-none text-sm"
+                  placeholder={
+                    editingOrderId && balanceDue > 0
+                      ? `Due: ${balanceDue.toFixed(2)}`
+                      : "Enter amount"
+                  }
+                  className="w-full px-3 py-1.5 bg-gray-700 border-2 border-green-600/30 text-white rounded focus:border-green-500 focus:outline-none text-sm"
                 />
                 {paidAmount &&
                   (() => {
@@ -2178,18 +2656,17 @@ const SalesPage: React.FC = () => {
                     const isFullyPaid = balance <= 0;
 
                     return (
-                      <div className="mt-2 p-2 rounded text-xs font-semibold">
+                      <div className="mt-1 px-2 py-1 rounded text-[10px] font-semibold">
                         {isFullyPaid ? (
                           <div className="bg-green-900/40 text-green-400">
                             ✓ Fully Paid{" "}
                             {paidAmt > amountToCompare
-                              ? `(Excess: Rs. ${(paidAmt - amountToCompare).toFixed(2)})`
+                              ? `(Excess: ${(paidAmt - amountToCompare).toFixed(2)})`
                               : ""}
                           </div>
                         ) : (
                           <div className="bg-orange-900/40 text-orange-400">
-                            ⚠️ Advance/Partial: Balance Due Rs.{" "}
-                            {balance.toFixed(2)}
+                            ⚠️ Partial: Due Rs. {balance.toFixed(2)}
                           </div>
                         )}
                       </div>
@@ -2204,106 +2681,204 @@ const SalesPage: React.FC = () => {
             isOpen={showBankPaymentModal}
             onClose={() => setShowBankPaymentModal(false)}
             onSave={handleSaveBankPayment}
-            totalAmount={total}
+            totalAmount={editingOrderId ? balanceDue : total}
+            isEditingOrder={!!editingOrderId}
           />
 
           {/* Action Buttons */}
-          <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={handleSaveOrder}
-                disabled={!selectedCustomer || cartItems.length === 0}
-                className="bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-              >
-                {editingOrderId ? "📝 Update" : "✓ Save"}
-              </button>
-              <button
-                onClick={handlePrintBill}
-                disabled={
-                  !selectedCustomer ||
-                  cartItems.length === 0 ||
-                  (() => {
-                    // Check if payment allows printing (only for full payment)
-                    if (paymentMethod === "cash") {
-                      const paidAmt = parseFloat(paidAmount) || 0;
-                      return paidAmt === 0 || paidAmt < total; // Disable if not paid or partial
-                    } else if (paymentMethod === "bank") {
-                      if (!bankPaymentDetails) return true; // Disable if no bank details
-                      const bankPaidAmt =
-                        parseFloat(bankPaymentDetails.paidAmount) || 0;
-                      return bankPaidAmt < total; // Disable if not full payment
-                    }
-                    return true; // Disable if no payment method selected
-                  })()
-                }
-                className="border-2 border-blue-600 text-blue-400 py-2 rounded-lg font-semibold hover:bg-blue-900/20 disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-              >
-                🖨️ Print
-              </button>
-            </div>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button
+              onClick={handleSaveOrder}
+              disabled={!selectedCustomer || cartItems.length === 0}
+              className="bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors text-sm"
+            >
+              {editingOrderId ? "📝 Update" : "✓ Save"}
+            </button>
+            <button
+              onClick={handlePrintBill}
+              disabled={
+                !selectedCustomer ||
+                cartItems.length === 0 ||
+                (() => {
+                  // Check if payment allows printing (only for full payment)
+                  if (paymentMethod === "cash") {
+                    const paidAmt = parseFloat(paidAmount) || 0;
+                    return paidAmt === 0 || paidAmt < total; // Disable if not paid or partial
+                  } else if (paymentMethod === "bank") {
+                    if (!bankPaymentDetails) return true; // Disable if no bank details
+                    const bankPaidAmt =
+                      parseFloat(bankPaymentDetails.paidAmount) || 0;
+                    return bankPaidAmt < total; // Disable if not full payment
+                  }
+                  return true; // Disable if no payment method selected
+                })()
+              }
+              className="border-2 border-blue-600 text-blue-400 py-2 rounded-lg font-semibold hover:bg-blue-900/20 disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors text-sm"
+            >
+              🖨️ Print
+            </button>
           </div>
         </div>
       </div>
 
       {/* Add Customer Modal */}
       {showAddCustomerModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700 space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold text-red-500">
-                Add New Customer
-              </h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-6 border-b border-red-600 flex justify-between items-center sticky top-0">
+              <h2 className="text-2xl font-bold">Add New Customer</h2>
               <button
-                onClick={() => setShowAddCustomerModal(false)}
-                className="text-gray-400 hover:text-red-400 text-xl"
+                onClick={() => {
+                  setShowAddCustomerModal(false);
+                  setCustomerFormData({
+                    customer_id: "",
+                    mobile: "",
+                    email: "",
+                  });
+                  setCustomerModalError("");
+                  setCustomerModalSuccess("");
+                }}
+                className="text-white hover:text-red-200 transition-colors text-2xl"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Customer Name *"
-                value={newCustomer.name}
-                onChange={(e) =>
-                  setNewCustomer({ ...newCustomer, name: e.target.value })
-                }
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded text-sm placeholder-gray-500 focus:border-red-500 focus:outline-none"
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                value={newCustomer.email}
-                onChange={(e) =>
-                  setNewCustomer({ ...newCustomer, email: e.target.value })
-                }
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded text-sm placeholder-gray-500 focus:border-red-500 focus:outline-none"
-              />
-              <input
-                type="tel"
-                placeholder="Mobile Number *"
-                value={newCustomer.mobile}
-                onChange={(e) =>
-                  setNewCustomer({ ...newCustomer, mobile: e.target.value })
-                }
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded text-sm placeholder-gray-500 focus:border-red-500 focus:outline-none"
-              />
-            </div>
+            {/* Modal Body */}
+            <div className="p-6 space-y-5">
+              {/* Error Message */}
+              {customerModalError && (
+                <div className="bg-red-900/30 border-2 border-red-600 text-red-300 p-3 rounded-lg flex items-start gap-3">
+                  <span className="text-xl">✕</span>
+                  <div>
+                    <p className="font-semibold">{customerModalError}</p>
+                  </div>
+                </div>
+              )}
 
-            <div className="flex gap-3 pt-4">
-              <button
-                onClick={handleAddCustomer}
-                className="flex-1 bg-red-600 text-white py-2 rounded font-semibold hover:bg-red-700 transition-colors"
-              >
-                Add Customer
-              </button>
-              <button
-                onClick={() => setShowAddCustomerModal(false)}
-                className="flex-1 border border-gray-600 text-gray-400 py-2 rounded font-semibold hover:bg-gray-700/50 transition-colors"
-              >
-                Cancel
-              </button>
+              {/* Success Message */}
+              {customerModalSuccess && (
+                <div className="bg-green-900/30 border-2 border-green-600 text-green-300 p-3 rounded-lg flex items-start gap-3">
+                  <span className="text-xl">✓</span>
+                  <div>
+                    <p className="font-semibold">{customerModalSuccess}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Customer ID */}
+              <div>
+                <label className="block text-sm font-semibold text-red-400 mb-2">
+                  Customer ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g., 1001"
+                  value={customerFormData.customer_id || ""}
+                  onChange={(e) =>
+                    setCustomerFormData({
+                      ...customerFormData,
+                      customer_id: e.target.value,
+                    })
+                  }
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "Enter" &&
+                      String(customerFormData.customer_id || "").trim()
+                    ) {
+                      (
+                        document.querySelector(
+                          'input[placeholder*="Mobile"]'
+                        ) as HTMLInputElement
+                      )?.focus();
+                    }
+                  }}
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Mobile Number */}
+              <div>
+                <label className="block text-sm font-semibold text-red-400 mb-2">
+                  Mobile Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g., +94-71-1234567"
+                  value={customerFormData.mobile || ""}
+                  onChange={(e) =>
+                    setCustomerFormData({
+                      ...customerFormData,
+                      mobile: e.target.value,
+                    })
+                  }
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "Enter" &&
+                      String(customerFormData.mobile || "").trim()
+                    ) {
+                      (
+                        document.querySelector(
+                          'input[type="email"]'
+                        ) as HTMLInputElement
+                      )?.focus();
+                    }
+                  }}
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-semibold text-red-400 mb-2">
+                  Email (Optional)
+                </label>
+                <input
+                  type="email"
+                  placeholder="e.g., customer@example.com"
+                  value={customerFormData.email || ""}
+                  onChange={(e) =>
+                    setCustomerFormData({
+                      ...customerFormData,
+                      email: e.target.value,
+                    })
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleAddCustomer();
+                    }
+                  }}
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-700">
+                <button
+                  onClick={handleAddCustomer}
+                  disabled={isCreatingCustomer}
+                  className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCreatingCustomer ? "Creating..." : "Add Customer"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddCustomerModal(false);
+                    setCustomerFormData({
+                      customer_id: "",
+                      mobile: "",
+                      email: "",
+                    });
+                    setCustomerModalError("");
+                    setCustomerModalSuccess("");
+                  }}
+                  disabled={isCreatingCustomer}
+                  className="flex-1 bg-gray-700 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2343,386 +2918,11 @@ const SalesPage: React.FC = () => {
       )}
 
       {/* Add Product Modal */}
-      {showAddProductModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-6 border-b border-red-600 flex justify-between items-center sticky top-0">
-              <h2 className="text-2xl font-bold">Add New Product</h2>
-              <button
-                onClick={handleCloseProductModal}
-                className="text-white hover:text-red-200 transition-colors text-2xl"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 space-y-5">
-              {/* Product Code */}
-              <div>
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Product Code <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., TSH-001"
-                  value={formData.code}
-                  onChange={(e) =>
-                    setFormData({ ...formData, code: e.target.value })
-                  }
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Product Name */}
-              <div>
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Product Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., Blue T-Shirt"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Category */}
-              <div>
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => {
-                    setSelectedCategory(e.target.value);
-                    setStockRows([]);
-                  }}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
-                >
-                  <option value="tshirt">T-Shirt</option>
-                  <option value="shirt">Shirt</option>
-                  <option value="trouser">Trouser</option>
-                  <option value="croptop">Crop Top</option>
-                  <option value="jacket">Jacket</option>
-                  <option value="dress">Dress</option>
-                </select>
-              </div>
-
-              {/* Prices */}
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-red-400 mb-2">
-                    Cost Price (Rs.) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.costPrice}
-                    onChange={(e) =>
-                      setFormData({ ...formData, costPrice: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-red-400 mb-2">
-                    Retail Price (Rs.) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.retailPrice}
-                    onChange={(e) =>
-                      setFormData({ ...formData, retailPrice: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-red-400 mb-2">
-                    Wholesale Price (Rs.){" "}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.wholesalePrice}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        wholesalePrice: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Stock Entry Rows - Row-Based System */}
-              <div>
-                <label className="block text-sm font-semibold text-red-400 mb-3">
-                  Stock Entries (Size, Color & Quantity){" "}
-                  <span className="text-red-500">*</span>
-                </label>
-
-                {/* Stock Rows Table with Scroll */}
-                <div className="mb-4 bg-gray-900/50 border border-gray-700 rounded-lg p-4 h-64 overflow-y-auto">
-                  {stockRows.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-6">
-                      No stock entries yet. Click "Add Row" to start adding
-                      stock.
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {stockRows.map((row) => (
-                        <div
-                          key={row.id}
-                          className="flex gap-2 items-end bg-gray-800/50 border border-gray-700 rounded-lg p-3 hover:border-red-600/50 transition-colors"
-                        >
-                          {/* Size Dropdown */}
-                          <div className="flex-1 min-w-[120px]">
-                            <label className="block text-xs text-gray-400 font-semibold mb-1">
-                              Size
-                            </label>
-                            <select
-                              value={row.size}
-                              onChange={(e) =>
-                                updateStockRow(row.id, "size", e.target.value)
-                              }
-                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
-                            >
-                              <option value="">Select Size</option>
-                              {getAllSizes().map((size) => (
-                                <option key={size} value={size}>
-                                  {size}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Color Dropdown */}
-                          <div className="flex-1 min-w-[120px]">
-                            <label className="block text-xs text-gray-400 font-semibold mb-1">
-                              Color
-                            </label>
-                            <select
-                              value={row.color}
-                              onChange={(e) =>
-                                updateStockRow(row.id, "color", e.target.value)
-                              }
-                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
-                            >
-                              <option value="">Select Color</option>
-                              {getAllColors().map((color) => (
-                                <option key={color} value={color}>
-                                  {color}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Quantity Input */}
-                          <div className="flex-1 min-w-[100px]">
-                            <label className="block text-xs text-gray-400 font-semibold mb-1">
-                              Qty
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              value={row.qty}
-                              onChange={(e) =>
-                                updateStockRow(
-                                  row.id,
-                                  "qty",
-                                  parseInt(e.target.value) || 0
-                                )
-                              }
-                              placeholder="0"
-                              className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none text-center"
-                            />
-                          </div>
-
-                          {/* Add Size Button */}
-                          <button
-                            onClick={() => setShowAddSizeModal(true)}
-                            className="px-3 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg hover:border-red-500 hover:text-red-400 transition-colors font-semibold"
-                            title="Add custom size"
-                          >
-                            + Size
-                          </button>
-
-                          {/* Add Color Button */}
-                          <button
-                            onClick={() => setShowAddColorModal(true)}
-                            className="px-3 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded-lg hover:border-red-500 hover:text-red-400 transition-colors font-semibold"
-                            title="Add custom color"
-                          >
-                            + Color
-                          </button>
-
-                          {/* Delete Row Button */}
-                          <button
-                            onClick={() => removeStockRow(row.id)}
-                            className="px-3 py-2 bg-red-900/30 border border-red-600/50 text-red-400 text-sm rounded-lg hover:bg-red-900/50 transition-colors font-semibold"
-                            title="Delete this row"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Add Row Button */}
-                <button
-                  onClick={addStockRow}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-dashed border-red-600/50 text-red-400 rounded-lg hover:border-red-500 hover:bg-gray-700/80 transition-colors font-semibold text-sm"
-                >
-                  + Add Row
-                </button>
-              </div>
-
-              {/* Mini-Modal for Adding Custom Size */}
-              {showAddSizeModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                  <div className="bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-sm">
-                    <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-4 border-b border-red-600 flex justify-between items-center">
-                      <h3 className="text-lg font-bold">Add Custom Size</h3>
-                      <button
-                        onClick={() => {
-                          setShowAddSizeModal(false);
-                          setNewSize("");
-                        }}
-                        className="text-white hover:text-red-200 transition-colors text-xl"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <div className="p-4 space-y-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-red-400 mb-2">
-                          Enter Size
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g., M, L, 40, etc."
-                          value={newSize}
-                          onChange={(e) => setNewSize(e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                          onKeyPress={(e) => {
-                            if (e.key === "Enter") handleAddSize();
-                          }}
-                        />
-                      </div>
-                      <div className="flex gap-3">
-                        <button
-                          onClick={handleAddSize}
-                          className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors"
-                        >
-                          Add Size
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowAddSizeModal(false);
-                            setNewSize("");
-                          }}
-                          className="flex-1 bg-gray-700 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Mini-Modal for Adding Custom Color */}
-              {showAddColorModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                  <div className="bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-sm">
-                    <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-4 border-b border-red-600 flex justify-between items-center">
-                      <h3 className="text-lg font-bold">Add Custom Color</h3>
-                      <button
-                        onClick={() => {
-                          setShowAddColorModal(false);
-                          setNewColor("");
-                        }}
-                        className="text-white hover:text-red-200 transition-colors text-xl"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <div className="p-4 space-y-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-red-400 mb-2">
-                          Enter Color
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g., Black, Navy Blue, etc."
-                          value={newColor}
-                          onChange={(e) => setNewColor(e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                          onKeyPress={(e) => {
-                            if (e.key === "Enter") handleAddColor();
-                          }}
-                        />
-                      </div>
-                      <div className="flex gap-3">
-                        <button
-                          onClick={handleAddColor}
-                          className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors"
-                        >
-                          Add Color
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowAddColorModal(false);
-                            setNewColor("");
-                          }}
-                          className="flex-1 bg-gray-700 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-gray-700">
-                <button
-                  onClick={() => {
-                    alert(
-                      "Product added successfully! Note: This is a demo. In production, this would save to database."
-                    );
-                    handleCloseProductModal();
-                  }}
-                  className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors"
-                >
-                  Add Product
-                </button>
-                <button
-                  onClick={handleCloseProductModal}
-                  className="flex-1 bg-gray-700 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddProductModal
+        isOpen={showAddProductModal}
+        onClose={handleCloseProductModal}
+        onProductAdded={handleProductAdded}
+      />
     </div>
   );
 };

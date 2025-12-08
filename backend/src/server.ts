@@ -19,7 +19,13 @@ process.on('unhandledRejection', (reason, promise) => {
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
-  process.exit(1);
+  server.close(() => {
+    process.exit(1);
+  });
+  // Force exit after 5 seconds if server hasn't closed
+  setTimeout(() => {
+    process.exit(1);
+  }, 5000);
 });
 
 // Graceful shutdown

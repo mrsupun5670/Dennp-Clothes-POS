@@ -1,147 +1,105 @@
 /**
  * Bank Collection Service
- * Handles API calls for bank collections and reconciliation data
+ * Handles API calls for bank collections (withdrawals from bank accounts)
  */
 
 import axios from 'axios';
 import { API_URL } from '../config/api';
 
-export interface PendingCollection {
-  id: string;
-  bankName: string;
-  branchName: string;
-  pendingAmount: number;
-  fromDate: string;
-  toDate: string;
-  ordersCount: number;
-  status: 'pending' | 'collected';
-  collectedDate?: string;
-  collectedAmount?: number;
-}
-
-export interface CollectionRecord {
-  collectionId: number;
-  bankName: string;
-  branchName: string;
-  pendingAmount: number;
-  collectedAmount: number;
-  fromDate: string;
-  toDate: string;
-  ordersCount: number;
-  collectionDate: string;
-  status: string;
+export interface BankCollection {
+  collection_id: number;
+  bank_account_id: number;
+  bank_name?: string;
+  collection_amount: number;
+  collection_date: string;
   notes?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
- * Get pending collections for a shop
+ * Get all bank collections
  */
-export const getPendingCollections = async (shopId: number): Promise<PendingCollection[]> => {
+export const getAllCollections = async (): Promise<BankCollection[]> => {
   try {
-    const response = await axios.get(`${API_URL}/bank-collections/pending`, {
-      params: {
-        shop_id: shopId,
-      },
-    });
-
+    const response = await axios.get(`${API_URL}/bank-collections`);
     return response.data.data || [];
   } catch (error) {
-    console.error('Error fetching pending collections:', error);
+    console.error('Error fetching collections:', error);
     throw error;
   }
 };
 
 /**
- * Get collection history
+ * Get collections for a specific bank account
  */
-export const getCollectionHistory = async (shopId: number): Promise<CollectionRecord[]> => {
+export const getBankAccountCollections = async (bankAccountId: number): Promise<BankCollection[]> => {
   try {
-    const response = await axios.get(`${API_URL}/bank-collections/history`, {
-      params: {
-        shop_id: shopId,
-      },
-    });
-
+    const response = await axios.get(`${API_URL}/bank-collections/bank/${bankAccountId}`);
     return response.data.data || [];
   } catch (error) {
-    console.error('Error fetching collection history:', error);
+    console.error('Error fetching bank account collections:', error);
     throw error;
   }
 };
 
 /**
- * Get collection details
+ * Create a new collection (withdrawal)
  */
-export const getCollectionDetails = async (
-  shopId: number,
-  collectionId: number
-): Promise<any> => {
-  try {
-    const response = await axios.get(
-      `${API_URL}/bank-collections/details/${collectionId}`,
-      {
-        params: {
-          shop_id: shopId,
-        },
-      }
-    );
-
-    return response.data.data;
-  } catch (error) {
-    console.error('Error fetching collection details:', error);
-    throw error;
-  }
-};
-
-/**
- * Record a new collection
- */
-export const recordCollection = async (
-  shopId: number,
+export const createCollection = async (
   bankAccountId: number,
   amount: number,
   collectionDate: string,
   notes?: string
 ): Promise<any> => {
   try {
-    const response = await axios.post(`${API_URL}/bank-collections/record`, {
-      shopId,
-      bankAccountId,
-      amount,
-      collectionDate,
+    const response = await axios.post(`${API_URL}/bank-collections`, {
+      bank_account_id: bankAccountId,
+      collection_amount: amount,
+      collection_date: collectionDate,
       notes,
     });
-
     return response.data;
   } catch (error) {
-    console.error('Error recording collection:', error);
+    console.error('Error creating collection:', error);
     throw error;
   }
 };
 
 /**
- * Get reconciliation summary
+ * Get collection summary
  */
-export const getReconciliationSummary = async (
-  shopId: number,
+export const getCollectionSummary = async (): Promise<{
+  total_collections: number;
+  total_amount: number;
+  last_collection_date: string | null;
+}> => {
+  try {
+    const response = await axios.get(`${API_URL}/bank-collections/summary`);
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching collection summary:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get collections by date range
+ */
+export const getCollectionsByDateRange = async (
   startDate: string,
   endDate: string
-): Promise<any[]> => {
+): Promise<BankCollection[]> => {
   try {
-    const response = await axios.get(
-      `${API_URL}/bank-collections/reconciliation-summary`,
-      {
-        params: {
-          shop_id: shopId,
-          start_date: startDate,
-          end_date: endDate,
-        },
-      }
-    );
-
+    const response = await axios.get(`${API_URL}/bank-collections/date-range`, {
+      params: {
+        start_date: startDate,
+        end_date: endDate,
+      },
+    });
     return response.data.data || [];
   } catch (error) {
-    console.error('Error fetching reconciliation summary:', error);
+    console.error('Error fetching collections by date range:', error);
     throw error;
   }
 };

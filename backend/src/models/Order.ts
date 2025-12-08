@@ -19,13 +19,11 @@ export interface Order {
   advance_paid: number;
   balance_due: number;
   payment_status: 'unpaid' | 'partial' | 'fully_paid';
-  payment_method?: 'cash' | 'card' | 'online' | 'check' | 'other';
   order_status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   notes?: string;
   tracking_number?: string | null;
-  order_date: Date;
-  created_at?: Date;
-  updated_at?: Date;
+  created_at: string;
+  updated_at?: string;
   delivery_line1?: string;
   delivery_line2?: string;
   delivery_postal_code?: string;
@@ -121,17 +119,26 @@ class OrderModel {
         advance_paid,
         balance_due,
         payment_status,
-        payment_method,
         order_status,
         recipient_phone,
         notes,
-        order_date,
       } = orderData;
+
+      // Get Sri Lankan timezone datetime
+      const sriLankanDate = new Date().toLocaleString("en-US", { timeZone: "Asia/Colombo" });
+      const dateObj = new Date(sriLankanDate);
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      const hours = String(dateObj.getHours()).padStart(2, "0");
+      const minutes = String(dateObj.getMinutes()).padStart(2, "0");
+      const seconds = String(dateObj.getSeconds()).padStart(2, "0");
+      const created_at = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
       const results = await query(
         `INSERT INTO orders
         (order_number, shop_id, customer_id, user_id, total_items, total_amount, delivery_charge, final_amount,
-         advance_paid, balance_due, payment_status, payment_method, order_status, recipient_phone, notes, order_date)
+         advance_paid, balance_due, payment_status, order_status, recipient_phone, notes, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           order_number,
@@ -145,11 +152,11 @@ class OrderModel {
           advance_paid,
           balance_due,
           payment_status,
-          payment_method || null,
           order_status,
           recipient_phone || null,
           notes || null,
-          order_date,
+          created_at,
+          created_at,
         ]
       );
 
@@ -190,7 +197,6 @@ class OrderModel {
         'advance_paid',
         'balance_due',
         'payment_status',
-        'payment_method',
         'order_status',
         'recipient_phone',
         'recipient_phone1',
@@ -223,7 +229,19 @@ class OrderModel {
         return false;
       }
 
-      fields.push('updated_at = NOW()');
+      // Get Sri Lankan timezone datetime for updated_at
+      const sriLankanDate = new Date().toLocaleString("en-US", { timeZone: "Asia/Colombo" });
+      const dateObj = new Date(sriLankanDate);
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      const hours = String(dateObj.getHours()).padStart(2, "0");
+      const minutes = String(dateObj.getMinutes()).padStart(2, "0");
+      const seconds = String(dateObj.getSeconds()).padStart(2, "0");
+      const updated_at = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+
+      fields.push('updated_at = ?');
+      values.push(updated_at);
       values.push(orderId);
       values.push(shopId);
 
@@ -235,6 +253,73 @@ class OrderModel {
       return affectedRows > 0;
     } catch (error) {
       logger.error('Error updating order:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Recalculate payment status based on final_amount and advance_paid
+   * Should be called after updating delivery_charge or recording payments
+   */
+  async recalculatePaymentStatus(orderId: number, shopId: number): Promise<boolean> {
+    try {
+      // Get current order
+      const order = await this.getOrderById(orderId, shopId);
+      if (!order) {
+        logger.warn('Order not found for payment recalculation', { orderId, shopId });
+        return false;
+      }
+
+      // Calculate final amount (total_amount + delivery_charge)
+      const finalAmount = order.total_amount + (order.delivery_charge || 0);
+
+      // Calculate balance due
+      const balanceDue = Math.max(0, finalAmount - (order.advance_paid || 0));
+
+      // Determine payment status
+      let paymentStatus: 'unpaid' | 'partial' | 'fully_paid';
+      if (order.advance_paid === 0) {
+        paymentStatus = 'unpaid';
+      } else if (balanceDue > 0) {
+        paymentStatus = 'partial';
+      } else {
+        paymentStatus = 'fully_paid';
+      }
+
+      // Get Sri Lankan timezone datetime for updated_at
+      const sriLankanDate = new Date().toLocaleString("en-US", { timeZone: "Asia/Colombo" });
+      const dateObj = new Date(sriLankanDate);
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      const hours = String(dateObj.getHours()).padStart(2, "0");
+      const minutes = String(dateObj.getMinutes()).padStart(2, "0");
+      const seconds = String(dateObj.getSeconds()).padStart(2, "0");
+      const updated_at = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+
+      // Update order with recalculated values
+      const results = await query(
+        `UPDATE orders
+         SET final_amount = ?,
+             balance_due = ?,
+             payment_status = ?,
+             updated_at = ?
+         WHERE order_id = ? AND shop_id = ?`,
+        [finalAmount, balanceDue, paymentStatus, updated_at, orderId, shopId]
+      );
+
+      const affectedRows = (results as any).affectedRows;
+      logger.info('Payment status recalculated', {
+        orderId,
+        finalAmount,
+        balanceDue,
+        paymentStatus,
+        affectedRows
+      });
+
+      return affectedRows > 0;
+    } catch (error) {
+      logger.error('Error recalculating payment status:', error);
       throw error;
     }
   }
@@ -326,7 +411,7 @@ class OrderModel {
          SUM(remaining_amount) as total_pending,
          COUNT(CASE WHEN payment_status = 'fully_paid' THEN 1 END) as fully_paid_count
          FROM orders
-         WHERE shop_id = ? AND order_date BETWEEN ? AND ?`,
+         WHERE shop_id = ? AND DATE(created_at) BETWEEN DATE(?) AND DATE(?)`,
         [shopId, startDate, endDate]
       );
 
@@ -335,6 +420,49 @@ class OrderModel {
       return summary;
     } catch (error) {
       logger.error('Error fetching order summary:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate next order number
+   * Start from 0001000 if no orders exist, otherwise increment last order number by 1
+   */
+  async generateOrderNumber(shopId: number): Promise<string> {
+    try {
+      const results = await query(
+        `SELECT order_number, order_id FROM orders WHERE shop_id = ? ORDER BY order_id DESC LIMIT 1`,
+        [shopId]
+      );
+
+      let newOrderNumber: string;
+
+      if ((results as any[]).length === 0) {
+        // No orders exist, start from 0001000
+        newOrderNumber = '0001000';
+      } else {
+        const lastOrderNumber = (results as any[])[0].order_number;
+        const lastOrderId = (results as any[])[0].order_id;
+
+        // Parse the last order number and increment by 1
+        const lastNumber = parseInt(lastOrderNumber, 10);
+
+        // Check if the order number is a timestamp (more than 7 digits) or invalid
+        if (isNaN(lastNumber) || lastNumber > 9999999) {
+          // Use order_id as base for proper order number
+          // Start from 0001000 + order_id to ensure uniqueness
+          newOrderNumber = String(1000000 + lastOrderId + 1).padStart(7, '0');
+        } else {
+          // Increment by 1 and pad with zeros to maintain 7 digits
+          const nextNumber = lastNumber + 1;
+          newOrderNumber = String(nextNumber).padStart(7, '0');
+        }
+      }
+
+      logger.info('Generated order number', { shopId, newOrderNumber });
+      return newOrderNumber;
+    } catch (error) {
+      logger.error('Error generating order number:', error);
       throw error;
     }
   }

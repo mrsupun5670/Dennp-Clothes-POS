@@ -61,7 +61,21 @@
       "Bash(cmd /c \"netstat -ano | findstr :5173\")",
       "Bash(cmd /c \"for /f \"\"tokens=5\"\" %a in (''netstat -ano ^| findstr :3002'') do taskkill /PID %a /F\")",
       "Bash(cmd /c \"for /f \"\"tokens=5\"\" %a in (''''netstat -ano ^| findstr :3002'''') do taskkill /PID %a /F 2>&1\")",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(cmd /c \"tasklist | findstr node.exe\")",
+      "Bash(cmd /c \"taskkill /PID 12248 /F\")",
+      "Bash(cmd /c \"taskkill /IM node.exe /F /T 2>&1 || echo No node processes\")",
+      "Bash(cmd /c \"netstat -ano | findstr :3000\")",
+      "Bash(cmd /c \"tasklist /FI \"IMAGENAME eq node.exe\"\")",
+      "Bash(cmd /c \"taskkill /IM node.exe /F /T & taskkill /IM nodemon.exe /F /T 2>nul & echo Processes killed\")",
+      "Bash(cmd /c \"netstat -ano | findstr LISTENING | findstr 3002\")",
+      "Bash(cmd /c \"netstat -ano | findstr 3002\")",
+      "Bash(cmd /c \"tasklist | findstr node\")",
+      "Bash(cmd /c \"taskkill /IM node.exe /F /T 2>&1 || echo No processes to kill\")",
+      "Bash(cmd /c \"for /f \"\"tokens=5\"\" %a in (''netstat -ano ^| findstr :3002'') do @echo %a\")",
+      "Bash(cmd /c:*)",
+      "Bash(python:*)",
+      "Bash(tasklist:*)"
     ],
     "deny": [],
     "ask": []

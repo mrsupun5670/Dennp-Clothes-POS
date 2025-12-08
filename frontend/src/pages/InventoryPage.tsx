@@ -18,7 +18,6 @@ const InventoryPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    inventory_id: "",
     name: "",
     qty: "",
     unitCost: "",
@@ -37,6 +36,11 @@ const InventoryPage: React.FC = () => {
 
   // Use ref to prevent duplicate requests in strict mode
   const loadInventoryRef = useRef(false);
+
+  // Refs for form inputs to enable Enter key navigation
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const qtyInputRef = useRef<HTMLInputElement>(null);
+  const unitCostInputRef = useRef<HTMLInputElement>(null);
 
   // Load inventory data when component mounts or shopId changes
   useEffect(() => {
@@ -97,15 +101,18 @@ const InventoryPage: React.FC = () => {
 
   const handleAddClick = () => {
     setIsEditMode(false);
-    setFormData({ inventory_id: "", name: "", qty: "", unitCost: "" });
+    setFormData({ name: "", qty: "", unitCost: "" });
     setShowAddModal(true);
+    setModalMessage("");
+    setModalMessageType("");
+    // Focus on name input when modal opens
+    setTimeout(() => nameInputRef.current?.focus(), 100);
   };
 
   const handleEditItem = (item: InventoryItem) => {
     setIsEditMode(true);
     setSelectedItemId(item.inventory_id);
     setFormData({
-      inventory_id: String(item.inventory_id),
       name: item.item_name,
       qty: String(item.quantity_in_stock),
       unitCost: String(item.unit_cost),
@@ -117,7 +124,7 @@ const InventoryPage: React.FC = () => {
     setShowAddModal(false);
     setIsEditMode(false);
     setSelectedItemId(null);
-    setFormData({ inventory_id: "", name: "", qty: "", unitCost: "" });
+    setFormData({ name: "", qty: "", unitCost: "" });
     setModalMessage("");
     setModalMessageType("");
   };
@@ -129,18 +136,6 @@ const InventoryPage: React.FC = () => {
     // Clear previous messages
     setModalMessage("");
     setModalMessageType("");
-
-    if (!formData.inventory_id.trim()) {
-      setModalMessage("Please enter inventory ID");
-      setModalMessageType("error");
-      return;
-    }
-
-    if (isNaN(parseInt(formData.inventory_id))) {
-      setModalMessage("Inventory ID must be a valid number");
-      setModalMessageType("error");
-      return;
-    }
 
     if (!formData.name.trim()) {
       setModalMessage("Please enter item name");
@@ -192,7 +187,7 @@ const InventoryPage: React.FC = () => {
           setModalMessageType("error");
           return;
         }
-        const result = await addInventoryItem(shopId, parseInt(formData.inventory_id), formData.name, qty, unitCost);
+        const result = await addInventoryItem(shopId, formData.name, qty, unitCost);
         const newItem: InventoryItem = {
           inventory_id: result.inventory_id,
           shop_id: shopId,
@@ -402,34 +397,13 @@ const InventoryPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Inventory ID */}
-              <div>
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Inventory ID <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  placeholder="e.g., 1001"
-                  value={formData.inventory_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, inventory_id: e.target.value })
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && formData.inventory_id.trim()) {
-                      (document.querySelector('input[placeholder*="POS Thermal"]') as HTMLInputElement)?.focus();
-                    }
-                  }}
-                  disabled={isEditMode}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
-
               {/* Item Name */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-2">
                   Item Name <span className="text-red-500">*</span>
                 </label>
                 <input
+                  ref={nameInputRef}
                   type="text"
                   placeholder="e.g., POS Thermal Paper Roll"
                   value={formData.name}
@@ -437,8 +411,9 @@ const InventoryPage: React.FC = () => {
                     setFormData({ ...formData, name: e.target.value })
                   }
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && formData.name.trim()) {
-                      (document.querySelector('input[type="number"][placeholder="0.00"]:first-of-type') as HTMLInputElement)?.focus();
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      qtyInputRef.current?.focus();
                     }
                   }}
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
@@ -452,6 +427,7 @@ const InventoryPage: React.FC = () => {
                     Quantity <span className="text-red-500">*</span>
                   </label>
                   <input
+                    ref={qtyInputRef}
                     type="number"
                     step="0.01"
                     placeholder="0.00"
@@ -463,8 +439,9 @@ const InventoryPage: React.FC = () => {
                       });
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && formData.qty.trim()) {
-                        (document.querySelector('input[type="number"][placeholder="0.00"]:last-of-type') as HTMLInputElement)?.focus();
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        unitCostInputRef.current?.focus();
                       }
                     }}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
@@ -475,6 +452,7 @@ const InventoryPage: React.FC = () => {
                     Unit Cost (Rs.) <span className="text-red-500">*</span>
                   </label>
                   <input
+                    ref={unitCostInputRef}
                     type="number"
                     step="0.01"
                     placeholder="0.00"
@@ -487,6 +465,7 @@ const InventoryPage: React.FC = () => {
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
+                        e.preventDefault();
                         handleSaveItem();
                       }
                     }}

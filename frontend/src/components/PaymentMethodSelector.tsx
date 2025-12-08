@@ -41,7 +41,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
     return (
       <div
-        className={`text-sm font-semibold p-2 rounded text-center ${
+        className={`text-[10px] font-semibold px-2 py-1 rounded text-center ${
           balancePayable === 0
             ? "bg-green-900/40 text-green-400"
             : balancePayable < 0
@@ -53,68 +53,68 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           ? "✓ Full Payment"
           : balancePayable < 0
           ? `Excess: Rs. ${Math.abs(balancePayable).toFixed(2)}`
-          : `Balance Due: Rs. ${balancePayable.toFixed(2)}`}
+          : `Due: Rs. ${balancePayable.toFixed(2)}`}
       </div>
     );
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Payment Method Selection - Horizontal Layout */}
-      <div className="space-y-2">
-        <label className="block text-sm font-semibold text-red-400">
+      <div className="space-y-1">
+        <label className="block text-xs font-semibold text-red-400">
           Payment Method <span className="text-red-500">*</span>
         </label>
 
         {/* Radio Buttons - Side by Side */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           {/* Cash Option */}
           <div
             onClick={() => onPaymentMethodChange("cash")}
-            className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border-2 cursor-pointer transition-all ${
               paymentMethod === "cash"
                 ? "bg-green-900/30 border-green-600/50"
                 : "bg-gray-700/50 border-gray-600"
             }`}
           >
             <div
-              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                 paymentMethod === "cash"
                   ? "border-green-600 bg-green-600"
                   : "border-gray-500"
               }`}
             >
               {paymentMethod === "cash" && (
-                <div className="w-2 h-2 bg-white rounded-full" />
+                <div className="w-1.5 h-1.5 bg-white rounded-full" />
               )}
             </div>
-            <label className="text-sm text-gray-200 cursor-pointer text-center">
-              💵 Cash Payment
+            <label className="text-xs text-gray-200 cursor-pointer">
+              💵 Cash
             </label>
           </div>
 
           {/* Bank Option */}
           <div
             onClick={() => onPaymentMethodChange("bank")}
-            className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border-2 cursor-pointer transition-all ${
               paymentMethod === "bank"
                 ? "bg-blue-900/30 border-blue-600/50"
                 : "bg-gray-700/50 border-gray-600"
             }`}
           >
             <div
-              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                 paymentMethod === "bank"
                   ? "border-blue-600 bg-blue-600"
                   : "border-gray-500"
               }`}
             >
               {paymentMethod === "bank" && (
-                <div className="w-2 h-2 bg-white rounded-full" />
+                <div className="w-1.5 h-1.5 bg-white rounded-full" />
               )}
             </div>
-            <label className="text-sm text-gray-200 cursor-pointer text-center">
-              🏦 Bank/Online
+            <label className="text-xs text-gray-200 cursor-pointer">
+              🏦 Bank
             </label>
           </div>
         </div>
@@ -122,70 +122,66 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
       {/* Bank Section - Show Bank Details Button */}
       {paymentMethod === "bank" && (
-        <div className="space-y-3 bg-blue-900/20 border border-blue-600/30 rounded-lg p-4 animate-fadeIn">
-          <div className="space-y-2">
-            <p className="text-sm text-blue-300">
-              Bank transfer payment will be recorded separately once verified.
-            </p>
+        <div className="space-y-2 bg-blue-900/20 border border-blue-600/30 rounded-lg p-2 animate-fadeIn">
+          <p className="text-[10px] text-blue-300">
+            Bank transfer payment will be recorded separately.
+          </p>
 
-            {!bankPaymentDetails ? (
-              <button
-                onClick={onBankPaymentClick}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-              >
-                <span>🏦</span> Add Bank Payment Details
-              </button>
-            ) : (
-              <div className="bg-gray-700/50 rounded-lg p-4 space-y-3 animate-fadeIn">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-xs text-blue-300">Bank Payment Added</p>
-                    <p className="text-sm font-semibold text-gray-200 mt-1">
-                      {bankPaymentDetails.bank === "boc"
-                        ? "Bank of Ceylon (BOC)"
-                        : "Commercial Bank"}
-                      {bankPaymentDetails.isOnlineTransfer && " • Online Transfer"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={onBankPaymentClick}
-                    className="text-blue-400 hover:text-blue-300 text-sm font-semibold"
-                  >
-                    Edit
-                  </button>
+          {!bankPaymentDetails ? (
+            <button
+              onClick={onBankPaymentClick}
+              className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-xs"
+            >
+              <span>🏦</span> Add Bank Details
+            </button>
+          ) : (
+            <div className="bg-gray-700/50 rounded-lg p-2 space-y-2 animate-fadeIn">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] text-blue-300">Bank Payment Added</p>
+                  <p className="text-xs font-semibold text-gray-200 mt-0.5">
+                    {bankPaymentDetails.bank === "boc" ? "BOC" : "Commercial"}
+                    {bankPaymentDetails.isOnlineTransfer && " • Online"}
+                  </p>
                 </div>
+                <button
+                  onClick={onBankPaymentClick}
+                  className="text-blue-400 hover:text-blue-300 text-[10px] font-semibold"
+                >
+                  Edit
+                </button>
+              </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {!bankPaymentDetails.isOnlineTransfer && (
-                    <div className="text-gray-400">
-                      <p className="text-blue-300 font-semibold mb-1">Branch</p>
-                      <p>{bankPaymentDetails.branch}</p>
-                    </div>
-                  )}
+              <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                {!bankPaymentDetails.isOnlineTransfer && (
                   <div className="text-gray-400">
-                    <p className="text-blue-300 font-semibold mb-1">Receipt #</p>
-                    <p>{bankPaymentDetails.receiptNumber}</p>
+                    <p className="text-blue-300 font-semibold">Branch</p>
+                    <p className="truncate">{bankPaymentDetails.branch}</p>
                   </div>
-                  <div className="text-gray-400">
-                    <p className="text-blue-300 font-semibold mb-1">Date & Time</p>
-                    <p>{new Date(bankPaymentDetails.paymentDateTime).toLocaleString()}</p>
-                  </div>
-                  <div className="text-gray-400">
-                    <p className="text-blue-300 font-semibold mb-1">Amount</p>
-                    <p>Rs. {parseFloat(bankPaymentDetails.paidAmount).toFixed(2)}</p>
-                  </div>
+                )}
+                <div className="text-gray-400">
+                  <p className="text-blue-300 font-semibold">Receipt #</p>
+                  <p className="truncate">{bankPaymentDetails.receiptNumber}</p>
                 </div>
-
-                {/* Balance Display for Bank Payment */}
-                <div className="pt-2 border-t border-gray-600">
-                  {getBalanceDisplay()}
+                <div className="text-gray-400">
+                  <p className="text-blue-300 font-semibold">Date & Time</p>
+                  <p className="truncate">{new Date(bankPaymentDetails.paymentDateTime).toLocaleString()}</p>
+                </div>
+                <div className="text-gray-400">
+                  <p className="text-blue-300 font-semibold">Amount</p>
+                  <p>Rs. {parseFloat(bankPaymentDetails.paidAmount).toFixed(2)}</p>
                 </div>
               </div>
-            )}
-          </div>
 
-          <p className="text-xs text-blue-300 pt-2">
-            ℹ️ Bill can be saved without payment. Payment will be verified later.
+              {/* Balance Display for Bank Payment */}
+              <div className="pt-1 border-t border-gray-600">
+                {getBalanceDisplay()}
+              </div>
+            </div>
+          )}
+
+          <p className="text-[10px] text-blue-300">
+            ℹ️ Bill can be saved without payment.
           </p>
         </div>
       )}

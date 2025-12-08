@@ -43,7 +43,7 @@ export interface IProduct {
 export interface IShopInventory {
   id: number;
   shop_id: number;
-  product_id: number;
+  product_id: string;
   quantity_in_stock: number;
   reorder_level?: number;
   last_sync_time?: Date;
@@ -69,7 +69,7 @@ export interface ISale {
 export interface ISaleItem {
   id: number;
   sale_id: number;
-  product_id: number;
+  product_id: string;
   quantity: number;
   unit_price: number;
   total_price: number;

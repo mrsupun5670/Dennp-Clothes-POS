@@ -59,7 +59,7 @@ class AnalyticsModel {
   ): Promise<SalesAnalysisData[]> {
     try {
       const results = await query(
-        `SELECT DATE(o.order_date) as date,
+        `SELECT DATE(o.created_at) as date,
                 SUM(o.total_amount) as sales,
                 SUM(oi.quantity * (p.product_cost + p.print_cost)) as cost,
                 (SUM(o.total_amount) - SUM(oi.quantity * (p.product_cost + p.print_cost))) as profit
@@ -67,11 +67,11 @@ class AnalyticsModel {
          LEFT JOIN order_items oi ON o.order_id = oi.order_id
          LEFT JOIN products p ON oi.product_id = p.product_id
          WHERE o.shop_id = ?
-         AND DATE(o.order_date) >= ?
-         AND DATE(o.order_date) <= ?
+         AND DATE(o.created_at) >= ?
+         AND DATE(o.created_at) <= ?
          AND o.order_status != 'cancelled'
-         GROUP BY DATE(o.order_date)
-         ORDER BY DATE(o.order_date) ASC`,
+         GROUP BY DATE(o.created_at)
+         ORDER BY DATE(o.created_at) ASC`,
         [shopId, startDate, endDate]
       );
 
@@ -99,7 +99,7 @@ class AnalyticsModel {
   ): Promise<TopSellingItem[]> {
     try {
       const results = await query(
-        `SELECT p.sku as productCode,
+        `SELECT p.product_id as productCode,
                 p.product_name as productName,
                 SUM(oi.quantity) as unitsSold,
                 SUM(oi.total_price) as revenue,
@@ -108,10 +108,10 @@ class AnalyticsModel {
          JOIN orders o ON oi.order_id = o.order_id
          JOIN products p ON oi.product_id = p.product_id
          WHERE o.shop_id = ?
-         AND DATE(o.order_date) >= ?
-         AND DATE(o.order_date) <= ?
+         AND DATE(o.created_at) >= ?
+         AND DATE(o.created_at) <= ?
          AND o.order_status != 'cancelled'
-         GROUP BY oi.product_id, p.sku, p.product_name
+         GROUP BY oi.product_id, p.product_id, p.product_name
          ORDER BY unitsSold DESC
          LIMIT ?`,
         [shopId, startDate, endDate, limit]
@@ -183,27 +183,27 @@ class AnalyticsModel {
       const results = await query(
         `SELECT SUM(o.total_amount) as totalSales,
                 SUM(oi.quantity * (p.product_cost + p.print_cost)) as totalCost,
-                COUNT(DISTINCT DATE(o.order_date)) as daysInPeriod,
-                MAX(CASE WHEN DATE(o.order_date) = (
-                  SELECT DATE(order_date) FROM orders
-                  WHERE shop_id = ? AND DATE(order_date) >= ? AND DATE(order_date) <= ?
+                COUNT(DISTINCT DATE(o.created_at)) as daysInPeriod,
+                MAX(CASE WHEN DATE(o.created_at) = (
+                  SELECT DATE(created_at) FROM orders
+                  WHERE shop_id = ? AND DATE(created_at) >= ? AND DATE(created_at) <= ?
                   AND order_status != 'cancelled'
-                  GROUP BY DATE(order_date)
+                  GROUP BY DATE(created_at)
                   ORDER BY SUM(total_amount) DESC LIMIT 1
-                ) THEN DATE(o.order_date) END) as bestDay,
-                MAX(CASE WHEN DATE(o.order_date) = (
-                  SELECT DATE(order_date) FROM orders
-                  WHERE shop_id = ? AND DATE(order_date) >= ? AND DATE(order_date) <= ?
+                ) THEN DATE(o.created_at) END) as bestDay,
+                MAX(CASE WHEN DATE(o.created_at) = (
+                  SELECT DATE(created_at) FROM orders
+                  WHERE shop_id = ? AND DATE(created_at) >= ? AND DATE(created_at) <= ?
                   AND order_status != 'cancelled'
-                  GROUP BY DATE(order_date)
+                  GROUP BY DATE(created_at)
                   ORDER BY SUM(total_amount) ASC LIMIT 1
-                ) THEN DATE(o.order_date) END) as worstDay
+                ) THEN DATE(o.created_at) END) as worstDay
          FROM orders o
          LEFT JOIN order_items oi ON o.order_id = oi.order_id
          LEFT JOIN products p ON oi.product_id = p.product_id
          WHERE o.shop_id = ?
-         AND DATE(o.order_date) >= ?
-         AND DATE(o.order_date) <= ?
+         AND DATE(o.created_at) >= ?
+         AND DATE(o.created_at) <= ?
          AND o.order_status != 'cancelled'`,
         [shopId, startDate, endDate, shopId, startDate, endDate, shopId, startDate, endDate]
       );
@@ -221,7 +221,7 @@ class AnalyticsModel {
       if (row.bestDay) {
         const bestDaySales = await query(
           `SELECT SUM(total_amount) as sales FROM orders
-           WHERE shop_id = ? AND DATE(order_date) = ? AND order_status != 'cancelled'`,
+           WHERE shop_id = ? AND DATE(created_at) = ? AND order_status != 'cancelled'`,
           [shopId, row.bestDay]
         );
         bestDay = {
@@ -233,7 +233,7 @@ class AnalyticsModel {
       if (row.worstDay) {
         const worstDaySales = await query(
           `SELECT SUM(total_amount) as sales FROM orders
-           WHERE shop_id = ? AND DATE(order_date) = ? AND order_status != 'cancelled'`,
+           WHERE shop_id = ? AND DATE(created_at) = ? AND order_status != 'cancelled'`,
           [shopId, row.worstDay]
         );
         worstDay = {
@@ -269,14 +269,14 @@ class AnalyticsModel {
   ): Promise<{ best: any; worst: any }> {
     try {
       const results = await query(
-        `SELECT DATE(order_date) as date,
+        `SELECT DATE(created_at) as date,
                 SUM(total_amount) as sales
          FROM orders
          WHERE shop_id = ?
-         AND DATE(order_date) >= ?
-         AND DATE(order_date) <= ?
+         AND DATE(created_at) >= ?
+         AND DATE(created_at) <= ?
          AND order_status != 'cancelled'
-         GROUP BY DATE(order_date)
+         GROUP BY DATE(created_at)
          ORDER BY sales DESC`,
         [shopId, startDate, endDate]
       );

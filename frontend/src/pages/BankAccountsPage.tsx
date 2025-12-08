@@ -3,59 +3,67 @@ import { useShop } from "../context/ShopContext";
 import { useQuery } from "../hooks/useQuery";
 import { API_URL } from "../config/api";
 import { deleteBankAccount, BankAccount, getShopBankAccounts } from "../services/bankAccountService";
-import { getPendingCollections, getCollectionHistory, recordCollection } from "../services/bankCollectionService";
-import type { PendingCollection as PendingCollectionType, CollectionRecord } from "../services/bankCollectionService";
-
-interface PendingCollection {
-  id: string;
-  bankName: string;
-  branchName: string;
-  pendingAmount: number;
-  fromDate: string;
-  toDate: string;
-  ordersCount: number;
-  status: "pending" | "collected";
-  collectedDate?: string;
-  collectedAmount?: number;
-}
+import { getAllCollections, createCollection, BankCollection } from "../services/bankCollectionService";
+import { formatSriLankanDate, formatSriLankanDateTime, getCurrentSriLankanDate } from "../utils/timeUtils";
 
 const BankAccountsPage: React.FC = () => {
   const { shopId: contextShopId } = useShop();
   const shopId = contextShopId || 1;
 
   const [selectedTab, setSelectedTab] = useState<
-    "summary" | "tracking" | "history"
+    "summary" | "collections"
   >("summary");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBank, setSelectedBank] = useState<string>("all");
-  const [showReconcileModal, setShowReconcileModal] = useState(false);
-  const [selectedCollection, setSelectedCollection] =
-    useState<PendingCollection | null>(null);
-  const [collectedAmount, setCollectedAmount] = useState("");
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [selectedBankAccount, setSelectedBankAccount] = useState<BankAccount | null>(null);
+  const [collectionAmount, setCollectionAmount] = useState("");
+  const [collectionDate, setCollectionDate] = useState(getCurrentSriLankanDate());
+  const [collectionNotes, setCollectionNotes] = useState("");
   const [bankAccountsData, setBankAccountsData] = useState<BankAccount[]>([]);
-  const [pendingCollectionsData, setPendingCollectionsData] = useState<PendingCollection[]>([]);
-  const [collectionHistoryData, setCollectionHistoryData] = useState<CollectionRecord[]>([]);
-  const [collections, setCollections] = useState<PendingCollection[]>([]);
+  const [collectionsData, setCollectionsData] = useState<BankCollection[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Error state
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Collection modal status messages
+  const [collectionStatus, setCollectionStatus] = useState<{
+    type: 'success' | 'error' | null;
+    message: string;
+  }>({ type: null, message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load bank accounts and collections from database
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [accounts, pending, history] = await Promise.all([
-          getShopBankAccounts(shopId),
-          getPendingCollections(shopId),
-          getCollectionHistory(shopId),
-        ]);
-        setBankAccountsData(accounts || []);
-        setPendingCollectionsData(pending || []);
-        setCollectionHistoryData(history || []);
-      } catch (error) {
+        setErrorMessage(null);
+
+        // Load bank accounts
+        try {
+          const accounts = await getShopBankAccounts(shopId);
+          setBankAccountsData(accounts || []);
+        } catch (error: any) {
+          console.error("Error loading bank accounts:", error);
+          setErrorMessage(error?.message || "Failed to load bank accounts");
+          setBankAccountsData([]);
+        }
+
+        // Load collections
+        try {
+          const collections = await getAllCollections();
+          setCollectionsData(collections || []);
+        } catch (error) {
+          console.warn("Could not load collections:", error);
+          setCollectionsData([]);
+        }
+      } catch (error: any) {
         console.error("Error loading data:", error);
+        setErrorMessage(error?.message || "Failed to load bank account data");
         setBankAccountsData([]);
-        setPendingCollectionsData([]);
-        setCollectionHistoryData([]);
+        setCollectionsData([]);
       } finally {
         setLoading(false);
       }
@@ -64,104 +72,133 @@ const BankAccountsPage: React.FC = () => {
     loadData();
   }, [shopId]);
 
-  // Update collections when pending data loads
-  useEffect(() => {
-    const combinedCollections: PendingCollection[] = [
-      ...pendingCollectionsData,
-      ...collectionHistoryData.map(col => ({
-        id: `COL-${col.collectionId}`,
-        bankName: col.bankName,
-        branchName: col.branchName,
-        pendingAmount: col.pendingAmount,
-        fromDate: col.fromDate,
-        toDate: col.toDate,
-        ordersCount: col.ordersCount,
-        status: 'collected' as const,
-        collectedDate: col.collectionDate,
-        collectedAmount: col.collectedAmount,
-      })),
-    ];
-    setCollections(combinedCollections);
-  }, [pendingCollectionsData, collectionHistoryData]);
-
   // Use real bank account data from database
   const bankAccounts = useMemo(() => {
-    return bankAccountsData.filter(account => account.status === 'active');
+    return bankAccountsData;
   }, [bankAccountsData]);
 
   // Filter collections based on search and bank
   const filteredCollections = useMemo(() => {
-    let result = [...collections];
+    let result = [...collectionsData];
 
     if (selectedBank !== "all") {
-      result = result.filter((col) => col.bankName === selectedBank);
+      result = result.filter((col) => col.bank_name === selectedBank);
     }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (col) =>
-          col.bankName.toLowerCase().includes(query) ||
-          col.branchName.toLowerCase().includes(query) ||
-          col.id.toLowerCase().includes(query)
+          col.bank_name?.toLowerCase().includes(query) ||
+          col.collection_id.toString().includes(query)
       );
     }
 
     return result;
-  }, [selectedBank, searchQuery, collections]);
-
-  const pendingCollections = filteredCollections.filter(
-    (col) => col.status === "pending"
-  );
-  const collectedHistory = filteredCollections.filter(
-    (col) => col.status === "collected"
-  );
+  }, [selectedBank, searchQuery, collectionsData]);
 
   const totalBankBalance = useMemo(() => {
     return bankAccounts.reduce((sum, account) => sum + parseFloat(String(account.current_balance)), 0);
   }, [bankAccounts]);
 
-  const totalPendingAmount = pendingCollections.reduce(
-    (sum, col) => sum + col.pendingAmount,
-    0
-  );
+  const totalCollected = useMemo(() => {
+    return collectionsData.reduce((sum, col) => sum + parseFloat(String(col.collection_amount)), 0);
+  }, [collectionsData]);
 
   const uniqueBanks = Array.from(
-    new Set(collections.map((col) => col.bankName))
+    new Set(collectionsData.map((col) => col.bank_name).filter(Boolean))
   ).sort();
 
-  const handleOpenReconcile = (collection: PendingCollection) => {
-    setSelectedCollection(collection);
-    setCollectedAmount(collection.pendingAmount.toString());
-    setShowReconcileModal(true);
+  const handleOpenCollectionModal = (account: BankAccount) => {
+    setSelectedBankAccount(account);
+    setCollectionAmount("");
+    setCollectionDate(getCurrentSriLankanDate());
+    setCollectionNotes("");
+    setCollectionStatus({ type: null, message: '' });
+    setIsSubmitting(false);
+    setShowCollectionModal(true);
   };
 
-  const handleCloseReconcile = () => {
-    setShowReconcileModal(false);
-    setSelectedCollection(null);
-    setCollectedAmount("");
+  const handleCloseCollectionModal = () => {
+    setShowCollectionModal(false);
+    setSelectedBankAccount(null);
+    setCollectionAmount("");
+    setCollectionNotes("");
+    setCollectionStatus({ type: null, message: '' });
+    setIsSubmitting(false);
   };
 
-  const handleMarkAsCollected = () => {
-    if (selectedCollection && collectedAmount) {
-      setCollections(
-        collections.map((col) =>
-          col.id === selectedCollection.id
-            ? {
-                ...col,
-                status: "collected",
-                collectedDate: new Date().toISOString().split("T")[0],
-                collectedAmount: parseFloat(collectedAmount),
-              }
-            : col
-        )
+  const handleRecordCollection = async () => {
+    if (!selectedBankAccount || !collectionAmount || parseFloat(collectionAmount) <= 0) {
+      setCollectionStatus({
+        type: 'error',
+        message: 'Please enter a valid collection amount'
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setCollectionStatus({ type: null, message: '' });
+
+    try {
+      await createCollection(
+        selectedBankAccount.bank_account_id,
+        parseFloat(collectionAmount),
+        collectionDate,
+        collectionNotes || undefined
       );
-      handleCloseReconcile();
+
+      // Show success message
+      setCollectionStatus({
+        type: 'success',
+        message: 'Collection recorded successfully! Updating balances...'
+      });
+
+      // Reload data
+      const accounts = await getShopBankAccounts(shopId);
+      setBankAccountsData(accounts || []);
+      const collections = await getAllCollections();
+      setCollectionsData(collections || []);
+
+      // Close modal after 1.5 seconds
+      setTimeout(() => {
+        handleCloseCollectionModal();
+      }, 1500);
+    } catch (error: any) {
+      console.error("Error recording collection:", error);
+      setCollectionStatus({
+        type: 'error',
+        message: error?.response?.data?.message || 'Failed to record collection. Please try again.'
+      });
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="space-y-6 h-full flex flex-col">
+      {/* Error Message Display */}
+      {errorMessage && (
+        <div className="bg-red-900/30 border-2 border-red-600 text-red-300 p-4 rounded-lg flex items-start gap-3">
+          <span className="text-2xl">⚠</span>
+          <div className="flex-1">
+            <p className="font-semibold text-lg">Error Loading Bank Accounts</p>
+            <p className="text-sm mt-1">{errorMessage}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
+            >
+              Reload Page
+            </button>
+          </div>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="text-red-300 hover:text-red-100 text-2xl"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Header Section */}
       <div className="flex justify-between items-center">
         <div>
@@ -183,9 +220,9 @@ const BankAccountsPage: React.FC = () => {
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-gray-400">Pending Collections</p>
-            <p className="text-2xl font-bold text-yellow-400">
-              Rs. {parseFloat(String(totalPendingAmount)).toFixed(2)}
+            <p className="text-sm text-gray-400">Total Collected</p>
+            <p className="text-2xl font-bold text-blue-400">
+              Rs. {parseFloat(String(totalCollected)).toFixed(2)}
             </p>
           </div>
         </div>
@@ -195,8 +232,7 @@ const BankAccountsPage: React.FC = () => {
       <div className="flex gap-2 border-b border-gray-700">
         {[
           { id: "summary", label: "Bank Summary", icon: "🏦" },
-          { id: "tracking", label: "Pending Collections", icon: "📍" },
-          { id: "history", label: "Reconciliation History", icon: "✓" },
+          { id: "collections", label: "Collections History", icon: "💰" },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -267,11 +303,11 @@ const BankAccountsPage: React.FC = () => {
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 className="text-lg font-bold text-red-400">
+                      <h3 className="text-xl font-bold text-red-400">
                         {account.bank_name}
                       </h3>
-                      <p className="text-sm text-gray-400 mt-1">
-                        Account: {account.account_number}
+                      <p className="text-xs text-gray-400 mt-1">
+                        Account ID: {account.bank_account_id}
                       </p>
                     </div>
                     <div className="text-right">
@@ -286,19 +322,35 @@ const BankAccountsPage: React.FC = () => {
 
                   <div className="space-y-2 bg-gray-700/30 rounded p-3 mb-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Account Holder:</span>
-                      <span className="text-gray-300">{account.account_holder_name}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Initial Balance:</span>
                       <span className="text-gray-300">Rs. {parseFloat(String(account.initial_balance)).toFixed(2)}</span>
                     </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Balance Change:</span>
+                      <span className={`font-semibold ${
+                        parseFloat(String(account.current_balance)) - parseFloat(String(account.initial_balance)) >= 0
+                          ? 'text-green-400'
+                          : 'text-red-400'
+                      }`}>
+                        {parseFloat(String(account.current_balance)) - parseFloat(String(account.initial_balance)) >= 0 ? '+' : ''}
+                        Rs. {(parseFloat(String(account.current_balance)) - parseFloat(String(account.initial_balance))).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="border-t border-gray-700 pt-3">
-                    <p className="text-xs text-gray-400 mb-3">
-                      Last Updated: {new Date(account.updated_at).toLocaleDateString()}
+                  <div className="border-t border-gray-700 pt-3 space-y-2">
+                    <p className="text-xs text-gray-400 mb-1">
+                      Created: {formatSriLankanDate(account.created_at)}
                     </p>
+                    <p className="text-xs text-gray-400">
+                      Last Updated: {formatSriLankanDateTime(account.updated_at)}
+                    </p>
+                    <button
+                      onClick={() => handleOpenCollectionModal(account)}
+                      className="w-full bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors mt-3"
+                    >
+                      💰 Collect Money
+                    </button>
                   </div>
                 </div>
               ))}
@@ -307,8 +359,8 @@ const BankAccountsPage: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: PENDING COLLECTIONS */}
-      {selectedTab === "tracking" && (
+      {/* TAB 2: COLLECTIONS HISTORY */}
+      {selectedTab === "collections" && (
         <div className="flex-1 overflow-hidden flex flex-col bg-gray-800/50 border border-gray-700 rounded-lg">
           <div className="overflow-x-auto overflow-y-auto flex-1">
             <table className="w-full text-sm">
@@ -320,67 +372,54 @@ const BankAccountsPage: React.FC = () => {
                   <th className="px-6 py-3 text-left font-semibold text-red-400">
                     Bank Name
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Branch
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Period
-                  </th>
                   <th className="px-6 py-3 text-right font-semibold text-red-400">
                     Amount (Rs.)
                   </th>
-                  <th className="px-6 py-3 text-center font-semibold text-red-400">
-                    Orders
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Collection Date
                   </th>
-                  <th className="px-6 py-3 text-center font-semibold text-red-400">
-                    Action
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Notes
+                  </th>
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Recorded At
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
-                {pendingCollections.length > 0 ? (
-                  pendingCollections.map((col) => (
+                {filteredCollections.length > 0 ? (
+                  filteredCollections.map((col) => (
                     <tr
-                      key={col.id}
-                      className="hover:bg-gray-700/30 border-l-4 border-l-yellow-600 transition-all"
+                      key={col.collection_id}
+                      className="hover:bg-gray-700/30 border-l-4 border-l-blue-600 transition-all"
                     >
                       <td className="px-6 py-4 text-gray-200 font-medium font-mono">
-                        {col.id}
+                        #{col.collection_id}
                       </td>
                       <td className="px-6 py-4 text-gray-300">
-                        {col.bankName}
+                        {col.bank_name || 'N/A'}
                       </td>
-                      <td className="px-6 py-4 text-gray-400">
-                        {col.branchName}
+                      <td className="px-6 py-4 text-right text-blue-400 font-bold">
+                        Rs. {parseFloat(String(col.collection_amount)).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 text-gray-300">
+                        {formatSriLankanDate(col.collection_date)}
                       </td>
                       <td className="px-6 py-4 text-gray-400 text-xs">
-                        {col.fromDate} to {col.toDate}
+                        {col.notes || '-'}
                       </td>
-                      <td className="px-6 py-4 text-right text-yellow-400 font-bold">
-                        Rs. {parseFloat(String(col.pendingAmount)).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs font-semibold">
-                          {col.ordersCount}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => handleOpenReconcile(col)}
-                          className="bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-red-700 transition-colors"
-                        >
-                          Collect
-                        </button>
+                      <td className="px-6 py-4 text-gray-400 text-xs">
+                        {formatSriLankanDateTime(col.created_at)}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={6}
                       className="px-6 py-8 text-center text-gray-400"
                     >
-                      No pending collections found
+                      No collections found
                     </td>
                   </tr>
                 )}
@@ -390,91 +429,15 @@ const BankAccountsPage: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: RECONCILIATION HISTORY */}
-      {selectedTab === "history" && (
-        <div className="flex-1 overflow-hidden flex flex-col bg-gray-800/50 border border-gray-700 rounded-lg">
-          <div className="overflow-x-auto overflow-y-auto flex-1">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
-                <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Collection ID
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Bank Name
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Branch
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Period
-                  </th>
-                  <th className="px-6 py-3 text-right font-semibold text-red-400">
-                    Amount (Rs.)
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Collected Date
-                  </th>
-                  <th className="px-6 py-3 text-right font-semibold text-red-400">
-                    Collected (Rs.)
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-700">
-                {collectedHistory.length > 0 ? (
-                  collectedHistory.map((col) => (
-                    <tr
-                      key={col.id}
-                      className="hover:bg-gray-700/30 border-l-4 border-l-green-600 transition-all"
-                    >
-                      <td className="px-6 py-4 text-gray-200 font-medium font-mono">
-                        {col.id}
-                      </td>
-                      <td className="px-6 py-4 text-gray-300">
-                        {col.bankName}
-                      </td>
-                      <td className="px-6 py-4 text-gray-400">
-                        {col.branchName}
-                      </td>
-                      <td className="px-6 py-4 text-gray-400 text-xs">
-                        {col.fromDate} to {col.toDate}
-                      </td>
-                      <td className="px-6 py-4 text-right text-gray-400">
-                        Rs. {parseFloat(String(col.pendingAmount)).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-gray-300">
-                        {col.collectedDate}
-                      </td>
-                      <td className="px-6 py-4 text-right text-green-400 font-bold">
-                        Rs. {(parseFloat(String(col.collectedAmount)) || 0).toFixed(2)}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-8 text-center text-gray-400"
-                    >
-                      No reconciliation history found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Reconciliation Modal */}
-      {showReconcileModal && selectedCollection && (
+      {/* Record Collection Modal */}
+      {showCollectionModal && selectedBankAccount && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-lg">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-6 border-b border-red-600 flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Mark as Collected</h2>
+              <h2 className="text-2xl font-bold">💰 Record Collection</h2>
               <button
-                onClick={handleCloseReconcile}
+                onClick={handleCloseCollectionModal}
                 className="text-white hover:text-red-200 transition-colors text-2xl"
               >
                 ✕
@@ -483,86 +446,105 @@ const BankAccountsPage: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-6 space-y-5">
-              {/* Collection Details */}
-              <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Collection ID:</span>
-                  <span className="text-gray-200 font-mono font-semibold">
-                    {selectedCollection.id}
-                  </span>
+              {/* Status Message */}
+              {collectionStatus.type && (
+                <div className={`p-4 rounded-lg border-2 ${
+                  collectionStatus.type === 'success'
+                    ? 'bg-green-900/30 border-green-600 text-green-300'
+                    : 'bg-red-900/30 border-red-600 text-red-300'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">
+                      {collectionStatus.type === 'success' ? '✓' : '⚠'}
+                    </span>
+                    <div className="flex-1">
+                      <p className="font-semibold">
+                        {collectionStatus.type === 'success' ? 'Success!' : 'Error'}
+                      </p>
+                      <p className="text-sm mt-1">{collectionStatus.message}</p>
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              {/* Bank Account Details */}
+              <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Bank:</span>
                   <span className="text-gray-200 font-semibold">
-                    {selectedCollection.bankName}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Branch:</span>
-                  <span className="text-gray-200">
-                    {selectedCollection.branchName}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Period:</span>
-                  <span className="text-gray-200">
-                    {selectedCollection.fromDate} to {selectedCollection.toDate}
+                    {selectedBankAccount.bank_name}
                   </span>
                 </div>
                 <div className="border-t border-gray-600 pt-3 flex justify-between">
                   <span className="text-gray-300 font-semibold">
-                    Pending Amount:
+                    Current Balance:
                   </span>
-                  <span className="text-yellow-400 font-bold text-lg">
-                    Rs. {parseFloat(String(selectedCollection.pendingAmount)).toFixed(2)}
+                  <span className="text-green-400 font-bold text-lg">
+                    Rs. {parseFloat(String(selectedBankAccount.current_balance)).toFixed(2)}
                   </span>
                 </div>
               </div>
 
-              {/* Collected Amount Input */}
+              {/* Collection Amount Input */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Amount Collected (Rs.) <span className="text-red-500">*</span>
+                  Amount to Collect (Rs.) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
                   step="0.01"
-                  value={collectedAmount}
-                  onChange={(e) => setCollectedAmount(e.target.value)}
+                  value={collectionAmount}
+                  onChange={(e) => setCollectionAmount(e.target.value)}
+                  placeholder="Enter amount"
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
                 />
-                <p className="text-xs text-gray-400 mt-2">
-                  {parseFloat(collectedAmount || "0") ===
-                  selectedCollection.pendingAmount
-                    ? "✓ Full amount matched"
-                    : parseFloat(collectedAmount || "0") >
-                        selectedCollection.pendingAmount
-                      ? "⚠ Amount exceeds pending"
-                      : "Partial collection"}
-                </p>
+                {parseFloat(collectionAmount || "0") > parseFloat(String(selectedBankAccount.current_balance)) && (
+                  <p className="text-xs text-red-400 mt-2">
+                    ⚠ Amount exceeds current balance
+                  </p>
+                )}
               </div>
 
-              {/* Collected Date Display */}
-              <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
-                <p className="text-xs text-gray-400 font-semibold mb-1">
-                  Collection Date
-                </p>
-                <p className="text-gray-200 font-semibold">
-                  {new Date().toISOString().split("T")[0]}
-                </p>
+              {/* Collection Date */}
+              <div>
+                <label className="block text-sm font-semibold text-red-400 mb-2">
+                  Collection Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={collectionDate}
+                  onChange={(e) => setCollectionDate(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-semibold text-red-400 mb-2">
+                  Notes (Optional)
+                </label>
+                <textarea
+                  value={collectionNotes}
+                  onChange={(e) => setCollectionNotes(e.target.value)}
+                  placeholder="Add any notes about this collection..."
+                  rows={3}
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none resize-none"
+                />
               </div>
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-700">
                 <button
-                  onClick={handleMarkAsCollected}
-                  className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                  onClick={handleRecordCollection}
+                  disabled={isSubmitting || !collectionAmount || parseFloat(collectionAmount) <= 0 || parseFloat(collectionAmount) > parseFloat(String(selectedBankAccount.current_balance))}
+                  className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
                 >
-                  ✓ Confirm Collected
+                  {isSubmitting ? 'Recording...' : '✓ Record Collection'}
                 </button>
                 <button
-                  onClick={handleCloseReconcile}
-                  className="flex-1 bg-gray-700 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                  onClick={handleCloseCollectionModal}
+                  disabled={isSubmitting}
+                  className="flex-1 bg-gray-700 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>

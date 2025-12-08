@@ -129,7 +129,7 @@ export interface UpdateShopInput {
 // ==================== PRODUCT MODELS ====================
 
 export interface Product {
-  product_id: number;
+  product_id: string;
   sku: string;
   product_name: string;
   category_id: number;
@@ -225,13 +225,13 @@ export interface CreateColorInput {
 
 export interface ProductColor {
   product_color_id: number;
-  product_id: number;
+  product_id: string;
   color_id: number;
 }
 
 export interface ProductSize {
   product_size_id: number;
-  product_id: number;
+  product_id: string;
   size_id: number;
 }
 
@@ -240,7 +240,7 @@ export interface ProductSize {
 export interface ShopProductStock {
   stock_id: number;
   shop_id: number;
-  product_id: number;
+  product_id: string;
   size_id: number;
   color_id: number;
   stock_qty: number;
@@ -250,7 +250,7 @@ export interface ShopProductStock {
 
 export interface CreateShopProductStockInput {
   shop_id: number;
-  product_id: number;
+  product_id: string;
   size_id: number;
   color_id: number;
   stock_qty: number;

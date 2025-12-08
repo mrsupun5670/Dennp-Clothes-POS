@@ -217,11 +217,12 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       return;
     }
 
-    // Validate that product code is numeric only
-    if (!/^\d+$/.test(productCode)) {
-      showNotification("Product Code must be numeric only (integers)", "error");
+    // Validate product code length (max 25 characters for VARCHAR(25))
+    if (productCode.length > 25) {
+      showNotification("Product Code must be 25 characters or less", "error");
       return;
     }
+
     if (!formData.name.trim()) {
       showNotification("Product Name is required", "error");
       return;
@@ -338,12 +339,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         shop_id: shopId,
         product_name: formData.name,
         category_id: parseInt(selectedCategory),
-        description: "",
         product_cost: cost,
         print_cost: printCost,
         retail_price: retailPrice,
         wholesale_price: wholesalePrice || null,
-        product_status: "active",
       };
 
       const createPayload = {
@@ -650,15 +649,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
             {/* Product Code */}
             <div>
               <label className="block text-sm font-semibold text-red-400 mb-2">
-                Product Code (Numeric) <span className="text-red-500">*</span>
+                Product Code <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                placeholder="e.g., 1001"
+                placeholder="e.g., TSHIRT-001 or 1001"
                 value={formData.code}
                 onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, "");
-                  setFormData({ ...formData, code: value });
+                  setFormData({ ...formData, code: e.target.value });
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {

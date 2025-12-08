@@ -1325,7 +1325,7 @@ export const generateOrdersHTML = (orders: any[]) => {
 };
 
 /**
- * Generate order bill HTML
+ * Generate order bill HTML - Red Minimalist Invoice Design
  */
 export const generateOrderBillHTML = (data: {
   selectedCustomer: any;
@@ -1335,11 +1335,32 @@ export const generateOrderBillHTML = (data: {
   paidAmount: string;
   orderNumber?: string;
   shopName?: string;
+  shopAddress?: string;
+  shopPhone?: string;
 }) => {
-  const { selectedCustomer, cartItems, subtotal, total, paidAmount, orderNumber, shopName } = data;
+  const { selectedCustomer, cartItems, subtotal, total, paidAmount, orderNumber } = data;
   const paid = parseFloat(paidAmount) || 0;
   const balance = total - paid;
-  const invoiceNumber = orderNumber ? `IN${orderNumber}` : `IN${Math.floor(Math.random() * 100000)}`;
+  const invoiceNumber = `IN${orderNumber || Math.floor(Math.random() * 100000)}`;
+  const customerId = selectedCustomer.customer_id ? `C${String(selectedCustomer.customer_id).padStart(5, '0')}` : "";
+
+  // Format date and time
+  const now = new Date();
+  const invoiceDate = now.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  const invoiceTime = now.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+
+  // Dennep Clothes address
+  const companyName = "Dennep Clothes";
+  const companyAddress = "Kebellewa, Nikaweratiya, Kurunegala";
+  const companyPhone = "0703813223";
 
   return `
     <!DOCTYPE html>
@@ -1347,11 +1368,12 @@ export const generateOrderBillHTML = (data: {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Order Bill</title>
+      <title>Invoice ${invoiceNumber}</title>
+      <script src="https://cdn.tailwindcss.com"></script>
       <style>
         @page {
           size: A4 portrait;
-          margin: 25.4mm;
+          margin: 15mm;
         }
         * {
           margin: 0;
@@ -1359,357 +1381,138 @@ export const generateOrderBillHTML = (data: {
           box-sizing: border-box;
         }
         body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          font-family: Arial, sans-serif;
           background: white;
           color: #1a1a1a;
-          line-height: 1.4;
-          position: relative;
         }
-        .invoice {
-          background: white;
-          padding: 0;
-          position: relative;
-          z-index: 1;
-        }
-        .watermark {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%) rotate(-45deg);
-          font-size: 120px;
-          font-weight: 700;
-          color: rgba(211, 47, 47, 0.08);
-          white-space: nowrap;
-          z-index: 0;
-          pointer-events: none;
-          letter-spacing: 20px;
-          text-transform: uppercase;
-        }
-        .invoice-header {
-          background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
-          color: white;
-          padding: 20px;
-          margin-bottom: 20px;
-          text-align: center;
-        }
-        .company-name {
-          font-size: 32px;
-          font-weight: 700;
-          margin-bottom: 5px;
-          letter-spacing: 2px;
-        }
-        .company-subtitle {
-          font-size: 11px;
-          opacity: 0.9;
-          letter-spacing: 1px;
-        }
-        .invoice-type {
-          background: white;
-          color: #d32f2f;
-          display: inline-block;
-          padding: 6px 16px;
-          font-weight: 600;
-          font-size: 12px;
-          margin-top: 10px;
-          border-radius: 3px;
-          text-transform: uppercase;
-        }
-        .invoice-meta {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 20px;
-          padding: 0 20px;
-          font-size: 11px;
-          color: #555;
-        }
-        .meta-item {
-          flex: 1;
-        }
-        .meta-label {
-          font-weight: 600;
-          color: #d32f2f;
-          text-transform: uppercase;
-          font-size: 10px;
-          margin-bottom: 4px;
-        }
-        .meta-value {
-          color: #1a1a1a;
-          font-weight: 500;
-        }
-        .divider {
-          height: 2px;
-          background: #d32f2f;
-          margin: 15px 20px;
-        }
-        .section {
-          padding: 0 20px;
-          margin-bottom: 15px;
-        }
-        .section-title {
-          font-size: 12px;
-          font-weight: 700;
-          color: #d32f2f;
-          text-transform: uppercase;
-          margin-bottom: 10px;
-          letter-spacing: 1px;
-          padding-bottom: 6px;
-          border-bottom: 2px solid #d32f2f;
-        }
-        .customer-info {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          font-size: 12px;
-          margin-bottom: 15px;
-        }
-        .info-field {
-          display: flex;
-          flex-direction: column;
-        }
-        .info-label {
-          font-weight: 600;
-          color: #666;
-          font-size: 10px;
-          text-transform: uppercase;
-          margin-bottom: 3px;
-        }
-        .info-value {
-          color: #1a1a1a;
-          font-weight: 500;
-        }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 11px;
-          margin: 0 20px;
-        }
-        thead {
-          background: #f5f5f5;
-        }
-        th {
-          padding: 8px;
-          text-align: left;
-          font-weight: 600;
-          color: #d32f2f;
-          text-transform: uppercase;
-          font-size: 10px;
-          border-bottom: 2px solid #d32f2f;
-        }
-        td {
-          padding: 8px;
-          border-bottom: 1px solid #eee;
-        }
-        tbody tr:last-child td {
-          border-bottom: 2px solid #d32f2f;
-        }
-        .text-right {
-          text-align: right;
-        }
-        .text-center {
-          text-align: center;
-        }
-        .amount {
-          font-weight: 600;
-          color: #1a1a1a;
-        }
-        .summary {
-          padding: 0 20px;
-          margin-bottom: 15px;
-        }
-        .summary-row {
-          display: flex;
-          justify-content: space-between;
-          padding: 8px 0;
-          font-size: 12px;
-          border-bottom: 1px solid #eee;
-        }
-        .summary-row:last-child {
-          border-bottom: none;
-        }
-        .summary-label {
-          color: #555;
-        }
-        .summary-value {
-          font-weight: 600;
-          color: #1a1a1a;
-        }
-        .total-row {
-          background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
-          padding: 12px 0;
-          margin-top: 10px;
-          border-top: 2px solid #d32f2f;
-          border-bottom: 2px solid #d32f2f;
-        }
-        .total-amount {
-          font-size: 18px;
-          font-weight: 700;
-          color: #d32f2f;
-        }
-        .payment-status {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-top: 8px;
-        }
-        .status-badge {
-          display: inline-block;
-          padding: 5px 12px;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 600;
-          text-transform: uppercase;
-        }
-        .status-paid {
-          background: #e8f5e9;
-          color: #2e7d32;
-        }
-        .status-balance {
-          background: #fff3e0;
-          color: #e65100;
-        }
-        .status-change {
-          background: #e3f2fd;
-          color: #1565c0;
-        }
-        .footer {
-          padding: 15px 20px;
-          text-align: center;
-          font-size: 11px;
-          color: #666;
-          border-top: 2px solid #d32f2f;
-          margin-top: 15px;
-        }
-        .thank-you {
-          font-size: 12px;
-          font-weight: 600;
-          color: #d32f2f;
-          margin-bottom: 5px;
-        }
-        .footer-note {
-          font-size: 9px;
-          color: #999;
-          margin-top: 8px;
-        }
-        .footer-line {
-          height: 1px;
-          background: #d32f2f;
-          margin: 8px 0;
-          opacity: 0.3;
+        @media print {
+          body { margin: 0; padding: 0; background: white; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
       </style>
     </head>
-    <body>
-      <div class="watermark">DENNP</div>
-      <div class="invoice">
-        <div class="invoice-header">
-          <div class="company-name">${shopName || 'DENNP CLOTHES'}</div>
-          <div class="company-subtitle">Premium Apparel & Printing Solutions</div>
-          <div class="invoice-type">Order Invoice</div>
-        </div>
-
-        <div class="invoice-meta">
-          <div class="meta-item">
-            <div class="meta-label">Invoice Date</div>
-            <div class="meta-value">${new Date().toLocaleDateString()}</div>
-          </div>
-          <div class="meta-item">
-            <div class="meta-label">Invoice Time</div>
-            <div class="meta-value">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-          </div>
-          <div class="meta-item">
-            <div class="meta-label">Invoice #</div>
-            <div class="meta-value">${invoiceNumber}</div>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="section">
-          <div class="section-title">Bill To</div>
-          <div class="customer-info">
-            <div class="info-field">
-              <div class="info-label">Customer Name</div>
-              <div class="info-value">${selectedCustomer.name}</div>
+    <body class="bg-white">
+      <div class="w-full min-h-screen bg-white p-6">
+        <!-- Header Section -->
+        <div class="border-b-2 border-black pb-4 mb-6">
+          <div class="flex justify-between items-start">
+            <!-- Logo and Company Name -->
+            <div class="flex items-center gap-3">
+              <img src="/dennep png.png" alt="Logo" class="w-16 h-16 object-contain" onerror="this.style.display='none'" />
+              <div>
+                <h1 class="text-2xl font-bold text-black">${companyName}</h1>
+              </div>
             </div>
-            <div class="info-field">
-              <div class="info-label">Mobile Number</div>
-              <div class="info-value">${selectedCustomer.mobile}</div>
+
+            <!-- INVOICE Title -->
+            <div class="text-right">
+              <h2 class="text-5xl font-bold text-red-600 tracking-wide">INVOICE</h2>
             </div>
           </div>
         </div>
 
-        <div class="divider"></div>
+        <!-- Customer and Invoice Details Section -->
+        <div class="flex justify-between mb-8">
+          <!-- Left: Customer Details -->
+          <div>
+            <p class="text-sm font-normal mb-2">Invoice to :</p>
+            ${customerId ? `<p class="text-sm text-gray-700">${customerId}</p>` : ''}
+            ${selectedCustomer.address ? `<p class="text-sm text-gray-700">${selectedCustomer.address}</p>` : ''}
+            <p class="text-sm text-gray-700">${selectedCustomer.mobile}</p>
+          </div>
 
-        <div style="padding: 0 20px; margin-bottom: 15px;">
-          <table>
+          <!-- Right: Invoice Number and Date -->
+          <div class="text-right">
+            <p class="text-lg font-bold text-gray-900">${invoiceNumber}, ${invoiceDate}, ${invoiceTime}</p>
+          </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="mb-8">
+          <table class="w-full border-collapse">
             <thead>
-              <tr>
-                <th>Item Description</th>
-                <th class="text-center">Size</th>
-                <th class="text-center">Color</th>
-                <th class="text-right">Qty</th>
-                <th class="text-right">Price</th>
-                <th class="text-right">Total</th>
+              <tr class="bg-red-600 text-white">
+                <th class="text-center py-3 px-4 font-bold text-sm" style="width: 48px;">No.</th>
+                <th class="text-left py-3 px-4 font-bold text-sm">Item</th>
+                <th class="text-center py-3 px-4 font-bold text-sm" style="width: 80px;">Size</th>
+                <th class="text-center py-3 px-4 font-bold text-sm" style="width: 80px;">Color</th>
+                <th class="text-right py-3 px-4 font-bold text-sm" style="width: 96px;">Price</th>
+                <th class="text-right py-3 px-4 font-bold text-sm" style="width: 112px;">Total</th>
               </tr>
             </thead>
             <tbody>
-              ${cartItems.map(item => `
-                <tr>
-                  <td>${item.productName}</td>
-                  <td class="text-center">${item.size}</td>
-                  <td class="text-center">${item.color}</td>
-                  <td class="text-right">${item.quantity}</td>
-                  <td class="text-right amount">Rs. ${item.price.toFixed(2)}</td>
-                  <td class="text-right amount">Rs. ${(item.price * item.quantity).toFixed(2)}</td>
-                </tr>
+              ${cartItems.map((item, index) => `
+              <tr class="border-b border-gray-300">
+                <td class="text-center py-3 px-4 text-sm">${index + 1}</td>
+                <td class="py-3 px-4 text-sm font-medium">${item.productName}</td>
+                <td class="text-center py-3 px-4 text-sm">${item.size || "-"}</td>
+                <td class="text-center py-3 px-4 text-sm">${item.color || "-"}</td>
+                <td class="text-right py-3 px-4 text-sm">Rs. ${item.price.toFixed(2)}</td>
+                <td class="text-right py-3 px-4 text-sm font-semibold">Rs. ${(item.price * item.quantity).toFixed(2)}</td>
+              </tr>
               `).join('')}
             </tbody>
           </table>
         </div>
 
-        <div class="summary">
-          <div class="summary-row">
-            <span class="summary-label">Subtotal</span>
-            <span class="summary-value">Rs. ${subtotal.toFixed(2)}</span>
+        <!-- Payment and Total Section -->
+        <div class="flex justify-between items-start">
+          <!-- Send Payment To -->
+          <div class="w-1/2">
+            <p class="text-sm font-bold mb-2">Send Payment to :</p>
+            <div class="text-sm text-gray-700">
+              ${companyName}<br>
+              ${companyAddress}<br>
+              ${companyPhone}
+            </div>
           </div>
-          <div class="summary-row total-row">
-            <span class="summary-label" style="font-size: 14px;">Grand Total</span>
-            <span class="total-amount">Rs. ${total.toFixed(2)}</span>
+
+          <!-- Totals -->
+          <div style="width: 45%;">
+            <div class="flex justify-between py-2 border-b border-gray-300">
+              <span class="text-sm">Sub-total :</span>
+              <span class="text-sm font-semibold">Rs. ${subtotal.toFixed(2)}</span>
+            </div>
+
+            <div class="flex justify-between py-3 bg-red-600 text-white px-4 mt-2">
+              <span class="text-base font-bold">Total :</span>
+              <span class="text-xl font-bold">Rs. ${total.toFixed(2)}</span>
+            </div>
+
+            ${balance !== 0 ? `
+            <div class="mt-3 p-3 bg-gray-100 rounded">
+              <div class="flex justify-between text-sm mb-1">
+                <span>Paid:</span>
+                <span class="font-semibold text-green-600">Rs. ${paid.toFixed(2)}</span>
+              </div>
+              ${balance > 0 ? `
+              <div class="flex justify-between text-sm">
+                <span>Balance Due:</span>
+                <span class="font-semibold text-red-600">Rs. ${balance.toFixed(2)}</span>
+              </div>
+              ` : `
+              <div class="flex justify-between text-sm">
+                <span>Change:</span>
+                <span class="font-semibold text-blue-600">Rs. ${Math.abs(balance).toFixed(2)}</span>
+              </div>
+              `}
+            </div>
+            ` : ''}
           </div>
         </div>
 
-        <div class="divider"></div>
-
-        <div class="section">
-          <div class="section-title">Payment Information</div>
-          <div class="summary-row">
-            <span class="summary-label">Amount Paid</span>
-            <span class="summary-value amount">Rs. ${paid.toFixed(2)}</span>
+        <!-- Footer -->
+        <div class="mt-12">
+          <!-- Company Contact Info -->
+          <div class="mb-6 text-sm text-gray-700">
+            <p>${companyName}</p>
+            <p>${companyAddress}</p>
+            <p>${companyPhone}</p>
           </div>
-          ${balance > 0 ? `
-            <div class="summary-row">
-              <span class="summary-label">Balance Due</span>
-              <span class="status-badge status-balance">Rs. ${balance.toFixed(2)}</span>
-            </div>
-          ` : balance < 0 ? `
-            <div class="summary-row">
-              <span class="summary-label">Change/Refund</span>
-              <span class="status-badge status-change">Rs. ${Math.abs(balance).toFixed(2)}</span>
-            </div>
-          ` : `
-            <div class="summary-row">
-              <span class="summary-label">Payment Status</span>
-              <span class="status-badge status-paid">✓ Fully Paid</span>
-            </div>
-          `}
-        </div>
 
-        <div class="footer">
-          <div class="thank-you">Thank You for Your Purchase!</div>
-          <div class="footer-line"></div>
-          <div class="footer-note">
-            This is a computer-generated invoice. Please retain for your records.<br>
-            For inquiries, contact us at DENNP Clothes
+          <!-- Thank You Message -->
+          <div class="text-center">
+            <p class="text-2xl font-semibold text-red-600 mb-2">Thank you for purchase!</p>
           </div>
         </div>
       </div>

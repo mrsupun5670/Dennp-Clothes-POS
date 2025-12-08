@@ -11,10 +11,12 @@ class BankAccountController {
       const { shopId } = req.params;
       const shopIdNum = Number(shopId);
 
-      if (!shopIdNum) {
+      if (!shopIdNum || isNaN(shopIdNum)) {
+        logger.warn("Invalid shop ID provided", { shopId });
         res.status(400).json({
           success: false,
-          message: "Invalid shop ID",
+          message: "Invalid shop ID provided",
+          data: [],
         });
         return;
       }
@@ -23,14 +25,22 @@ class BankAccountController {
 
       res.json({
         success: true,
-        data: accounts,
-        message: "Bank accounts retrieved successfully",
+        data: accounts || [],
+        message: accounts && accounts.length > 0
+          ? "Bank accounts retrieved successfully"
+          : "No bank accounts found",
       });
-    } catch (error) {
-      logger.error("Error in getShopBankAccounts:", error);
+    } catch (error: any) {
+      logger.error("Error in getShopBankAccounts:", {
+        error: error?.message || error,
+        shopId: req.params.shopId,
+        stack: error?.stack,
+      });
       res.status(500).json({
         success: false,
-        message: "Failed to retrieve bank accounts",
+        message: "Unable to retrieve bank accounts. Please try again later.",
+        data: [],
+        error: process.env.NODE_ENV === "development" ? error?.message : undefined,
       });
     }
   }
@@ -45,10 +55,12 @@ class BankAccountController {
       const bankAccountId = Number(id);
       const shopId = Number(shop_id);
 
-      if (!bankAccountId || !shopId) {
+      if (!bankAccountId || isNaN(bankAccountId) || !shopId || isNaN(shopId)) {
+        logger.warn("Invalid parameters for getBankAccountById", { id, shop_id });
         res.status(400).json({
           success: false,
           message: "Invalid bank account ID or shop ID",
+          data: null,
         });
         return;
       }
@@ -59,9 +71,11 @@ class BankAccountController {
       );
 
       if (!account) {
+        logger.info("Bank account not found", { bankAccountId, shopId });
         res.status(404).json({
           success: false,
           message: "Bank account not found",
+          data: null,
         });
         return;
       }
@@ -71,11 +85,18 @@ class BankAccountController {
         data: account,
         message: "Bank account retrieved successfully",
       });
-    } catch (error) {
-      logger.error("Error in getBankAccountById:", error);
+    } catch (error: any) {
+      logger.error("Error in getBankAccountById:", {
+        error: error?.message || error,
+        id: req.params.id,
+        shop_id: req.query.shop_id,
+        stack: error?.stack,
+      });
       res.status(500).json({
         success: false,
-        message: "Failed to retrieve bank account",
+        message: "Unable to retrieve bank account. Please try again later.",
+        data: null,
+        error: process.env.NODE_ENV === "development" ? error?.message : undefined,
       });
     }
   }
@@ -88,52 +109,41 @@ class BankAccountController {
       const {
         shop_id,
         bank_name,
-        branch_name,
-        account_number,
-        account_holder_name,
-        account_type,
-        ifsc_code,
         initial_balance,
       } = req.body;
 
       // Validation
-      if (
-        !shop_id ||
-        !bank_name ||
-        !account_number ||
-        !account_holder_name ||
-        !account_type ||
-        initial_balance === undefined
-      ) {
+      if (!shop_id || isNaN(Number(shop_id))) {
+        logger.warn("Invalid shop_id in createBankAccount", { shop_id });
         res.status(400).json({
           success: false,
-          message: "Missing required fields",
+          message: "Invalid shop ID",
         });
         return;
       }
 
-      // Check if account already exists
-      const existingAccount = await BankAccountModel.getBankAccountByNumber(
-        account_number,
-        shop_id
-      );
-      if (existingAccount) {
-        res.status(409).json({
+      if (!bank_name || typeof bank_name !== 'string' || bank_name.trim() === '') {
+        logger.warn("Invalid bank_name in createBankAccount", { bank_name });
+        res.status(400).json({
           success: false,
-          message: "Bank account with this number already exists for this shop",
+          message: "Bank name is required",
+        });
+        return;
+      }
+
+      if (initial_balance === undefined || initial_balance === null || isNaN(Number(initial_balance))) {
+        logger.warn("Invalid initial_balance in createBankAccount", { initial_balance });
+        res.status(400).json({
+          success: false,
+          message: "Valid initial balance is required",
         });
         return;
       }
 
       const accountId = await BankAccountModel.createBankAccount(
-        shop_id,
-        bank_name,
-        branch_name || null,
-        account_number,
-        account_holder_name,
-        account_type,
-        ifsc_code || null,
-        initial_balance
+        Number(shop_id),
+        bank_name.trim(),
+        Number(initial_balance)
       );
 
       res.status(201).json({
@@ -141,11 +151,16 @@ class BankAccountController {
         data: { bank_account_id: accountId },
         message: "Bank account created successfully",
       });
-    } catch (error) {
-      logger.error("Error in createBankAccount:", error);
+    } catch (error: any) {
+      logger.error("Error in createBankAccount:", {
+        error: error?.message || error,
+        body: req.body,
+        stack: error?.stack,
+      });
       res.status(500).json({
         success: false,
-        message: "Failed to create bank account",
+        message: "Unable to create bank account. Please try again later.",
+        error: process.env.NODE_ENV === "development" ? error?.message : undefined,
       });
     }
   }
@@ -160,10 +175,20 @@ class BankAccountController {
       const bankAccountId = Number(id);
       const shopId = Number(shop_id);
 
-      if (!bankAccountId || !shopId) {
+      if (!bankAccountId || isNaN(bankAccountId) || !shopId || isNaN(shopId)) {
+        logger.warn("Invalid parameters in updateBankAccount", { id, shop_id });
         res.status(400).json({
           success: false,
           message: "Invalid bank account ID or shop ID",
+        });
+        return;
+      }
+
+      if (!req.body || Object.keys(req.body).length === 0) {
+        logger.warn("No update data provided", { bankAccountId, shopId });
+        res.status(400).json({
+          success: false,
+          message: "No update data provided",
         });
         return;
       }
@@ -175,6 +200,7 @@ class BankAccountController {
       );
 
       if (!success) {
+        logger.info("Bank account not found or update failed", { bankAccountId, shopId });
         res.status(404).json({
           success: false,
           message: "Bank account not found or update failed",
@@ -186,11 +212,17 @@ class BankAccountController {
         success: true,
         message: "Bank account updated successfully",
       });
-    } catch (error) {
-      logger.error("Error in updateBankAccount:", error);
+    } catch (error: any) {
+      logger.error("Error in updateBankAccount:", {
+        error: error?.message || error,
+        id: req.params.id,
+        shop_id: req.query.shop_id,
+        stack: error?.stack,
+      });
       res.status(500).json({
         success: false,
-        message: "Failed to update bank account",
+        message: "Unable to update bank account. Please try again later.",
+        error: process.env.NODE_ENV === "development" ? error?.message : undefined,
       });
     }
   }
@@ -205,7 +237,8 @@ class BankAccountController {
       const bankAccountId = Number(id);
       const shopId = Number(shop_id);
 
-      if (!bankAccountId || !shopId) {
+      if (!bankAccountId || isNaN(bankAccountId) || !shopId || isNaN(shopId)) {
+        logger.warn("Invalid parameters in deleteBankAccount", { id, shop_id });
         res.status(400).json({
           success: false,
           message: "Invalid bank account ID or shop ID",
@@ -219,6 +252,7 @@ class BankAccountController {
       );
 
       if (!success) {
+        logger.info("Bank account not found for deletion", { bankAccountId, shopId });
         res.status(404).json({
           success: false,
           message: "Bank account not found",
@@ -230,11 +264,17 @@ class BankAccountController {
         success: true,
         message: "Bank account deleted successfully",
       });
-    } catch (error) {
-      logger.error("Error in deleteBankAccount:", error);
+    } catch (error: any) {
+      logger.error("Error in deleteBankAccount:", {
+        error: error?.message || error,
+        id: req.params.id,
+        shop_id: req.query.shop_id,
+        stack: error?.stack,
+      });
       res.status(500).json({
         success: false,
-        message: "Failed to delete bank account",
+        message: "Unable to delete bank account. Please try again later.",
+        error: process.env.NODE_ENV === "development" ? error?.message : undefined,
       });
     }
   }
@@ -247,27 +287,37 @@ class BankAccountController {
       const { shopId } = req.params;
       const shopIdNum = Number(shopId);
 
-      if (!shopIdNum) {
+      if (!shopIdNum || isNaN(shopIdNum)) {
+        logger.warn("Invalid shop ID in getActiveBankAccounts", { shopId });
         res.status(400).json({
           success: false,
           message: "Invalid shop ID",
+          data: [],
         });
         return;
       }
 
       const accounts =
-        await BankAccountModel.getActiveBankAccounts(shopIdNum);
+        await BankAccountModel.getShopBankAccounts(shopIdNum);
 
       res.json({
         success: true,
-        data: accounts,
-        message: "Active bank accounts retrieved successfully",
+        data: accounts || [],
+        message: accounts && accounts.length > 0
+          ? "Active bank accounts retrieved successfully"
+          : "No active bank accounts found",
       });
-    } catch (error) {
-      logger.error("Error in getActiveBankAccounts:", error);
+    } catch (error: any) {
+      logger.error("Error in getActiveBankAccounts:", {
+        error: error?.message || error,
+        shopId: req.params.shopId,
+        stack: error?.stack,
+      });
       res.status(500).json({
         success: false,
-        message: "Failed to retrieve active bank accounts",
+        message: "Unable to retrieve active bank accounts. Please try again later.",
+        data: [],
+        error: process.env.NODE_ENV === "development" ? error?.message : undefined,
       });
     }
   }

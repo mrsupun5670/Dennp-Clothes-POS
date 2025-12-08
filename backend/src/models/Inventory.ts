@@ -61,12 +61,19 @@ class InventoryModel {
     unitCost: number
   ): Promise<{ inventory_id: number }> {
     try {
-      const result = await query(
-        'INSERT INTO shop_inventory (shop_id, item_name, quantity_in_stock, unit_cost, updated_at) VALUES (?, ?, ?, ?, NOW())',
-        [shopId, itemName, quantityInStock, unitCost]
+      // Get the maximum inventory_id and add 1 to it
+      const maxIdResult = await query(
+        'SELECT COALESCE(MAX(inventory_id), 0) as max_id FROM shop_inventory'
       );
-      logger.info('Added new inventory item', { shopId, itemName });
-      return { inventory_id: (result as any).insertId };
+      const nextInventoryId = ((maxIdResult as any[])[0].max_id || 0) + 1;
+
+      // Insert with the calculated inventory_id
+      await query(
+        'INSERT INTO shop_inventory (inventory_id, shop_id, item_name, quantity_in_stock, unit_cost, updated_at) VALUES (?, ?, ?, ?, ?, NOW())',
+        [nextInventoryId, shopId, itemName, quantityInStock, unitCost]
+      );
+      logger.info('Added new inventory item', { shopId, itemName, inventoryId: nextInventoryId });
+      return { inventory_id: nextInventoryId };
     } catch (error) {
       logger.error('Error adding inventory item:', error);
       throw error;

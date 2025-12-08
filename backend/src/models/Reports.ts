@@ -57,8 +57,8 @@ class ReportsModel {
         `SELECT oi.item_id as itemId,
                 oi.order_id as orderId,
                 o.order_number as orderNumber,
-                DATE(o.order_date) as orderDate,
-                p.sku as productCode,
+                DATE(o.created_at) as orderDate,
+                p.product_id as productCode,
                 p.product_name as productName,
                 oi.quantity,
                 p.retail_price as unitPrice,
@@ -74,10 +74,10 @@ class ReportsModel {
          JOIN orders o ON oi.order_id = o.order_id
          JOIN products p ON oi.product_id = p.product_id
          WHERE o.shop_id = ?
-         AND DATE(o.order_date) >= ?
-         AND DATE(o.order_date) <= ?
+         AND DATE(o.created_at) >= ?
+         AND DATE(o.created_at) <= ?
          AND o.order_status != 'cancelled'
-         ORDER BY o.order_date DESC, o.order_id DESC`,
+         ORDER BY o.created_at DESC, o.order_id DESC`,
         [shopId, startDate, endDate]
       );
 
@@ -125,8 +125,8 @@ class ReportsModel {
          JOIN orders o ON oi.order_id = o.order_id
          JOIN products p ON oi.product_id = p.product_id
          WHERE o.shop_id = ?
-         AND DATE(o.order_date) >= ?
-         AND DATE(o.order_date) <= ?
+         AND DATE(o.created_at) >= ?
+         AND DATE(o.created_at) <= ?
          AND o.order_status != 'cancelled'`,
         [shopId, startDate, endDate]
       );
@@ -176,8 +176,8 @@ class ReportsModel {
          JOIN orders o ON oi.order_id = o.order_id
          JOIN products p ON oi.product_id = p.product_id
          WHERE o.shop_id = ?
-         AND DATE(o.order_date) >= ?
-         AND DATE(o.order_date) <= ?
+         AND DATE(o.created_at) >= ?
+         AND DATE(o.created_at) <= ?
          AND o.order_status != 'cancelled'`,
         [shopId, startDate, endDate]
       );

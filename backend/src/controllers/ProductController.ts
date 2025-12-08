@@ -78,11 +78,12 @@ class ProductController {
   }
 
   /**
-   * GET /products/sku/:sku?shop_id=1 - Get product by SKU
+   * GET /products/sku/:sku?shop_id=1 - Get product by product_id
    */
   async getProductBySku(req: Request, res: Response): Promise<void> {
     try {
       const { sku } = req.params;
+      const productId = Number(sku);
       const shopId = Number(req.query.shop_id);
       if (!shopId) {
         res.status(400).json({
@@ -92,7 +93,7 @@ class ProductController {
         return;
       }
 
-      const product = await ProductModel.getProductBySku(sku, shopId);
+      const product = await ProductModel.getProductBySku(productId, shopId);
 
       if (!product) {
         res.status(404).json({
@@ -162,12 +163,10 @@ class ProductController {
         product_id,
         product_name,
         category_id,
-        description,
         product_cost,
         print_cost,
         retail_price,
         wholesale_price,
-        product_status,
         stock,
       } = req.body;
 
@@ -196,12 +195,10 @@ class ProductController {
         {
           product_name,
           category_id,
-          description,
           product_cost: product_cost || 0,
           print_cost: print_cost || 0,
           retail_price,
           wholesale_price,
-          product_status: product_status || "active",
         },
         stock // Pass stock data if provided
       );

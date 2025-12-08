@@ -9,7 +9,7 @@ import { logger } from '../utils/logger';
 export interface OrderItem {
   item_id: number;
   order_id: number;
-  product_id: number;
+  product_id: string;
   color_id?: number;
   size_id?: number;
   quantity: number;
@@ -154,7 +154,6 @@ class OrderItemModel {
          oi.sold_price,
          oi.total_price,
          p.product_name,
-         p.sku,
          p.product_cost,
          p.print_cost,
          c.color_name,

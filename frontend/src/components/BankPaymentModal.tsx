@@ -1,14 +1,24 @@
 import React, { useState, useEffect } from "react";
+import { useShop } from "../context/ShopContext";
+import { API_URL } from "../config/api";
 
 interface BankPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (paymentData: BankPaymentData) => void;
   totalAmount: number;
+  isEditingOrder?: boolean;
+}
+
+interface BankAccount {
+  bank_account_id: number;
+  bank_name: string;
+  current_balance: number;
 }
 
 export interface BankPaymentData {
   bank: string;
+  bankAccountId: number;
   isOnlineTransfer: boolean;
   branch: string;
   receiptNumber: string;
@@ -26,14 +36,54 @@ const BankPaymentModal: React.FC<BankPaymentModalProps> = ({
   onClose,
   onSave,
   totalAmount,
+  isEditingOrder = false,
 }) => {
+  const { shopId } = useShop();
   const [bank, setBank] = useState("");
+  const [bankAccountId, setBankAccountId] = useState<number>(0);
   const [isOnlineTransfer, setIsOnlineTransfer] = useState(false);
   const [branch, setBranch] = useState("");
   const [receiptNumber, setReceiptNumber] = useState("");
   const [paymentDateTime, setPaymentDateTime] = useState("");
   const [paidAmount, setPaidAmount] = useState("");
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(false);
+
+  // Fetch bank accounts on mount
+  useEffect(() => {
+    const fetchBankAccounts = async () => {
+      if (!shopId) {
+        console.log("No shopId available");
+        return;
+      }
+
+      setIsLoadingBankAccounts(true);
+      try {
+        console.log("Fetching bank accounts for shop:", shopId);
+        const response = await fetch(`${API_URL}/bank-accounts/${shopId}`);
+        const result = await response.json();
+        console.log("Bank accounts API response:", result);
+
+        if (result.success && result.data) {
+          setBankAccounts(result.data);
+          console.log("Bank accounts loaded:", result.data.length, "accounts");
+        } else {
+          console.error("Failed to fetch bank accounts:", result.error);
+          setBankAccounts([]);
+        }
+      } catch (error) {
+        console.error("Error fetching bank accounts:", error);
+        setBankAccounts([]);
+      } finally {
+        setIsLoadingBankAccounts(false);
+      }
+    };
+
+    if (isOpen) {
+      fetchBankAccounts();
+    }
+  }, [isOpen, shopId]);
 
   // Get current date-time in ISO format for input
   useEffect(() => {
@@ -47,8 +97,8 @@ const BankPaymentModal: React.FC<BankPaymentModalProps> = ({
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!bank.trim()) {
-      newErrors.bank = "Bank is required";
+    if (!bankAccountId || bankAccountId === 0) {
+      newErrors.bankAccount = "Please select a bank account";
     }
 
     if (!receiptNumber.trim()) {
@@ -56,7 +106,7 @@ const BankPaymentModal: React.FC<BankPaymentModalProps> = ({
     }
 
     if (!isOnlineTransfer && !branch.trim()) {
-      newErrors.branch = "Branch is required for bank transfer";
+      newErrors.branch = "Branch name is required for bank deposit";
     }
 
     if (!paymentDateTime) {
@@ -81,8 +131,12 @@ const BankPaymentModal: React.FC<BankPaymentModalProps> = ({
 
   const handleSave = () => {
     if (validateForm()) {
+      // Find the selected bank account to get the bank name
+      const selectedAccount = bankAccounts.find(acc => acc.bank_account_id === bankAccountId);
+
       onSave({
-        bank,
+        bank: selectedAccount?.bank_name || "",
+        bankAccountId,
         isOnlineTransfer,
         branch: isOnlineTransfer ? "" : branch,
         receiptNumber,
@@ -96,6 +150,7 @@ const BankPaymentModal: React.FC<BankPaymentModalProps> = ({
 
   const handleReset = () => {
     setBank("");
+    setBankAccountId(0);
     setIsOnlineTransfer(false);
     setBranch("");
     setReceiptNumber("");
@@ -128,34 +183,75 @@ const BankPaymentModal: React.FC<BankPaymentModalProps> = ({
         <div className="p-6 space-y-5">
           {/* Total Amount Display */}
           <div className="bg-blue-900/30 border border-blue-600/50 rounded-lg p-4">
-            <p className="text-sm text-blue-300 mb-1">Total Order Amount</p>
+            <p className="text-sm text-blue-300 mb-1">
+              {isEditingOrder ? "Balance Due" : "Total Order Amount"}
+            </p>
             <p className="text-3xl font-bold text-blue-400">Rs. {totalAmount.toFixed(2)}</p>
           </div>
 
-          {/* Bank Selection */}
-          <div>
-            <label className="block text-sm font-semibold text-blue-400 mb-2">
-              Select Bank <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={bank}
-              onChange={(e) => {
-                setBank(e.target.value);
-                setBranch("");
-              }}
-              className={`w-full px-4 py-2 bg-gray-700 border-2 text-white rounded-lg focus:outline-none transition-colors ${
-                errors.bank
-                  ? "border-red-500"
-                  : "border-blue-600/30 focus:border-blue-500"
-              }`}
-            >
-              <option value="">-- Select Bank --</option>
-              <option value="boc">Bank of Ceylon (BOC)</option>
-              <option value="commercial">Commercial Bank</option>
-            </select>
-            {errors.bank && (
-              <p className="text-red-400 text-xs mt-1">{errors.bank}</p>
-            )}
+          {/* Bank Account and Branch Selection in Same Row */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Bank Account Selection */}
+            <div>
+              <label className="block text-sm font-semibold text-blue-400 mb-2">
+                Bank Account <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={bankAccountId}
+                onChange={(e) => {
+                  const selectedId = parseInt(e.target.value);
+                  setBankAccountId(selectedId);
+                  // Set bank name from selected account
+                  const selectedAccount = bankAccounts.find(acc => acc.bank_account_id === selectedId);
+                  if (selectedAccount) {
+                    setBank(selectedAccount.bank_name);
+                  }
+                }}
+                disabled={isLoadingBankAccounts}
+                className={`w-full px-4 py-2 bg-gray-700 border-2 text-white rounded-lg focus:outline-none transition-colors ${
+                  errors.bankAccount
+                    ? "border-red-500"
+                    : "border-blue-600/30 focus:border-blue-500"
+                } ${isLoadingBankAccounts ? "opacity-50 cursor-wait" : ""}`}
+              >
+                <option value={0}>
+                  {isLoadingBankAccounts ? "Loading bank accounts..." : "Select Bank Account"}
+                </option>
+                {!isLoadingBankAccounts && bankAccounts.length === 0 && (
+                  <option value={0} disabled>No bank accounts found</option>
+                )}
+                {bankAccounts.map((account) => (
+                  <option key={account.bank_account_id} value={account.bank_account_id}>
+                    {account.bank_name} (Balance: Rs. {Number(account.current_balance).toFixed(2)})
+                  </option>
+                ))}
+              </select>
+              {errors.bankAccount && (
+                <p className="text-red-400 text-xs mt-1">{errors.bankAccount}</p>
+              )}
+            </div>
+
+            {/* Branch Name Input - Hidden if Online Transfer */}
+            <div>
+              <label className="block text-sm font-semibold text-blue-400 mb-2">
+                Branch {!isOnlineTransfer && <span className="text-red-500">*</span>}
+              </label>
+              <input
+                type="text"
+                placeholder={isOnlineTransfer ? "Not required for online transfer" : "Enter branch name"}
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                disabled={isOnlineTransfer}
+                className={`w-full px-4 py-2 bg-gray-700 border-2 text-white placeholder-gray-500 rounded-lg focus:outline-none transition-colors ${
+                  errors.branch
+                    ? "border-red-500"
+                    : "border-blue-600/30 focus:border-blue-500"
+                } ${isOnlineTransfer ? "opacity-50 cursor-not-allowed" : ""}`}
+              />
+              {errors.branch && (
+                <p className="text-red-400 text-xs mt-1">{errors.branch}</p>
+              )}
+            </div>
           </div>
 
           {/* Online Transfer Checkbox */}
@@ -179,34 +275,6 @@ const BankPaymentModal: React.FC<BankPaymentModalProps> = ({
               Online Transfer (e-Banking/Mobile Banking)
             </label>
           </div>
-
-          {/* Branch Selection - Hidden if Online Transfer */}
-          {!isOnlineTransfer && bank && (
-            <div className="animate-slideDown">
-              <label className="block text-sm font-semibold text-blue-400 mb-2">
-                Select Branch <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={branch}
-                onChange={(e) => setBranch(e.target.value)}
-                className={`w-full px-4 py-2 bg-gray-700 border-2 text-white rounded-lg focus:outline-none transition-colors ${
-                  errors.branch
-                    ? "border-red-500"
-                    : "border-blue-600/30 focus:border-blue-500"
-                }`}
-              >
-                <option value="">-- Select Branch --</option>
-                {bankBranches[bank]?.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-              {errors.branch && (
-                <p className="text-red-400 text-xs mt-1">{errors.branch}</p>
-              )}
-            </div>
-          )}
 
           {/* Receipt Number */}
           <div>

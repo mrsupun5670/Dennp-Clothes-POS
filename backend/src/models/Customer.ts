@@ -184,13 +184,13 @@ class CustomerModel {
     try {
       const results = await query(
         `UPDATE customers
-         SET orders_count = (SELECT COUNT(*) FROM orders WHERE customer_id = ? AND shop_id = ?),
-             total_spent = (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE customer_id = ? AND shop_id = ? AND order_status = 'completed')
+         SET orders_count = (SELECT COUNT(*) FROM orders WHERE customer_id = ? AND shop_id = ? AND order_status != 'cancelled'),
+             total_spent = (SELECT COALESCE(SUM(final_amount), 0) FROM orders WHERE customer_id = ? AND shop_id = ? AND order_status != 'cancelled')
          WHERE customer_id = ? AND shop_id = ?`,
         [customerId, shopId, customerId, shopId, customerId, shopId]
       );
 
-      logger.debug('Customer stats updated', { customerId, shopId });
+      logger.info('Customer stats updated', { customerId, shopId, affectedRows: (results as any).affectedRows });
       return (results as any).affectedRows > 0;
     } catch (error) {
       logger.error('Error updating customer stats:', error);
@@ -199,13 +199,13 @@ class CustomerModel {
   }
 
   /**
-   * Search customers by name or mobile
+   * Search customers by mobile or email (customer_name removed from database)
    */
   async searchCustomers(shopId: number, searchTerm: string): Promise<Customer[]> {
     try {
       const searchPattern = `%${searchTerm}%`;
       const results = await query(
-        'SELECT * FROM customers WHERE shop_id = ? AND (customer_name LIKE ? OR mobile LIKE ?) ORDER BY customer_name ASC',
+        'SELECT * FROM customers WHERE shop_id = ? AND (mobile LIKE ? OR email LIKE ?) ORDER BY customer_id DESC',
         [shopId, searchPattern, searchPattern]
       );
 

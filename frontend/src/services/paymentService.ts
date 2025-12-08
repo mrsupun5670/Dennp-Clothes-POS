@@ -5,10 +5,9 @@ export interface Payment {
   payment_id: number;
   shop_id: number;
   order_id?: number;
+  order_number?: string;
   customer_id?: number;
   payment_amount: number;
-  payment_date: string;
-  payment_time?: string;
   payment_method: 'cash' | 'online_transfer' | 'bank_deposit';
   bank_name?: string;
   branch_name?: string;

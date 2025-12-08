@@ -11,12 +11,10 @@ export interface Product {
   shop_id: number;
   product_name: string;
   category_id: number;
-  description?: string;
   product_cost: number;
   print_cost: number;
   retail_price: number;
   wholesale_price?: number;
-  product_status: "active" | "inactive" | "discontinued";
   created_at: Date;
   updated_at: Date;
 }
@@ -71,19 +69,19 @@ class ProductModel {
   }
 
   /**
-   * Get product by SKU (per shop)
+   * Get product by product_id (per shop)
    */
-  async getProductBySku(sku: string, shopId: number): Promise<Product | null> {
+  async getProductBySku(productId: number, shopId: number): Promise<Product | null> {
     try {
       const results = await query(
-        "SELECT * FROM products WHERE sku = ? AND shop_id = ?",
-        [sku, shopId]
+        "SELECT * FROM products WHERE product_id = ? AND shop_id = ?",
+        [productId, shopId]
       );
       const product = (results as Product[])[0] || null;
-      logger.debug("Retrieved product by SKU", { sku, shopId });
+      logger.debug("Retrieved product by ID", { productId, shopId });
       return product;
     } catch (error) {
-      logger.error("Error fetching product by SKU:", error);
+      logger.error("Error fetching product by ID:", error);
       throw error;
     }
   }
@@ -129,12 +127,10 @@ class ProductModel {
       const {
         product_name,
         category_id,
-        description,
         product_cost,
         print_cost,
         retail_price,
         wholesale_price,
-        product_status,
       } = productData;
 
       // Step 0: Check for duplicates before inserting
@@ -170,19 +166,17 @@ class ProductModel {
       });
 
       const productResult = await query(
-        `INSERT INTO products (product_id, shop_id, product_name, category_id, description, product_cost, print_cost, retail_price, wholesale_price, product_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO products (product_id, shop_id, product_name, category_id, product_cost, print_cost, retail_price, wholesale_price)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           productId,
           shopId,
           product_name,
           category_id,
-          description || null,
           product_cost,
           print_cost,
           retail_price,
           wholesale_price || null,
-          product_status,
         ]
       );
 
@@ -281,12 +275,10 @@ class ProductModel {
       >)[] = [
         "product_name",
         "category_id",
-        "description",
         "product_cost",
         "print_cost",
         "retail_price",
         "wholesale_price",
-        "product_status",
       ];
 
       for (const field of updateableFields) {
@@ -407,14 +399,14 @@ class ProductModel {
   }
 
   /**
-   * Search products by name, SKU, or product ID
+   * Search products by name or product ID
    */
   async searchProducts(shopId: number, searchTerm: string): Promise<Product[]> {
     try {
       const searchPattern = `%${searchTerm}%`;
       const results = await query(
-        'SELECT * FROM products WHERE shop_id = ? AND (product_name LIKE ? OR sku LIKE ? OR product_id LIKE ?) AND product_status = "active" ORDER BY product_name ASC',
-        [shopId, searchPattern, searchPattern, searchPattern]
+        'SELECT * FROM products WHERE shop_id = ? AND (product_name LIKE ? OR product_id LIKE ?) ORDER BY product_name ASC',
+        [shopId, searchPattern, searchPattern]
       );
 
       logger.debug("Searched products", {
@@ -706,6 +698,73 @@ class ProductModel {
     } catch (error) {
       logger.error("Error updating product stock:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Reduce stock quantity for a product variant when an order is placed
+   * Simple approach: Find the stock entry and subtract the quantity
+   */
+  async reduceProductStock(
+    productId: string,
+    sizeId: number,
+    colorId: number,
+    quantity: number,
+    shopId: number
+  ): Promise<boolean> {
+    try {
+      logger.info("=== REDUCING STOCK ===", {
+        productId,
+        sizeId,
+        colorId,
+        quantity,
+        shopId,
+      });
+
+      // UPDATE the stock_qty by subtracting the quantity
+      const updateQuery = `UPDATE shop_product_stock
+         SET stock_qty = stock_qty - ?, updated_at = NOW()
+         WHERE shop_id = ? AND product_id = ? AND size_id = ? AND color_id = ?`;
+
+      const updateParams = [quantity, shopId, productId, sizeId, colorId];
+
+      logger.info("SQL UPDATE QUERY", {
+        query: updateQuery,
+        params: updateParams,
+      });
+
+      const result = await query(updateQuery, updateParams);
+      const affectedRows = (result as any).affectedRows;
+
+      logger.info("UPDATE RESULT", {
+        affectedRows,
+        productId,
+        sizeId,
+        colorId,
+        quantityReduced: quantity,
+      });
+
+      if (affectedRows === 0) {
+        logger.warn("No stock entry found to update", {
+          productId,
+          sizeId,
+          colorId,
+          shopId,
+        });
+        return false;
+      }
+
+      logger.info("✓ Stock reduced successfully", {
+        productId,
+        sizeId,
+        colorId,
+        quantityReduced: quantity,
+      });
+
+      return true;
+    } catch (error) {
+      logger.error("Error reducing product stock:", error);
+      return false;
     }
   }
 

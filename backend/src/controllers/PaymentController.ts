@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import PaymentModel from '../models/Payment';
 import { logger } from '../utils/logger';
+import { query } from '../config/database';
 
 class PaymentController {
   async getShopPayments(req: Request, res: Response): Promise<void> {
@@ -48,7 +49,7 @@ class PaymentController {
 
   async createPayment(req: Request, res: Response): Promise<void> {
     try {
-      const { shop_id, customer_id, payment_amount, payment_date, payment_method, bank_account_id, branch_name } = req.body;
+      const { shop_id, customer_id, payment_amount, payment_method, bank_account_id, branch_name, order_id } = req.body;
 
       // Validate essential fields
       if (!shop_id) {
@@ -66,29 +67,81 @@ class PaymentController {
         return;
       }
 
-      if (!payment_date) {
-        res.status(400).json({ success: false, message: 'Payment date is required' });
-        return;
-      }
-
       if (!payment_method) {
         res.status(400).json({ success: false, message: 'Payment method is required' });
         return;
       }
 
-      // For bank transfers, bank account and branch are required
+      // For bank transfers, bank account is required
       if ((payment_method === 'online_transfer' || payment_method === 'bank_deposit') && !bank_account_id) {
         res.status(400).json({ success: false, message: 'Bank account is required for bank transfers' });
         return;
       }
 
-      if ((payment_method === 'online_transfer' || payment_method === 'bank_deposit') && !branch_name) {
-        res.status(400).json({ success: false, message: 'Branch name is required for bank transfers' });
+      // Branch name is only required for bank_deposit, not online_transfer
+      if (payment_method === 'bank_deposit' && !branch_name) {
+        res.status(400).json({ success: false, message: 'Branch name is required for bank deposit' });
         return;
       }
 
-      const paymentId = await PaymentModel.createPayment(shop_id, req.body);
-      res.status(201).json({ success: true, data: { payment_id: paymentId }, message: 'Payment created successfully' });
+      // CAP PAYMENT AT ORDER TOTAL - Don't allow overpayment recording
+      let actualPaymentAmount = parseFloat(payment_amount);
+
+      if (order_id) {
+        // Get order details
+        const orderResult = await query(
+          `SELECT final_amount FROM orders WHERE order_id = ? AND shop_id = ?`,
+          [order_id, shop_id]
+        );
+
+        if ((orderResult as any[]).length > 0) {
+          const order = (orderResult as any[])[0];
+          const orderTotal = parseFloat(order.final_amount);
+
+          logger.info('Payment validation for order', {
+            order_id,
+            orderTotal,
+            requestedPayment: actualPaymentAmount
+          });
+
+          // If payment exceeds order total, cap it at order total
+          if (actualPaymentAmount > orderTotal) {
+            logger.warn('Payment amount exceeds order total - capping at order total', {
+              order_id,
+              requestedPayment: actualPaymentAmount,
+              orderTotal,
+              cappedPayment: orderTotal
+            });
+            actualPaymentAmount = orderTotal;
+          }
+        }
+      }
+
+      // Create payment with the actual (possibly capped) amount
+      const paymentData = {
+        ...req.body,
+        payment_amount: actualPaymentAmount
+      };
+
+      const paymentId = await PaymentModel.createPayment(shop_id, paymentData);
+
+      logger.info('Payment created', {
+        paymentId,
+        order_id,
+        requestedAmount: parseFloat(payment_amount),
+        recordedAmount: actualPaymentAmount,
+        capped: actualPaymentAmount < parseFloat(payment_amount)
+      });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          payment_id: paymentId,
+          recorded_amount: actualPaymentAmount,
+          change_given: parseFloat(payment_amount) - actualPaymentAmount
+        },
+        message: 'Payment created successfully'
+      });
     } catch (error: any) {
       logger.error('Error in createPayment:', error);
 

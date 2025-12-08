@@ -9,6 +9,17 @@ import {
   PaymentSummary,
 } from "../services/paymentService";
 import { getShopBankAccounts, BankAccount } from "../services/bankAccountService";
+import { API_URL } from "../config/api";
+
+interface Customer {
+  customer_id: number;
+  id?: number;
+  first_name?: string;
+  last_name?: string;
+  name?: string;
+  mobile?: string;
+  email?: string;
+}
 
 interface Notification {
   type: "success" | "error";
@@ -40,8 +51,6 @@ const PaymentsPage: React.FC = () => {
   const [formData, setFormData] = useState({
     customer_id: "",
     payment_amount: "",
-    payment_date: new Date().toISOString().split("T")[0],
-    payment_time: new Date().toTimeString().slice(0, 5),
     payment_method: "cash" as "cash" | "online_transfer" | "bank_deposit",
     bank_account_id: "",
     bank_name: "",
@@ -53,13 +62,84 @@ const PaymentsPage: React.FC = () => {
   });
 
   // Modal state for customer selection
-  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
   const [modalErrorMessage, setModalErrorMessage] = useState("");
   const [modalSuccessMessage, setModalSuccessMessage] = useState("");
 
   // Use ref to prevent duplicate requests in strict mode
   const loadDataRef = useRef(false);
+
+  // Load all customers on component mount
+  useEffect(() => {
+    if (!shopId) return;
+
+    const loadCustomers = async () => {
+      try {
+        const response = await fetch(`${API_URL}/customers?shop_id=${shopId}`);
+        const result = await response.json();
+        if (result.success) {
+          const data = result.data || [];
+          setAllCustomers(data);
+          setCustomers(data);
+        }
+      } catch (error) {
+        console.error("Error loading customers:", error);
+      }
+    };
+
+    loadCustomers();
+  }, [shopId]);
+
+  // Search customers on key up - with instant local filtering
+  useEffect(() => {
+    if (!customerSearchQuery.trim()) {
+      // Show all customers if search is cleared
+      setCustomers(allCustomers);
+      return;
+    }
+
+    if (!shopId) return;
+
+    // Instant local filtering for faster UX
+    const query = customerSearchQuery.toLowerCase();
+    const localFiltered = allCustomers.filter(
+      (customer) =>
+        String(customer.customer_id || customer.id || "")
+          .toLowerCase()
+          .includes(query) ||
+        (customer.mobile && customer.mobile.toLowerCase().includes(query)) ||
+        (customer.name && customer.name.toLowerCase().includes(query)) ||
+        (customer.first_name &&
+          customer.first_name.toLowerCase().includes(query)) ||
+        (customer.last_name && customer.last_name.toLowerCase().includes(query))
+    );
+
+    // Show local results immediately
+    setCustomers(localFiltered);
+
+    // Fetch from API for more accurate results
+    const searchTimer = setTimeout(async () => {
+      setIsLoadingCustomers(true);
+      try {
+        const response = await fetch(
+          `${API_URL}/customers/search?shop_id=${shopId}&q=${encodeURIComponent(customerSearchQuery)}`
+        );
+        const result = await response.json();
+        if (result.success) {
+          setCustomers(result.data || []);
+        }
+      } catch (error) {
+        console.error("Error searching customers:", error);
+      } finally {
+        setIsLoadingCustomers(false);
+      }
+    }, 50); // Very fast debounce for API call
+
+    return () => clearTimeout(searchTimer);
+  }, [customerSearchQuery, shopId, allCustomers]);
 
   // Load payments and summary
   useEffect(() => {
@@ -135,7 +215,7 @@ const PaymentsPage: React.FC = () => {
     // Date range filter
     if (filterDateRange !== "all") {
       const today = new Date();
-      const paymentDate = (p: Payment) => new Date(p.payment_date);
+      const paymentDate = (p: Payment) => new Date(p.created_at);
 
       result = result.filter((p) => {
         const pDate = paymentDate(p);
@@ -158,7 +238,7 @@ const PaymentsPage: React.FC = () => {
 
     return result.sort(
       (a, b) =>
-        new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     );
   }, [payments, searchQuery, filterMethod, filterStatus, filterDateRange]);
 
@@ -173,8 +253,6 @@ const PaymentsPage: React.FC = () => {
       setFormData({
         customer_id: payment.customer_id?.toString() || "",
         payment_amount: payment.payment_amount.toString(),
-        payment_date: payment.payment_date,
-        payment_time: payment.payment_time || "",
         payment_method: payment.payment_method,
         bank_account_id: payment.bank_account_id?.toString() || "",
         bank_name: payment.bank_name || "",
@@ -189,8 +267,6 @@ const PaymentsPage: React.FC = () => {
       setFormData({
         customer_id: "",
         payment_amount: "",
-        payment_date: new Date().toISOString().split("T")[0],
-        payment_time: new Date().toTimeString().slice(0, 5),
         payment_method: "cash",
         bank_account_id: "",
         bank_name: "",
@@ -208,9 +284,9 @@ const PaymentsPage: React.FC = () => {
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setShowCustomerSearch(false);
     setEditingPayment(null);
     setCustomerSearchQuery("");
+    setCustomers(allCustomers); // Reset customers list
     setModalErrorMessage("");
     setModalSuccessMessage("");
   };
@@ -230,18 +306,17 @@ const PaymentsPage: React.FC = () => {
         return;
       }
 
-      if (!formData.payment_date) {
-        setModalErrorMessage("Payment date is required");
-        return;
-      }
-
       if (formData.payment_method === "online_transfer" || formData.payment_method === "bank_deposit") {
         if (!formData.bank_account_id) {
           setModalErrorMessage("Bank Account is required for bank transfers");
           return;
         }
+      }
+
+      // Branch is only required for bank_deposit, not online_transfer
+      if (formData.payment_method === "bank_deposit") {
         if (!formData.branch_name) {
-          setModalErrorMessage("Branch name is required");
+          setModalErrorMessage("Branch name is required for bank deposit");
           return;
         }
       }
@@ -249,8 +324,6 @@ const PaymentsPage: React.FC = () => {
       if (editingPayment) {
         await updatePayment(editingPayment.payment_id, shopId, {
           payment_amount: parseFloat(formData.payment_amount),
-          payment_date: formData.payment_date,
-          payment_time: formData.payment_time || undefined,
           payment_method: formData.payment_method,
           bank_name: formData.bank_name || undefined,
           branch_name: formData.branch_name || undefined,
@@ -269,8 +342,6 @@ const PaymentsPage: React.FC = () => {
             ? parseInt(formData.customer_id)
             : undefined,
           payment_amount: parseFloat(formData.payment_amount),
-          payment_date: formData.payment_date,
-          payment_time: formData.payment_time || undefined,
           payment_method: formData.payment_method,
           bank_name: formData.bank_name || undefined,
           branch_name: formData.branch_name || undefined,
@@ -306,6 +377,15 @@ const PaymentsPage: React.FC = () => {
       bank_deposit: "bg-purple-600 text-white",
     };
     return colors[method] || "bg-gray-600 text-white";
+  };
+
+  const formatPaymentMethod = (method: string) => {
+    const labels: Record<string, string> = {
+      cash: "CASH",
+      online_transfer: "ONLINE TRANSFER",
+      bank_deposit: "BANK DEPOSIT",
+    };
+    return labels[method] || method.toUpperCase();
   };
 
   const getStatusBadgeColor = (status: string) => {
@@ -505,7 +585,16 @@ const PaymentsPage: React.FC = () => {
                     Payment ID
                   </th>
                   <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Order/Customer
+                    Customer ID
+                  </th>
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Bank Name
+                  </th>
+                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                    Branch Name
+                  </th>
+                  <th className="px-6 py-3 text-center font-semibold text-red-400">
+                    Payment Type
                   </th>
                   <th className="px-6 py-3 text-right font-semibold text-red-400">
                     Amount (Rs.)
@@ -513,70 +602,58 @@ const PaymentsPage: React.FC = () => {
                   <th className="px-6 py-3 text-left font-semibold text-red-400">
                     Date & Time
                   </th>
-                  <th className="px-6 py-3 text-center font-semibold text-red-400">
-                    Method
-                  </th>
-                  <th className="px-6 py-3 text-center font-semibold text-red-400">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-center font-semibold text-red-400">
-                    Action
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
-                {filteredPayments.map((payment) => (
-                  <tr
-                    key={payment.payment_id}
-                    className="hover:bg-gray-700/30 transition-all cursor-pointer"
-                    onDoubleClick={() => handleOpenModal(payment)}
-                  >
-                    <td className="px-6 py-4 text-gray-200 font-mono font-semibold">
-                      #{payment.payment_id}
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">
-                      {payment.order_id ? `Order #${payment.order_id}` : "Direct Payment"}
-                      {payment.customer_id && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          Customer: {payment.customer_id}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right text-green-400 font-bold">
-                      Rs. {(parseFloat(String(payment?.payment_amount)) || 0).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 text-gray-400 text-xs">
-                      <div>{payment.payment_date}</div>
-                      {payment.payment_time && (
-                        <div className="text-gray-500">{payment.payment_time}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentMethodBadgeColor(payment.payment_method)}`}>
-                        {payment.payment_method.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(payment.payment_status)}`}
-                      >
-                        {payment.payment_status.charAt(0).toUpperCase() +
-                          payment.payment_status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center space-x-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenModal(payment);
-                        }}
-                        className="bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-red-700 transition-colors"
-                      >
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredPayments.map((payment) => {
+                  // Determine bank name display
+                  let bankNameDisplay = "CASH";
+                  let branchNameDisplay = "_";
+                  let paymentTypeDisplay = "Cash";
+
+                  if (payment.payment_method === "online_transfer") {
+                    bankNameDisplay = payment.bank_name || "_";
+                    branchNameDisplay = "_";
+                    paymentTypeDisplay = "Online Transfer";
+                  } else if (payment.payment_method === "bank_deposit") {
+                    bankNameDisplay = payment.bank_name || "_";
+                    branchNameDisplay = payment.branch_name || "_";
+                    paymentTypeDisplay = "Bank Deposit";
+                  }
+
+                  return (
+                    <tr
+                      key={payment.payment_id}
+                      className="hover:bg-gray-700/30 transition-all cursor-pointer"
+                      onDoubleClick={() => handleOpenModal(payment)}
+                    >
+                      <td className="px-6 py-4 text-gray-200 font-mono font-semibold">
+                        #{payment.payment_id}
+                      </td>
+                      <td className="px-6 py-4 text-gray-300">
+                        {payment.customer_id ? `#${payment.customer_id}` : "_"}
+                      </td>
+                      <td className="px-6 py-4 text-gray-300">
+                        {bankNameDisplay}
+                      </td>
+                      <td className="px-6 py-4 text-gray-300">
+                        {branchNameDisplay}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentMethodBadgeColor(payment.payment_method)}`}>
+                          {paymentTypeDisplay.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right text-green-400 font-bold">
+                        Rs. {(parseFloat(String(payment?.payment_amount)) || 0).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 text-gray-400 text-xs">
+                        <div>{new Date(payment.updated_at).toLocaleDateString()}</div>
+                        <div className="text-gray-500">{new Date(payment.updated_at).toLocaleTimeString()}</div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -624,29 +701,81 @@ const PaymentsPage: React.FC = () => {
 
               {/* ===== ESSENTIAL FIELDS ===== */}
 
-              {/* Customer ID - with add customer option */}
+              {/* Customer Search - with live dropdown */}
               <div>
                 <label className="block text-sm font-semibold text-green-400 mb-2">
-                  Customer ID <span className="text-red-500">*</span> (Required)
+                  Search Customer <span className="text-red-500">*</span> (Required)
                 </label>
-                <div className="flex gap-2">
+                <div className="relative space-y-2">
                   <input
-                    type="number"
-                    min="0"
-                    value={formData.customer_id || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, customer_id: e.target.value })
-                    }
-                    placeholder="e.g., 1000"
-                    className="flex-1 px-4 py-2 bg-gray-700 border-2 border-green-600/50 text-white placeholder-gray-500 rounded-lg focus:border-green-500 focus:outline-none"
+                    type="text"
+                    placeholder="Search by customer ID, name, or mobile..."
+                    value={customerSearchQuery}
+                    onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-700 border-2 border-green-600/50 text-white placeholder-gray-500 rounded-lg focus:border-green-500 focus:outline-none"
                   />
-                  <button
-                    onClick={() => setShowCustomerSearch(!showCustomerSearch)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                  >
-                    🔍 Find
-                  </button>
+
+                  {/* Customer Dropdown */}
+                  {customerSearchQuery && customers.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 bg-gray-700 border-2 border-green-600/50 rounded-lg max-h-60 overflow-y-auto z-50 mt-1">
+                      {isLoadingCustomers ? (
+                        <div className="px-4 py-3 text-gray-400 text-sm">
+                          Searching...
+                        </div>
+                      ) : (
+                        customers.map((customer) => (
+                          <button
+                            key={customer.customer_id || customer.id}
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                customer_id: String(customer.customer_id || customer.id)
+                              });
+                              setCustomerSearchQuery("");
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-green-900/40 border-b border-gray-600/50 text-sm transition-colors"
+                          >
+                            <div className="font-medium text-gray-100">
+                              ID: {customer.customer_id || customer.id}
+                              {customer.name && ` - ${customer.name}`}
+                              {!customer.name && customer.first_name && ` - ${customer.first_name} ${customer.last_name || ''}`}
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              {customer.mobile}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* No results message */}
+                  {customerSearchQuery && customers.length === 0 && !isLoadingCustomers && (
+                    <div className="absolute top-full left-0 right-0 bg-gray-700 border-2 border-green-600/50 rounded-lg p-4 z-50 mt-1">
+                      <p className="text-gray-400 text-sm text-center">
+                        No customers found
+                      </p>
+                    </div>
+                  )}
                 </div>
+
+                {/* Selected Customer ID Display */}
+                {formData.customer_id && (
+                  <div className="mt-2 bg-green-900/20 border border-green-600/50 rounded-lg p-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-sm text-gray-400">Selected Customer ID:</p>
+                        <p className="font-semibold text-green-400">#{formData.customer_id}</p>
+                      </div>
+                      <button
+                        onClick={() => setFormData({ ...formData, customer_id: "" })}
+                        className="text-gray-400 hover:text-red-400 text-lg"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Paid Amount */}
@@ -667,8 +796,29 @@ const PaymentsPage: React.FC = () => {
                 />
               </div>
 
-              {/* Bank Account (only for bank transfers) */}
-              {formData.payment_method !== "cash" && (
+              {/* Payment Method */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-400 mb-2">
+                  Payment Method
+                </label>
+                <select
+                  value={formData.payment_method}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      payment_method: e.target.value as any,
+                    })
+                  }
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-gray-600/30 text-white rounded-lg focus:border-gray-500 focus:outline-none"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="online_transfer">Online Transfer</option>
+                  <option value="bank_deposit">Bank Deposit</option>
+                </select>
+              </div>
+
+              {/* Bank Details - Online Transfer (Bank only, no branch) */}
+              {formData.payment_method === "online_transfer" && (
                 <div>
                   <label className="block text-sm font-semibold text-green-400 mb-2">
                     Bank <span className="text-red-500">*</span> (Required)
@@ -683,7 +833,7 @@ const PaymentsPage: React.FC = () => {
                         ...formData,
                         bank_account_id: e.target.value,
                         bank_name: selectedAccount?.bank_name || "",
-                        branch_name: selectedAccount?.branch_name || "",
+                        branch_name: "", // Clear branch for online transfer
                       });
                     }}
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-green-600/50 text-white rounded-lg focus:border-green-500 focus:outline-none"
@@ -691,28 +841,60 @@ const PaymentsPage: React.FC = () => {
                     <option value="">Select Bank</option>
                     {bankAccounts.map((account) => (
                       <option key={account.bank_account_id} value={account.bank_account_id}>
-                        {account.bank_name} - {account.branch_name}
+                        {account.bank_name}
                       </option>
                     ))}
                   </select>
                 </div>
               )}
 
-              {/* Branch Name (only for bank transfers) */}
-              {formData.payment_method !== "cash" && (
-                <div>
-                  <label className="block text-sm font-semibold text-green-400 mb-2">
-                    Branch <span className="text-red-500">*</span> (Required)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.branch_name || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, branch_name: e.target.value })
-                    }
-                    placeholder="e.g., Colombo Main"
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-green-600/50 text-white placeholder-gray-500 rounded-lg focus:border-green-500 focus:outline-none"
-                  />
+              {/* Bank Details - Bank Deposit (Bank and Branch in same row) */}
+              {formData.payment_method === "bank_deposit" && (
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Bank Selection */}
+                  <div>
+                    <label className="block text-sm font-semibold text-green-400 mb-2">
+                      Bank <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.bank_account_id || ""}
+                      onChange={(e) => {
+                        const selectedAccount = bankAccounts.find(
+                          (acc) => acc.bank_account_id.toString() === e.target.value
+                        );
+                        setFormData({
+                          ...formData,
+                          bank_account_id: e.target.value,
+                          bank_name: selectedAccount?.bank_name || "",
+                          branch_name: selectedAccount?.branch_name || "",
+                        });
+                      }}
+                      className="w-full px-4 py-2 bg-gray-700 border-2 border-green-600/50 text-white rounded-lg focus:border-green-500 focus:outline-none"
+                    >
+                      <option value="">Select Bank</option>
+                      {bankAccounts.map((account) => (
+                        <option key={account.bank_account_id} value={account.bank_account_id}>
+                          {account.bank_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Branch Input */}
+                  <div>
+                    <label className="block text-sm font-semibold text-green-400 mb-2">
+                      Branch <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.branch_name || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, branch_name: e.target.value })
+                      }
+                      placeholder="e.g., Colombo Main"
+                      className="w-full px-4 py-2 bg-gray-700 border-2 border-green-600/50 text-white placeholder-gray-500 rounded-lg focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -739,25 +921,20 @@ const PaymentsPage: React.FC = () => {
                 />
               </div>
 
-              {/* Payment Method */}
+              {/* Transaction ID */}
               <div>
                 <label className="block text-sm font-semibold text-gray-400 mb-2">
-                  Payment Method
+                  Transaction ID
                 </label>
-                <select
-                  value={formData.payment_method}
+                <input
+                  type="text"
+                  value={formData.transaction_id || ""}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      payment_method: e.target.value as any,
-                    })
+                    setFormData({ ...formData, transaction_id: e.target.value })
                   }
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-gray-600/30 text-white rounded-lg focus:border-gray-500 focus:outline-none"
-                >
-                  <option value="cash">Cash</option>
-                  <option value="online_transfer">Online Transfer</option>
-                  <option value="bank_deposit">Bank Deposit</option>
-                </select>
+                  placeholder="Optional"
+                  className="w-full px-4 py-2 bg-gray-700 border-2 border-gray-600/30 text-white placeholder-gray-500 rounded-lg focus:border-gray-500 focus:outline-none"
+                />
               </div>
 
               {/* Notes */}

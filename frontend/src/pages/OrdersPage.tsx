@@ -1,8 +1,11 @@
 import React, { useState, useMemo, useEffect } from "react";
+import ReactDOM from "react-dom/client";
 import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
 import { printContent, generateOrdersHTML } from "../utils/exportUtils";
+import InvoicePrint from "../components/InvoicePrint";
+import BankPaymentModal, { BankPaymentData } from "../components/BankPaymentModal";
 
 interface OrderItem {
   product_id: number;
@@ -26,7 +29,6 @@ interface Order {
   advance_paid: number;
   balance_due: number;
   payment_status: "unpaid" | "partial" | "fully_paid";
-  payment_method?: "cash" | "card" | "online" | "other";
   order_status:
     | "pending"
     | "processing"
@@ -35,6 +37,8 @@ interface Order {
     | "cancelled";
   notes?: string | null;
   order_date: string;
+  created_at?: string;
+  updated_at?: string;
   recipient_name?: string;
   recipient_phone?: string;
   recipient_phone1?: string;
@@ -111,334 +115,6 @@ const printReceipt = async (orderId: number) => {
   }
 };
 
-// Utility function to print bill in A4 portrait format with validation
-const printBill = async (order: Order, shopName: string, shopAddress?: string, shopPhone?: string) => {
-  try {
-    // Validation: Check if payment is fully paid
-    if (order.payment_status !== "fully_paid") {
-      alert("❌ Payment must be fully paid before printing bill");
-      return;
-    }
-
-    // Validation: Check if complete address exists
-    const hasCompleteAddress =
-      order.delivery_line1 &&
-      order.delivery_city &&
-      order.delivery_district &&
-      order.delivery_province &&
-      order.delivery_postal_code;
-
-    if (!hasCompleteAddress) {
-      alert("❌ Complete delivery address is required to print bill (Line 1, City, District, Province, Postal Code)");
-      return;
-    }
-
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      alert("Please allow popups to print bill");
-      return;
-    }
-
-    // Format date and time
-    const orderDate = new Date(order.order_date);
-    const dateStr = orderDate.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    const timeStr = orderDate.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-
-    // Format invoice number: IN + order_id
-    const invoiceNumber = `IN${order.order_id}`;
-
-    // Build customer address string
-    const addressParts = [
-      order.delivery_line1,
-      order.delivery_line2,
-      order.delivery_city,
-      order.delivery_district,
-      order.delivery_province,
-      order.delivery_postal_code,
-    ].filter(Boolean);
-    const addressStr = addressParts.join(", ");
-
-    // Calculate item totals
-    const itemsHtml = (order.items || [])
-      .map(
-        (item) => `
-      <tr>
-        <td style="padding: 8px; text-align: center; font-size: 11px; border-bottom: 1px solid #e0e0e0;">${item.product_id}</td>
-        <td style="padding: 8px; text-align: left; font-size: 11px; border-bottom: 1px solid #e0e0e0;">${item.product_name}</td>
-        <td style="padding: 8px; text-align: center; font-size: 11px; border-bottom: 1px solid #e0e0e0;">${item.size_name || "-"}</td>
-        <td style="padding: 8px; text-align: center; font-size: 11px; border-bottom: 1px solid #e0e0e0;">${item.color_name || "-"}</td>
-        <td style="padding: 8px; text-align: center; font-size: 11px; border-bottom: 1px solid #e0e0e0;">${item.quantity}</td>
-        <td style="padding: 8px; text-align: right; font-size: 11px; border-bottom: 1px solid #e0e0e0;">Rs. ${parseFloat(String(item.sold_price)).toFixed(2)}</td>
-        <td style="padding: 8px; text-align: right; font-size: 11px; border-bottom: 1px solid #e0e0e0;">Rs. ${parseFloat(String(item.total_price)).toFixed(2)}</td>
-      </tr>
-    `
-      )
-      .join("");
-
-    const billHTML = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Invoice #${invoiceNumber}</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <style>
-          @page {
-            size: A4 portrait;
-            margin: 0;
-            padding: 0;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-          }
-          * {
-            box-sizing: border-box;
-          }
-          .invoice-container {
-            width: 210mm;
-            height: 297mm;
-            background: white;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            margin: 0 auto;
-          }
-          /* Red wave divider */
-          .wave-divider {
-            position: relative;
-            height: 20px;
-            background: white;
-            overflow: hidden;
-          }
-          .wave-divider::after {
-            content: '';
-            position: absolute;
-            top: -10px;
-            left: 0;
-            right: 0;
-            width: 100%;
-            height: 40px;
-            background: #dc2626;
-            clip-path: polygon(
-              0% 50%, 1% 48%, 2% 46%, 3% 45%, 4% 45%, 5% 46%, 6% 48%, 7% 50%,
-              8% 52%, 9% 54%, 10% 55%, 11% 55%, 12% 54%, 13% 52%, 14% 50%,
-              15% 48%, 16% 47%, 17% 47%, 18% 48%, 19% 50%, 20% 52%, 21% 54%,
-              22% 55%, 23% 55%, 24% 54%, 25% 52%, 26% 50%, 27% 48%, 28% 47%,
-              29% 47%, 30% 48%, 31% 50%, 32% 52%, 33% 54%, 34% 55%, 35% 55%,
-              36% 54%, 37% 52%, 38% 50%, 39% 48%, 40% 47%, 41% 47%, 42% 48%,
-              43% 50%, 44% 52%, 45% 54%, 46% 55%, 47% 55%, 48% 54%, 49% 52%,
-              50% 50%, 51% 48%, 52% 47%, 53% 47%, 54% 48%, 55% 50%, 56% 52%,
-              57% 54%, 58% 55%, 59% 55%, 60% 54%, 61% 52%, 62% 50%, 63% 48%,
-              64% 47%, 65% 47%, 66% 48%, 67% 50%, 68% 52%, 69% 54%, 70% 55%,
-              71% 55%, 72% 54%, 73% 52%, 74% 50%, 75% 48%, 76% 47%, 77% 47%,
-              78% 48%, 79% 50%, 80% 52%, 81% 54%, 82% 55%, 83% 55%, 84% 54%,
-              85% 52%, 86% 50%, 87% 48%, 88% 47%, 89% 47%, 90% 48%, 91% 50%,
-              92% 52%, 93% 54%, 94% 55%, 95% 55%, 96% 54%, 97% 52%, 98% 50%,
-              99% 48%, 100% 50%, 100% 0%, 0% 0%
-            );
-          }
-          .diagonal-stripes {
-            background: repeating-linear-gradient(
-              45deg,
-              #2d2d2d,
-              #2d2d2d 10px,
-              #404040 10px,
-              #404040 20px
-            );
-          }
-          @media print {
-            .invoice-container {
-              margin: 0;
-              width: 210mm;
-              height: 297mm;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-            }
-          }
-        </style>
-      </head>
-      <body class="bg-gray-50">
-        <div class="invoice-container">
-          <!-- Top Header with Diagonal Stripes -->
-          <div class="diagonal-stripes px-8 py-6">
-            <div class="flex justify-between items-center">
-              <!-- Left: Logo + Company Name -->
-              <div class="flex items-center gap-4">
-                <div class="w-14 h-14 bg-white rounded flex items-center justify-center flex-shrink-0">
-                  <img src="dennep png.png" alt="Dennep Logo" class="w-12 h-12 object-contain">
-                </div>
-                <div class="text-white">
-                  <h1 class="text-xl font-bold tracking-wide leading-tight">DENNEP<br>CLOTHES</h1>
-                  <p class="text-xs opacity-80">Premium Fashion</p>
-                </div>
-              </div>
-
-              <!-- Right: INVOICE Text -->
-              <div class="text-white">
-                <h2 class="text-4xl font-bold tracking-widest">INVOICE</h2>
-              </div>
-            </div>
-          </div>
-
-          <!-- Red Wave Divider -->
-          <div class="wave-divider"></div>
-
-          <!-- Main Content -->
-          <div class="flex-1 px-8 py-8 flex flex-col">
-            <!-- Invoice Details Section -->
-            <div class="grid grid-cols-2 gap-16 mb-6 pb-4 border-b border-gray-300">
-              <!-- Left: Invoice To -->
-              <div>
-                <h3 class="text-sm font-bold text-red-600 uppercase tracking-wide mb-3">Invoice To:</h3>
-                <p class="text-sm font-bold text-gray-800">${order.recipient_name || "Customer Name"}</p>
-                <p class="text-xs text-gray-600">${order.recipient_phone || order.customer_mobile || ""}</p>
-                <p class="text-xs text-gray-600">${order.delivery_line1 || ""}</p>
-              </div>
-
-              <!-- Right: Invoice Details -->
-              <div class="text-right">
-                <div class="inline-block bg-red-600 text-white px-3 py-2 rounded text-xs font-bold mb-3">
-                  INVOICE NO #${order.order_id}
-                </div>
-                <div class="text-xs space-y-1">
-                  <div><span class="font-bold">Account No</span><br><span class="text-gray-600">${order.order_id}</span></div>
-                  <div><span class="font-bold">Invoice Date</span><br><span class="text-gray-600">${dateStr}</span></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Items Table -->
-            <div class="mb-6">
-              <table class="w-full text-xs">
-                <thead>
-                  <tr class="bg-red-600 text-white">
-                    <th class="text-left px-3 py-3 font-bold">Item Description</th>
-                    <th class="text-center px-3 py-3 font-bold">Qty</th>
-                    <th class="text-right px-3 py-3 font-bold">Unit Price</th>
-                    <th class="text-right px-3 py-3 font-bold">Total Price</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${(order.items || [])
-                    .map((item) => {
-                      return `
-                    <tr class="border-b border-gray-200 hover:bg-gray-50">
-                      <td class="px-3 py-2">
-                        <p class="font-semibold text-gray-800">${item.product_name || ""}</p>
-                        <p class="text-gray-500 text-xs">Size: ${item.size_name || "—"} | Color: ${item.color_name || "—"}</p>
-                      </td>
-                      <td class="text-center px-3 py-2">${item.quantity}</td>
-                      <td class="text-right px-3 py-2">Rs. ${parseFloat(String(item.sold_price)).toFixed(2)}</td>
-                      <td class="text-right px-3 py-2 font-semibold">Rs. ${parseFloat(String(item.total_price)).toFixed(2)}</td>
-                    </tr>
-                  `;
-                    })
-                    .join("")}
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Amount Summary (Right-aligned box) -->
-            <div class="flex justify-end mb-6">
-              <div class="w-72 text-sm">
-                <div class="flex justify-between py-2 border-b border-gray-200">
-                  <span class="font-bold">Sub Total</span>
-                  <span>Rs. ${parseFloat(String(order.total_amount)).toFixed(2)}</span>
-                </div>
-                ${
-                  order.delivery_charge
-                    ? `<div class="flex justify-between py-2 border-b border-gray-200">
-                      <span class="font-bold">Delivery</span>
-                      <span>Rs. ${parseFloat(String(order.delivery_charge)).toFixed(2)}</span>
-                    </div>`
-                    : ""
-                }
-                <div class="flex justify-between py-2 bg-gray-800 text-white px-3 rounded font-bold">
-                  <span>GRAND TOTAL</span>
-                  <span>Rs. ${parseFloat(String(order.final_amount)).toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Payment Method -->
-            <div class="bg-gray-100 px-4 py-3 rounded mb-4 text-xs">
-              <p class="font-bold mb-1">Payment method</p>
-              <p class="text-gray-700">Account: Bank Transfer - DENNEP CLOTHES</p>
-              <p class="text-gray-700">Payment Date: ${dateStr}</p>
-            </div>
-
-            <!-- Terms & Conditions -->
-            <div class="mb-4 text-xs">
-              <p class="font-bold mb-2 text-gray-800">Thanks for your business!</p>
-              <p class="text-gray-600 leading-relaxed">
-                Terms & Conditions: Returns accepted within 7 days with original invoice and unused items in original packaging. Report damages within 24 hours of delivery. No payment returns - all sales are final unless agreed otherwise.
-              </p>
-            </div>
-
-            <!-- Signature Section -->
-            <div class="flex justify-between my-6 text-xs text-center">
-              <div class="w-1/3">
-                <div class="border-t border-gray-800 mb-2" style="margin-top: 50px;"></div>
-                <p class="font-bold">AUTHORIZED SIGNATURE</p>
-              </div>
-              <div class="w-1/3"></div>
-              <div class="w-1/3">
-                <div class="border-t border-gray-800 mb-2" style="margin-top: 50px;"></div>
-                <p class="font-bold">CUSTOMER SIGNATURE</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Footer Contact Section -->
-          <div class="bg-gray-100 px-8 py-4 text-xs">
-            <h3 class="text-sm font-bold text-red-600 uppercase tracking-wide mb-2">CONTACT</h3>
-            <div class="grid grid-cols-2 gap-4 text-gray-700">
-              <div><span class="font-bold">Phone</span><br>${shopPhone || "+94 XX XXX XXXX"}</div>
-              <div><span class="font-bold">Website</span><br>${shopAddress || "www.dennepclothes.com"}</div>
-              <div><span class="font-bold">Address</span><br>Colombo, Sri Lanka</div>
-            </div>
-          </div>
-
-          <!-- Bottom Wave + Stripes -->
-          <div class="wave-divider mt-auto"></div>
-          <div class="diagonal-stripes h-10"></div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(billHTML);
-    printWindow.document.close();
-
-    // Wait for content to be fully loaded and rendered before printing
-    printWindow.onload = () => {
-      setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
-        // Close after print dialog closes
-        printWindow.onafterprint = () => {
-          printWindow.close();
-        };
-      }, 1000);
-    };
-  } catch (error) {
-    console.error("Error printing bill:", error);
-    alert("Failed to print bill. Please try again.");
-  }
-};
 
 // Utility function to export receipt as image
 const exportReceiptAsImage = async (
@@ -493,8 +169,10 @@ const OrdersPage: React.FC = () => {
     "balance"
   );
   const [paymentMethod, setPaymentMethod] = useState<
-    "cash" | "card" | "online" | "other"
+    "cash" | "bank"
   >("cash");
+  const [bankPaymentData, setBankPaymentData] = useState<BankPaymentData | null>(null);
+  const [showBankPaymentModal, setShowBankPaymentModal] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState("");
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
@@ -505,6 +183,9 @@ const OrdersPage: React.FC = () => {
   // Order items loading state
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+
+  // Order payments state - stores payment_method from payments table
+  const [orderPayments, setOrderPayments] = useState<{ [orderId: number]: string }>({});
 
   // Delivery status update state
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -525,6 +206,12 @@ const OrdersPage: React.FC = () => {
   const [deliveryCharge, setDeliveryCharge] = useState("");
   const [isUpdatingAddress, setIsUpdatingAddress] = useState(false);
   const [addressMessage, setAddressMessage] = useState("");
+
+  // Note editing state
+  const [orderNote, setOrderNote] = useState("");
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [isUpdatingNote, setIsUpdatingNote] = useState(false);
+  const [noteMessage, setNoteMessage] = useState("");
 
   const {
     data: orders,
@@ -548,11 +235,43 @@ const OrdersPage: React.FC = () => {
     { enabled: shopId !== null }
   );
 
+  // Fetch payment methods for all orders from payments table
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      if (!orders || orders.length === 0) return;
+
+      const paymentMap: { [orderId: number]: string } = {};
+
+      for (const order of orders) {
+        try {
+          const response = await fetch(`${API_URL}/orders/${order.order_id}/payments`);
+          const result = await response.json();
+
+          if (result.success && result.data && result.data.length > 0) {
+            // Get the payment method from the first payment (or combine if multiple)
+            const paymentMethods = result.data.map((p: any) => p.payment_method);
+            const uniqueMethods = [...new Set(paymentMethods)];
+            paymentMap[order.order_id] = uniqueMethods.join(", ");
+          } else {
+            paymentMap[order.order_id] = "Not specified";
+          }
+        } catch (error) {
+          console.error(`Error fetching payments for order ${order.order_id}:`, error);
+          paymentMap[order.order_id] = "Error";
+        }
+      }
+
+      setOrderPayments(paymentMap);
+    };
+
+    fetchPaymentMethods();
+  }, [orders]);
+
   // Filter and search orders
   const filteredOrders = useMemo(() => {
     let result = [...(orders || [])];
 
-    // Search by customer ID, customer name, or order ID
+    // Search by customer ID, customer name, or order number
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -560,7 +279,7 @@ const OrdersPage: React.FC = () => {
           (order.recipient_name &&
             order.recipient_name.toLowerCase().includes(query)) ||
           (order.customer_id && order.customer_id.toString().includes(query)) ||
-          order.order_id.toString().includes(query)
+          order.order_number.toLowerCase().includes(query)
       );
     }
 
@@ -608,6 +327,147 @@ const OrdersPage: React.FC = () => {
     }
   }, [selectedOrderId, showOrderModal, shopId]);
 
+  // Print bill function - has access to orderItems state
+  const printBill = async (order: Order) => {
+    try {
+      console.log("Starting printBill function", order);
+      console.log("Order items from state:", orderItems);
+
+      // Validation: Check if payment is fully paid
+      if (order.payment_status !== "fully_paid") {
+        alert("❌ Payment must be fully paid before printing bill");
+        return;
+      }
+
+      // Validation: Check if complete address exists
+      const hasCompleteAddress =
+        order.delivery_line1 &&
+        order.delivery_city &&
+        order.delivery_district &&
+        order.delivery_province &&
+        order.delivery_postal_code;
+
+      if (!hasCompleteAddress) {
+        alert("❌ Complete delivery address is required to print bill (Line 1, City, District, Province, Postal Code)");
+        return;
+      }
+
+      // Check if items are loaded
+      if (!orderItems || orderItems.length === 0) {
+        alert("❌ Order items not loaded. Please wait for items to load.");
+        return;
+      }
+
+      console.log("Opening print window...");
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        alert("Please allow popups to print bill");
+        return;
+      }
+      console.log("Print window opened successfully");
+
+      // Prepare order data for InvoicePrint component
+      console.log("printBill - Items being passed to invoice:", orderItems);
+
+      // Validate payment method
+      const paymentMethod = orderPayments[order.order_id];
+      const validPaymentMethods = ["cash", "card", "online", "bank", "other"];
+      const paymentMethodValue = validPaymentMethods.includes(paymentMethod)
+        ? (paymentMethod as "cash" | "card" | "online" | "bank" | "other")
+        : "other";
+
+      const invoiceData = {
+        order_id: order.order_id,
+        order_number: order.order_number,
+        customer_id: order.customer_id,
+        total_items: order.total_items,
+        total_amount: order.total_amount,
+        final_amount: order.final_amount,
+        advance_paid: order.advance_paid,
+        balance_due: order.balance_due,
+        payment_status: order.payment_status,
+        payment_method: paymentMethodValue,
+        order_status: order.order_status,
+        notes: order.notes,
+        order_date: order.order_date,
+        recipient_name: order.recipient_name,
+        customer_mobile: order.customer_mobile,
+        recipient_phone: order.recipient_phone,
+        delivery_charge: order.delivery_charge,
+        delivery_line1: order.delivery_line1,
+        delivery_line2: order.delivery_line2,
+        delivery_city: order.delivery_city,
+        items: orderItems
+      };
+
+      // Generate filename with invoice number and customer ID
+      const invoiceNumber = `IN${order.order_number}`;
+      const customerId = order.customer_id
+        ? `C${String(order.customer_id).padStart(7, '0')}`
+        : 'CXXXXXX';
+      const filename = `${invoiceNumber}_${customerId}`;
+
+      // Write initial HTML with Tailwind CDN
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${filename}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 15mm;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              font-family: Arial, sans-serif;
+            }
+            @media print {
+              body { margin: 0; padding: 0; background: white; }
+              * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <div id="invoice-root"></div>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+
+      // Wait for Tailwind to load
+      setTimeout(() => {
+        const rootElement = printWindow.document.getElementById('invoice-root');
+        if (rootElement) {
+          const root = ReactDOM.createRoot(rootElement);
+          root.render(
+            React.createElement(InvoicePrint, { order: invoiceData })
+          );
+
+          // Wait for React to render, then print
+          setTimeout(() => {
+            printWindow.print();
+            printWindow.onafterprint = () => {
+              printWindow.close();
+            };
+          }, 500);
+        }
+      }, 1000);
+
+      console.log("Print bill completed successfully");
+    } catch (error) {
+      console.error("Error printing bill:", error);
+      if (error instanceof Error) {
+        console.error("Error stack:", error.stack);
+      }
+      alert(`Failed to print bill: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
+    }
+  };
+
   // Fetch receipt HTML when showing receipt
   useEffect(() => {
     if (selectedOrderId && showReceiptPreview) {
@@ -638,6 +498,9 @@ const OrdersPage: React.FC = () => {
     setPaymentMethod("cash");
     setPaymentMessage("");
     setShowReceiptPreview(false);
+    setOrderNote(order.notes || "");
+    setIsEditingNote(false);
+    setNoteMessage("");
     setShowOrderModal(true);
   };
 
@@ -664,45 +527,21 @@ const OrdersPage: React.FC = () => {
     setAddressMessage("");
   };
 
-  const handleCancelOrder = async () => {
-    if (!selectedOrderId || !shopId) return;
-
-    setIsUpdatingOrder(true);
-    try {
-      const response = await fetch(`${API_URL}/orders/${selectedOrderId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          shop_id: shopId,
-          order_status: "cancelled",
-        }),
-      });
-      const result = await response.json();
-      if (result.success) {
-        setPaymentMessage("✅ Order cancelled successfully!");
-        setTimeout(() => {
-          refetchOrders();
-          handleCloseModal();
-        }, 1000);
-      } else {
-        setPaymentMessage(`❌ Error: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Error cancelling order:", error);
-      setPaymentMessage("❌ Failed to cancel order");
-    } finally {
-      setIsUpdatingOrder(false);
-    }
-  };
 
   const handleStatusUpdate = async (newStatus: "processing" | "shipped" | "delivered") => {
     if (!selectedOrderId || !shopId || !selectedOrder) return;
 
     // Validate requirements for shipped status
     if (newStatus === "shipped") {
-      // Check 1: Payment must be fully paid
-      if (selectedOrder.payment_status !== "fully_paid") {
-        setStatusMessage("❌ Payment must be fully paid to mark as shipped");
+      // Check 1: Payment must be fully paid - calculate actual balance due
+      const totalAmount = parseFloat(String(selectedOrder.total_amount)) || 0;
+      const deliveryCharge = parseFloat(String(selectedOrder.delivery_charge)) || 0;
+      const advancePaid = parseFloat(String(selectedOrder.advance_paid)) || 0;
+      const expectedTotal = totalAmount + deliveryCharge;
+      const actualBalanceDue = Math.max(0, expectedTotal - advancePaid);
+
+      if (actualBalanceDue > 0) {
+        setStatusMessage(`❌ Payment not complete. Rs. ${actualBalanceDue.toFixed(2)} must be paid before marking as shipped`);
         return;
       }
 
@@ -853,9 +692,51 @@ const OrdersPage: React.FC = () => {
     }
   };
 
+  const handleSaveNote = async () => {
+    if (!selectedOrderId || !shopId) return;
+
+    setIsUpdatingNote(true);
+    setNoteMessage("");
+
+    try {
+      const response = await fetch(`${API_URL}/orders/${selectedOrderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop_id: shopId,
+          notes: orderNote.trim() || null,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setNoteMessage("✅ Note saved successfully!");
+        setIsEditingNote(false);
+        setTimeout(() => {
+          refetchOrders();
+          setNoteMessage("");
+        }, 1500);
+      } else {
+        setNoteMessage(`❌ Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error saving note:", error);
+      setNoteMessage("❌ Failed to save note");
+    } finally {
+      setIsUpdatingNote(false);
+    }
+  };
+
   const handleRecordPayment = async () => {
     if (!selectedOrderId || !paymentAmount) {
       setPaymentMessage("❌ Please enter a payment amount");
+      return;
+    }
+
+    // If bank payment is selected but no bank details provided, show error
+    if (paymentMethod === "bank" && !bankPaymentData) {
+      setPaymentMessage("❌ Please provide bank payment details");
+      setShowBankPaymentModal(true);
       return;
     }
 
@@ -876,16 +757,29 @@ const OrdersPage: React.FC = () => {
     setPaymentMessage("");
 
     try {
+      const paymentPayload: any = {
+        shop_id: shopId,
+        amount_paid: amount,
+        payment_type: paymentType,
+        payment_method: paymentMethod === "bank"
+          ? (bankPaymentData?.isOnlineTransfer ? "online_transfer" : "bank_deposit")
+          : "cash",
+      };
+
+      // Add bank details if bank payment
+      if (paymentMethod === "bank" && bankPaymentData) {
+        paymentPayload.bank_name = bankPaymentData.bank;
+        paymentPayload.branch_name = bankPaymentData.branch || null;
+        paymentPayload.bank_account_id = bankPaymentData.bankAccountId;
+        paymentPayload.transaction_id = bankPaymentData.receiptNumber;
+      }
+
       const response = await fetch(
         `${API_URL}/orders/${selectedOrderId}/payment`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount_paid: amount,
-            payment_type: paymentType,
-            payment_method: paymentMethod,
-          }),
+          body: JSON.stringify(paymentPayload),
         }
       );
 
@@ -895,6 +789,7 @@ const OrdersPage: React.FC = () => {
           `✅ Payment of Rs. ${amount.toFixed(2)} recorded successfully!`
         );
         setPaymentAmount("");
+        setBankPaymentData(null);
         setTimeout(() => {
           refetchOrders();
           handleCloseModal();
@@ -950,7 +845,7 @@ const OrdersPage: React.FC = () => {
           balanceDue: Number(selectedOrder.balance_due) || 0,
           deliveryCharge: Number(selectedOrder.delivery_charge) || 0,
           orderStatus: selectedOrder.order_status,
-          paymentMethod: selectedOrder.payment_method,
+          paymentMethod: orderPayments[selectedOrder.order_id] || "Not specified",
           orderDate: selectedOrder.order_date,
           orderNotes: selectedOrder.notes,
         })
@@ -1159,8 +1054,9 @@ const OrdersPage: React.FC = () => {
                     <td className="px-6 py-4 text-gray-400">
                       {order.customer_mobile}
                     </td>
-                    <td className="px-6 py-4 text-gray-400 text-sm">
-                      {new Date(order.order_date).toLocaleDateString()}
+                    <td className="px-6 py-4 text-gray-400 text-xs">
+                      <div>{new Date(order.updated_at || order.order_date).toLocaleDateString()}</div>
+                      <div className="text-gray-500">{new Date(order.updated_at || order.order_date).toLocaleTimeString()}</div>
                     </td>
                     <td className="px-6 py-4 text-right text-red-400 font-semibold">
                       {parseFloat(String(order.total_amount)).toFixed(2)}
@@ -1175,13 +1071,32 @@ const OrdersPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusBadgeColor(
-                          order.payment_status
-                        )}`}
-                      >
-                        {order.payment_status.replace("_", " ")}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentStatusBadgeColor(
+                            order.payment_status
+                          )}`}
+                        >
+                          {order.payment_status.replace("_", " ")}
+                        </span>
+                        {(() => {
+                          // Calculate actual balance due
+                          const totalAmount = parseFloat(String(order.total_amount)) || 0;
+                          const deliveryCharge = parseFloat(String(order.delivery_charge)) || 0;
+                          const advancePaid = parseFloat(String(order.advance_paid)) || 0;
+                          const expectedTotal = totalAmount + deliveryCharge;
+                          const balanceDue = Math.max(0, expectedTotal - advancePaid);
+
+                          if (balanceDue > 0) {
+                            return (
+                              <span className="text-red-400 text-xs font-bold">
+                                Due: Rs. {balanceDue.toFixed(2)}
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-gray-300 text-sm">
                       {order.tracking_number ? (
@@ -1236,37 +1151,40 @@ const OrdersPage: React.FC = () => {
                 <h3 className="text-lg font-bold text-red-400 mb-4">
                   Customer & Order Information
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
                     <p className="text-xs text-gray-400 font-semibold mb-1">
                       Customer ID
                     </p>
-                    <p className="text-gray-200 font-medium text-lg font-mono">
+                    <p className="text-gray-200 font-medium text-base font-mono">
                       {selectedOrder.customer_id || "N/A"}
                     </p>
                   </div>
-                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
+                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
                     <p className="text-xs text-gray-400 font-semibold mb-1">
                       Mobile
                     </p>
-                    <p className="text-gray-200 font-medium">
+                    <p className="text-gray-200 font-medium text-base">
                       {selectedOrder.customer_mobile}
                     </p>
                   </div>
-                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
+                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
                     <p className="text-xs text-gray-400 font-semibold mb-1">
-                      Order Date
+                      Last Updated
                     </p>
-                    <p className="text-gray-200 font-medium">
-                      {new Date(selectedOrder.order_date).toLocaleDateString()}
+                    <p className="text-gray-200 font-medium text-sm">
+                      {new Date(selectedOrder.updated_at || selectedOrder.order_date).toLocaleDateString()}
+                    </p>
+                    <p className="text-gray-400 text-xs">
+                      {new Date(selectedOrder.updated_at || selectedOrder.order_date).toLocaleTimeString()}
                     </p>
                   </div>
-                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
+                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
                     <p className="text-xs text-gray-400 font-semibold mb-1">
                       Payment Method
                     </p>
-                    <p className="text-gray-200 font-medium">
-                      {selectedOrder.payment_method}
+                    <p className="text-gray-200 font-medium text-base capitalize">
+                      {orderPayments[selectedOrder.order_id] || "Not specified"}
                     </p>
                   </div>
                 </div>
@@ -1413,8 +1331,17 @@ const OrdersPage: React.FC = () => {
                     </div>
                     <div>
                       {(() => {
-                        const balanceDue =
-                          parseFloat(String(selectedOrder.balance_due)) || 0;
+                        // Calculate actual balance due as difference between what should be paid and what was paid
+                        const totalAmount = parseFloat(String(selectedOrder.total_amount)) || 0;
+                        const deliveryCharge = parseFloat(String(selectedOrder.delivery_charge)) || 0;
+                        const advancePaid = parseFloat(String(selectedOrder.advance_paid)) || 0;
+
+                        // Expected total = products + delivery
+                        const expectedTotal = totalAmount + deliveryCharge;
+
+                        // Balance due = expected total - what's been paid
+                        const balanceDue = Math.max(0, expectedTotal - advancePaid);
+
                         return (
                           <>
                             <p className="text-xs text-gray-400 font-semibold mb-1">
@@ -1433,6 +1360,35 @@ const OrdersPage: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Outstanding Balance Warning */}
+                  {(() => {
+                    // Recalculate balance due for warning
+                    const totalAmount = parseFloat(String(selectedOrder.total_amount)) || 0;
+                    const deliveryCharge = parseFloat(String(selectedOrder.delivery_charge)) || 0;
+                    const advancePaid = parseFloat(String(selectedOrder.advance_paid)) || 0;
+                    const expectedTotal = totalAmount + deliveryCharge;
+                    const balanceDue = Math.max(0, expectedTotal - advancePaid);
+
+                    if (balanceDue > 0) {
+                      return (
+                        <div className="bg-red-900/30 border-2 border-red-500 rounded-lg p-4 mt-3">
+                          <div className="flex items-center gap-3">
+                            <div className="text-red-400 text-2xl">⚠️</div>
+                            <div>
+                              <p className="text-red-400 font-bold text-sm">
+                                PAYMENT PENDING
+                              </p>
+                              <p className="text-red-300 text-xs mt-1">
+                                Rs. {balanceDue.toFixed(2)} must be paid before printing bill or marking as shipped
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
                   {/* Payment Status */}
                   <div className="pt-2 border-t border-gray-600">
                     <span
@@ -1446,6 +1402,186 @@ const OrdersPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Payment Recording Section */}
+              {selectedOrder.order_status !== "cancelled" && selectedOrder.balance_due > 0 && (
+                <div className="border-t border-gray-700 pt-6">
+                  <h3 className="text-lg font-bold text-red-400 mb-4">
+                    💰 Record Payment
+                  </h3>
+                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 space-y-4">
+                    {/* Payment Method Selection */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-300 mb-2">
+                        Payment Method
+                      </label>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => {
+                            setPaymentMethod("cash");
+                            setBankPaymentData(null);
+                          }}
+                          className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
+                            paymentMethod === "cash"
+                              ? "bg-green-600 text-white"
+                              : "bg-gray-600 text-gray-300 hover:bg-gray-500"
+                          }`}
+                        >
+                          💵 Cash
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPaymentMethod("bank");
+                            setShowBankPaymentModal(true);
+                          }}
+                          className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
+                            paymentMethod === "bank"
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-600 text-gray-300 hover:bg-gray-500"
+                          }`}
+                        >
+                          🏦 Bank
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bank Payment Details Display */}
+                    {paymentMethod === "bank" && bankPaymentData && (
+                      <div className="bg-blue-900/30 border border-blue-600/30 rounded-lg p-3">
+                        <p className="text-blue-300 text-sm font-semibold mb-2">
+                          Bank Payment Details
+                        </p>
+                        <div className="text-xs text-gray-300 space-y-1">
+                          <p>Bank: {bankPaymentData.bank}</p>
+                          <p>Type: {bankPaymentData.isOnlineTransfer ? "Online Transfer" : "Bank Deposit"}</p>
+                          {bankPaymentData.branch && <p>Branch: {bankPaymentData.branch}</p>}
+                          <p>Receipt: {bankPaymentData.receiptNumber}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Payment Amount Input */}
+                    {paymentMethod === "cash" && (
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          Payment Amount (Rs.)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Enter payment amount"
+                          value={paymentAmount}
+                          onChange={(e) => setPaymentAmount(e.target.value)}
+                          className="w-full px-4 py-2 bg-gray-600 border border-gray-500 text-white placeholder-gray-400 rounded-lg focus:border-green-500 focus:outline-none"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">
+                          Balance Due: Rs. {parseFloat(String(selectedOrder.balance_due)).toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Payment Message */}
+                    {paymentMessage && (
+                      <p className={`text-sm font-semibold ${paymentMessage.includes("✅") ? "text-green-400" : "text-red-400"}`}>
+                        {paymentMessage}
+                      </p>
+                    )}
+
+                    {/* Record Payment Button */}
+                    <button
+                      onClick={handleRecordPayment}
+                      disabled={isProcessingPayment || (paymentMethod === "cash" && !paymentAmount)}
+                      className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                        isProcessingPayment || (paymentMethod === "cash" && !paymentAmount)
+                          ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                          : "bg-green-600 text-white hover:bg-green-700"
+                      }`}
+                    >
+                      {isProcessingPayment ? "⏳ Processing..." : "💰 Record Payment"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Order Notes Section */}
+              <div className="border-t border-gray-700 pt-6">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-lg font-bold text-red-400">
+                    Order Notes
+                  </h3>
+                  {!isEditingNote && (
+                    <button
+                      onClick={() => setIsEditingNote(true)}
+                      className="text-blue-400 hover:text-blue-300 text-sm font-semibold flex items-center gap-1"
+                    >
+                      {orderNote ? "✏️ Edit Note" : "➕ Add Note"}
+                    </button>
+                  )}
+                </div>
+
+                {isEditingNote ? (
+                  <div className="space-y-3">
+                    <textarea
+                      value={orderNote}
+                      onChange={(e) => setOrderNote(e.target.value)}
+                      placeholder="Enter order notes (e.g., special instructions, delivery preferences...)"
+                      rows={4}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:border-red-500 focus:outline-none resize-none"
+                    />
+
+                    {noteMessage && (
+                      <p className={`text-sm font-semibold ${noteMessage.includes("✅") ? "text-green-400" : "text-red-400"}`}>
+                        {noteMessage}
+                      </p>
+                    )}
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleSaveNote}
+                        disabled={isUpdatingNote}
+                        className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${
+                          isUpdatingNote
+                            ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                            : "bg-green-600 text-white hover:bg-green-700"
+                        }`}
+                      >
+                        {isUpdatingNote ? "⏳ Saving..." : "💾 Save Note"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditingNote(false);
+                          setOrderNote(selectedOrder.notes || "");
+                          setNoteMessage("");
+                        }}
+                        disabled={isUpdatingNote}
+                        className="flex-1 py-2 rounded-lg font-semibold bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
+                      >
+                        ❌ Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {orderNote && orderNote.trim() !== "" ? (
+                      <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl">📝</span>
+                          <p className="text-gray-200 text-sm whitespace-pre-wrap flex-1">
+                            {orderNote}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-700/30 border border-gray-600 rounded-lg p-4">
+                        <p className="text-gray-400 text-sm italic text-center">
+                          No notes added yet. Click "Add Note" to add special instructions.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Delivery Status Section */}
@@ -1657,14 +1793,7 @@ const OrdersPage: React.FC = () => {
                 {/* Print Receipt Button - Only for Shipped and Delivered */}
                 {selectedOrder.order_status === "shipped" && (
                   <button
-                    onClick={() =>
-                      printBill(
-                        selectedOrder,
-                        "DENNEP CLOTHES",
-                        "Shop Address Here",
-                        "+94 XXX XXXXXX"
-                      )
-                    }
+                    onClick={() => printBill(selectedOrder)}
                     className="flex-1 min-w-[150px] bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                   >
                     🖨️ Print Bill
@@ -1688,40 +1817,10 @@ const OrdersPage: React.FC = () => {
                 {/* Print Bill Button - Only for Processing */}
                 {selectedOrder.order_status === "processing" && (
                   <button
-                    onClick={() =>
-                      printBill(
-                        selectedOrder,
-                        "DENNEP CLOTHES",
-                        "Shop Address Here",
-                        "+94 XXX XXXXXX"
-                      )
-                    }
+                    onClick={() => printBill(selectedOrder)}
                     className="flex-1 min-w-[150px] bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                   >
                     🖨️ Print Bill
-                  </button>
-                )}
-
-                {/* Cancel Order Button - Only for Pending */}
-                {selectedOrder.order_status === "pending" && (
-                  <button
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          "Are you sure you want to cancel this order? This action cannot be undone."
-                        )
-                      ) {
-                        handleCancelOrder();
-                      }
-                    }}
-                    disabled={isUpdatingOrder}
-                    className={`flex-1 min-w-[150px] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
-                      isUpdatingOrder
-                        ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                        : "bg-red-600 text-white hover:bg-red-700"
-                    }`}
-                  >
-                    {isUpdatingOrder ? "⏳ Cancelling..." : "❌ Cancel Order"}
                   </button>
                 )}
 
@@ -2004,6 +2103,21 @@ const OrdersPage: React.FC = () => {
             />
           </div>
         </div>
+      )}
+
+      {/* Bank Payment Modal */}
+      {showBankPaymentModal && (
+        <BankPaymentModal
+          isOpen={showBankPaymentModal}
+          onClose={() => setShowBankPaymentModal(false)}
+          onSave={(data) => {
+            setBankPaymentData(data);
+            setPaymentAmount(data.paidAmount);
+            setShowBankPaymentModal(false);
+          }}
+          totalAmount={selectedOrder ? parseFloat(String(selectedOrder.balance_due || 0)) : 0}
+          isEditingOrder={true}
+        />
       )}
     </div>
   );

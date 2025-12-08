@@ -41,14 +41,12 @@ export const getInventoryItem = async (inventoryId: number): Promise<InventoryIt
  */
 export const addInventoryItem = async (
   shopId: number,
-  inventoryId: number,
   itemName: string,
   quantityInStock: number,
   unitCost: number
 ): Promise<{ inventory_id: number }> => {
   try {
     const response = await axios.post(`${API_URL}/inventory`, {
-      inventory_id: inventoryId,
       shop_id: shopId,
       item_name: itemName,
       quantity_in_stock: quantityInStock,

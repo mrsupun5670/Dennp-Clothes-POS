@@ -1,6 +1,6 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { writeFile, BaseDirectory, createDir } from '@tauri-apps/api/fs';
+import { writeFile, writeBinaryFile, BaseDirectory, createDir } from '@tauri-apps/api/fs';
 import { message } from '@tauri-apps/api/dialog';
 
 // A4 size in mm for jsPDF
@@ -124,8 +124,8 @@ export const saveAsPDF = async (
     const arrayBuffer = await pdfBlob.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
-    // Ensure directory exists
-    const dirPath = `${exportBasePath}/${folderName}`;
+    // Use "Dennep Pos Invoices" folder for all exports
+    const dirPath = 'Dennep Pos Invoices';
     try {
       await createDir(dirPath, { dir: BaseDirectory.Download, recursive: true });
     } catch (e) {
@@ -137,11 +137,11 @@ export const saveAsPDF = async (
     const time = new Date().toTimeString().split(' ')[0].replace(/:/g, '-');
     const pdfFileName = `${fileName}_${timestamp}_${time}.pdf`;
 
-    // Save file using Tauri API
+    // Save file using Tauri API for binary data
     const filePath = `${dirPath}/${pdfFileName}`;
-    await writeFile(
+    await writeBinaryFile(
       filePath,
-      new TextDecoder().decode(uint8Array),
+      uint8Array,
       { dir: BaseDirectory.Download }
     );
 

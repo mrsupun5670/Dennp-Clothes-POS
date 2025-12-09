@@ -75,7 +75,8 @@
       "Bash(cmd /c \"for /f \"\"tokens=5\"\" %a in (''netstat -ano ^| findstr :3002'') do @echo %a\")",
       "Bash(cmd /c:*)",
       "Bash(python:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

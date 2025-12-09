@@ -2,6 +2,7 @@ import React from "react";
 import { appWindow } from "@tauri-apps/api/window";
 import { ShopBadge } from "../ShopBadge";
 import { ShopStatus } from "../ShopInfoPanel";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 
 interface POSLayoutProps {
   currentPage: string;
@@ -10,8 +11,15 @@ interface POSLayoutProps {
 }
 
 const POSLayout: React.FC<POSLayoutProps> = ({ currentPage, onPageChange, children }) => {
+  const { isAdminAuthenticated, logout } = useAdminAuth();
+
   const handleCloseApp = async () => {
     await appWindow.close();
+  };
+
+  const handleLogout = () => {
+    logout();
+    onPageChange("sales");
   };
   const menuItems = [
     { id: "sales", label: "Sales", icon: "🛒" },
@@ -22,6 +30,7 @@ const POSLayout: React.FC<POSLayoutProps> = ({ currentPage, onPageChange, childr
     { id: "reports", label: "Reports", icon: "📊" },
     { id: "payments", label: "Payments", icon: "💳" },
     { id: "bankaccounts", label: "Bank Accounts", icon: "🏦" },
+    { id: "notes", label: "Notes", icon: "📝" },
     { id: "settings", label: "Settings", icon: "⚙️" },
   ];
 
@@ -48,12 +57,21 @@ const POSLayout: React.FC<POSLayoutProps> = ({ currentPage, onPageChange, childr
             <div className="text-sm text-red-400 font-mono bg-gray-900/50 px-3 py-2 rounded border border-red-600/30">
               {new Date().toLocaleTimeString()}
             </div>
-            <div className="flex items-center gap-2 pl-4 border-l border-red-600/30">
-              <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-700 rounded-full flex items-center justify-center font-bold text-white text-sm">
-                A
+            {isAdminAuthenticated && (
+              <div className="flex items-center gap-2 pl-4 border-l border-red-600/30">
+                <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-700 rounded-full flex items-center justify-center font-bold text-white text-sm">
+                  A
+                </div>
+                <span className="text-sm font-medium text-red-400">Admin</span>
+                <button
+                  onClick={handleLogout}
+                  className="ml-2 px-2 py-1 bg-gray-700 hover:bg-gray-600 text-red-400 text-xs font-semibold rounded border border-red-600/30 transition-colors duration-200"
+                  title="Logout"
+                >
+                  Logout
+                </button>
               </div>
-              <span className="text-sm font-medium text-red-400">Admin</span>
-            </div>
+            )}
             <button
               onClick={handleCloseApp}
               className="ml-4 px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-semibold rounded border border-red-700 transition-colors duration-200 flex items-center gap-2"

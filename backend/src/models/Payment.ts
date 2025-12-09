@@ -77,6 +77,16 @@ class PaymentModel {
         .slice(0, 19)
         .replace('T', ' ');
 
+      // Generate unique transaction_id if not provided or make it unique
+      let transactionId = paymentData.transaction_id;
+      if (!transactionId || transactionId.trim() === '') {
+        // Auto-generate if empty
+        transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      } else {
+        // Make user-provided transaction_id unique by appending timestamp
+        transactionId = `${transactionId}-${Date.now()}`;
+      }
+
       // Start transaction
       await query('START TRANSACTION', []);
 
@@ -85,7 +95,7 @@ class PaymentModel {
         const results = await query(
           `INSERT INTO payments (shop_id, order_id, customer_id, payment_amount, payment_method, bank_name, branch_name, bank_account_id, transaction_id, payment_status, notes, created_by, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [shopId, paymentData.order_id || null, paymentData.customer_id || null, paymentData.payment_amount, paymentData.payment_method, paymentData.bank_name || null, paymentData.branch_name || null, paymentData.bank_account_id || null, paymentData.transaction_id || null, paymentData.payment_status || 'completed', paymentData.notes || null, paymentData.created_by || null, localDateTime, localDateTime]
+          [shopId, paymentData.order_id || null, paymentData.customer_id || null, paymentData.payment_amount, paymentData.payment_method, paymentData.bank_name || null, paymentData.branch_name || null, paymentData.bank_account_id || null, transactionId, paymentData.payment_status || 'completed', paymentData.notes || null, paymentData.created_by || null, localDateTime, localDateTime]
         );
 
         const paymentId = (results as any).insertId;

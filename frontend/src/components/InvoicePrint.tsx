@@ -53,8 +53,14 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order }) => {
       (sum, item) => sum + parseFloat(String(item.total_price || 0)),
       0
     );
-  const finalAmount = parseFloat(String(order.final_amount || 0));
+  
   const deliveryCharge = parseFloat(String(order.delivery_charge || 0));
+  
+  // Calculate Grand Total = Subtotal + Delivery Charge
+  const grandTotal = subtotal + deliveryCharge;
+  
+  const advancePaid = parseFloat(String(order.advance_paid || 0));
+  const balanceDue = parseFloat(String(order.balance_due || 0));
 
   // Get customer info from different possible fields
   const customerPhone = order.customer_mobile || order.recipient_phone || "";
@@ -65,18 +71,87 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order }) => {
   // Format invoice number with IN prefix
   const invoiceNumber = `IN${order.order_number}`;
 
-  // Format date and time
-  const orderDateTime = new Date(order.order_date);
-  const invoiceDate = orderDateTime.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const invoiceTime = orderDateTime.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
+  // Format date and time - handle various date formats
+  let invoiceDate = "";
+  let invoiceTime = "";
+  
+  try {
+    let orderDateTime: Date;
+    
+    if (order.order_date) {
+      // Try parsing the date - handle both ISO strings and other formats
+      const dateStr = String(order.order_date);
+      
+      // If it's already a valid date string, parse it
+      if (dateStr.includes('T') || dateStr.includes('Z')) {
+        orderDateTime = new Date(dateStr);
+      } else {
+        // For MySQL datetime format (YYYY-MM-DD HH:MM:SS)
+        orderDateTime = new Date(dateStr.replace(' ', 'T'));
+      }
+      
+      // Check if date is valid
+      if (!isNaN(orderDateTime.getTime())) {
+        invoiceDate = orderDateTime.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+        invoiceTime = orderDateTime.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      } else {
+        // Fallback to current date if invalid
+        const now = new Date();
+        invoiceDate = now.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+        invoiceTime = now.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error parsing date:', error);
+    // Fallback to current date
+    const now = new Date();
+    invoiceDate = now.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    invoiceTime = now.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  }
+  
+  // Final fallback if still empty
+  if (!invoiceDate || !invoiceTime) {
+    const now = new Date();
+    if (!invoiceDate) {
+      invoiceDate = now.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    }
+    if (!invoiceTime) {
+      invoiceTime = now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
+  }
+
 
   // Dennep Clothes address
   const companyName = "Dennep Clothes";
@@ -84,7 +159,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order }) => {
   const companyPhone = "0703813223";
 
   // Business policies and terms
-  const businessPolicies = `• No returns or refunds on purchased items
+  const businessPolicies = `• No returns or refunds on purchased customised items
+• No exchanges possible for size mismatchings, Please verify sizes.
 • All sales are final
 • Colors may vary slightly from display
 • Handle with care - hand wash recommended`;
@@ -97,7 +173,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order }) => {
     <div className="w-full min-h-screen flex justify-center bg-white print:bg-white p-4 print:p-0">
       {/* A4 Invoice Container */}
       <div
-        className="w-[210mm] bg-white print:shadow-none relative"
+        className="w-[210mm] min-h-[297mm] bg-white print:shadow-none relative"
         style={{ fontFamily: "'Arial', sans-serif" }}
       >
         {/* Watermark Logo */}
@@ -118,7 +194,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order }) => {
         {/* Content - All content needs relative positioning to appear above watermark */}
         <div className="relative" style={{ zIndex: 1 }}>
           {/* Header Section */}
-          <div className="border-b-2 border-black pb-4 mb-6">
+          <div className="pb-4 mb-6">
             <div className="flex justify-between items-start">
               {/* Logo and Company Name */}
               <div className="flex items-center gap-3">
@@ -134,6 +210,9 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order }) => {
                   <h1 className="text-2xl font-bold text-black">
                     {companyName}
                   </h1>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {companyAddress} | {companyPhone}
+                  </p>
                 </div>
               </div>
 
@@ -177,90 +256,60 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order }) => {
           </div>
 
           {/* Items Table */}
-          <div className="mb-8">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-red-600 text-white">
-                  <th className="text-center py-2 px-3 font-bold text-sm w-12">
-                    No.
-                  </th>
-                  <th className="text-left py-2 px-3 font-bold text-sm">
-                    Item
-                  </th>
-                  <th className="text-center py-2 px-3 font-bold text-sm w-20">
-                    Size
-                  </th>
-                  <th className="text-center py-2 px-3 font-bold text-sm w-20">
-                    Color
-                  </th>
-                  <th className="text-center py-2 px-3 font-bold text-sm w-16">
-                    Qty
-                  </th>
-                  <th className="text-right py-2 px-3 font-bold text-sm w-24">
-                    Price (Rs.)
-                  </th>
-                  <th className="text-right py-2 px-3 font-bold text-sm w-28">
-                    Total (Rs.)
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.items && order.items.length > 0 ? (
-                  order.items.map((item, index) => (
-                    <tr key={index} className="border-b border-gray-300">
-                      <td className="text-center py-2 px-3 text-sm">
-                        {index + 1}
-                      </td>
-                      <td className="py-2 px-3 text-sm font-medium">
-                        {item.product_name}
-                      </td>
-                      <td className="text-center py-2 px-3 text-sm">
-                        {item.size_name || "-"}
-                      </td>
-                      <td className="text-center py-2 px-3 text-sm">
-                        {item.color_name || "-"}
-                      </td>
-                      <td className="text-center py-2 px-3 text-sm font-semibold">
-                        {item.quantity}
-                      </td>
-                      <td className="text-right py-2 px-3 text-sm">
-                        {parseFloat(String(item.sold_price || 0)).toFixed(2)}
-                      </td>
-                      <td className="text-right py-2 px-3 text-sm font-semibold">
-                        {parseFloat(String(item.total_price || 0)).toFixed(2)}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="text-center py-3 text-sm text-gray-500"
-                    >
-                      No items found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="mb-4">
+           <table className="w-full table-fixed border-collapse">
+  <colgroup>
+    <col style={{ width: "6%" }} />   {/* No. */}
+    <col style={{ width: "34%" }} />  {/* Item */}
+    <col style={{ width: "12%" }} />  {/* Size */}
+    <col style={{ width: "12%" }} />  {/* Color */}
+    <col style={{ width: "10%" }} />  {/* Qty */}
+    <col style={{ width: "13%" }} />  {/* Price */}
+    <col style={{ width: "13%" }} />  {/* Total */}
+  </colgroup>
+
+  <thead>
+    <tr className="bg-red-600 text-white text-sm">
+      <th className="py-2 px-2 text-center align-middle font-bold">No.</th>
+      <th className="py-2 px-2 text-left align-middle font-bold">Item</th>
+      <th className="py-2 px-2 text-center align-middle font-bold">Size</th>
+      <th className="py-2 px-2 text-center align-middle font-bold">Color</th>
+      <th className="py-2 px-2 text-center align-middle font-bold">Qty</th>
+      <th className="py-2 px-2 text-right align-middle font-bold">Price (Rs.)</th>
+      <th className="py-2 px-2 text-right align-middle font-bold">Total (Rs.)</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {order.items.map((item, index) => (
+      <tr
+        key={index}
+        className="border-b border-gray-300 text-sm"
+      >
+        <td className="py-2 px-2 text-center align-middle">{index + 1}</td>
+        <td className="py-2 px-2 align-middle font-medium">{item.product_name}</td>
+        <td className="py-2 px-2 text-center align-middle">{item.size_name || "-"}</td>
+        <td className="py-2 px-2 text-center align-middle">{item.color_name || "-"}</td>
+        <td className="py-2 px-2 text-center align-middle font-semibold">{item.quantity}</td>
+        <td className="py-2 px-2 text-right align-middle">
+          {parseFloat(String(item.sold_price || 0)).toFixed(2)}
+        </td>
+        <td className="py-2 px-2 text-right align-middle font-semibold">
+          {parseFloat(String(item.total_price || 0)).toFixed(2)}
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
           </div>
 
           {/* Payment and Total Section */}
-          <div className="flex justify-between items-start">
-            {/* Send Payment To */}
-            <div className="w-1/2">
-              {order.bankDetails && (
-                <>
-                  <p className="text-sm font-bold mb-2">Send Payment to :</p>
-                  <div className="text-sm text-gray-700 whitespace-pre-line">
-                    {order.bankDetails}
-                  </div>
-                </>
-              )}
-            </div>
+          <div className="flex justify-end items-end">
 
             {/* Totals */}
             <div className="w-5/12">
+              {/* Subtotal - Always shown */}
               <div className="flex justify-between py-2 border-b border-gray-300">
                 <span className="text-sm">Sub-total :</span>
                 <span className="text-sm font-semibold">
@@ -268,6 +317,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order }) => {
                 </span>
               </div>
 
+              {/* Delivery Charge - Show if available */}
               {deliveryCharge > 0 && (
                 <div className="flex justify-between py-2 border-b border-gray-300">
                   <span className="text-sm">Delivery :</span>
@@ -277,34 +327,40 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order }) => {
                 </div>
               )}
 
+              {/* Grand Total - Always shown with highlight */}
               <div className="flex justify-between py-3 bg-red-600 text-white px-4 mt-2">
-                <span className="text-base font-bold">Total :</span>
+                <span className="text-base font-bold">Grand Total :</span>
                 <span className="text-xl font-bold">
-                  Rs. {finalAmount.toFixed(2)}
+                  Rs. {grandTotal.toFixed(2)}
                 </span>
               </div>
+
+              {/* Payment Breakdown - Only show if there's a balance due */}
+              {balanceDue > 0 && (
+                <>
+                  {advancePaid > 0 && (
+                    <div className="flex justify-between py-2 border-b border-gray-300 mt-2">
+                      <span className="text-sm">Advance Paid :</span>
+                      <span className="text-sm font-semibold">
+                        Rs. {advancePaid.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-2 bg-orange-100 px-4 mt-1">
+                    <span className="text-sm font-bold text-red-700">Balance Due :</span>
+                    <span className="text-sm font-bold text-red-700">
+                      Rs. {balanceDue.toFixed(2)}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Terms & Conditions */}
-          <div className="mt-6 p-3 bg-transparent border-l-4 border-red-600">
-            <p className="text-xs font-bold text-red-600 uppercase mb-1">
-              Notes:
-            </p>
-            <p className="text-sm text-gray-700 whitespace-pre-line">
-              {businessPolicies}
-            </p>
-          </div>
+
 
           {/* Footer */}
           <div className="mt-8">
-            {/* Company Contact Info */}
-            <div className="mb-4 text-sm text-gray-700">
-              <p>{companyName}</p>
-              <p>{companyAddress}</p>
-              <p>{companyPhone}</p>
-            </div>
-
             {/* Thank You Message */}
             <div className="text-center">
               <p className="text-2xl font-semibold text-red-600 mb-2">
@@ -312,6 +368,13 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order }) => {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Software Credit - At the very bottom of the page */}
+        <div className="absolute bottom-2 left-0 right-0 text-center">
+          <p className="text-[8px] text-gray-400">
+            Software by zipzipy.com (078 89 15 271)
+          </p>
         </div>
 
         {/* Print Styles */}

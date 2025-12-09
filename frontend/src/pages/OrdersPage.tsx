@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { Command } from "@tauri-apps/api/shell";
-import { writeTextFile } from "@tauri-apps/api/fs";
-import { join } from "@tauri-apps/api/path";
-import { tempdir } from "@tauri-apps/api/os";
+import { writeTextFile, createDir } from "@tauri-apps/api/fs";
+import { join, downloadDir } from "@tauri-apps/api/path";
+import html2canvas from "html2canvas";
 import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
-import { printContent, generateOrdersHTML } from "../utils/exportUtils";
+import { printContent, generateOrdersHTML, saveAsPDF } from "../utils/exportUtils";
 import InvoicePrint from "../components/InvoicePrint";
 import BankPaymentModal, { BankPaymentData } from "../components/BankPaymentModal";
 
@@ -398,11 +398,6 @@ const OrdersPage: React.FC = () => {
       setTimeout(async () => {
         try {
           const invoiceHTML = printContainer.innerHTML;
-          const tempDirPath = await tempdir();
-          const tempFilePath = await join(
-            tempDirPath,
-            `invoice-${Date.now()}.html`
-          );
 
           const fullHtml = `
             <!DOCTYPE html>
@@ -434,7 +429,13 @@ const OrdersPage: React.FC = () => {
             </html>
           `;
 
-          await writeTextFile(tempFilePath, fullHtml);
+          // Call Tauri command to print silently
+          const { invoke } = await import('@tauri-apps/api/tauri');
+          await invoke('print_invoice', {
+            htmlContent: fullHtml,
+            invoiceNumber: order.order_number || 'TEMP'
+          });
+
 
           const command = new Command("powershell", [
             "-NoProfile",
@@ -458,6 +459,116 @@ const OrdersPage: React.FC = () => {
     } catch (error) {
       console.error("Error preparing for print:", error);
       alert("Failed to prepare bill for printing.");
+    }
+  };
+
+  // Export invoice as image
+  const exportInvoiceAsImage = async (order: Order) => {
+    try {
+      if (!orderItems || orderItems.length === 0) {
+        alert("❌ Order items not loaded. Please wait for items to load.");
+        return;
+      }
+
+      const paymentMethod = orderPayments[order.order_id];
+      const validPaymentMethods = ["cash", "card", "online", "bank", "other"];
+      const paymentMethodValue = validPaymentMethods.includes(paymentMethod)
+        ? (paymentMethod as "cash" | "card" | "online" | "bank" | "other")
+        : "other";
+
+      const invoiceData = {
+        order_id: order.order_id,
+        order_number: order.order_number,
+        customer_id: order.customer_id,
+        total_items: order.total_items,
+        total_amount: order.total_amount,
+        final_amount: order.final_amount,
+        advance_paid: order.advance_paid,
+        balance_due: order.balance_due,
+        payment_status: order.payment_status,
+        payment_method: paymentMethodValue,
+        order_status: order.order_status,
+        notes: order.notes,
+        order_date: order.order_date,
+        recipient_name: order.recipient_name,
+        customer_mobile: order.customer_mobile,
+        recipient_phone: order.recipient_phone,
+        delivery_charge: order.delivery_charge,
+        delivery_line1: order.delivery_line1,
+        delivery_line2: order.delivery_line2,
+        delivery_city: order.delivery_city,
+        items: orderItems,
+      };
+
+      // Create a temporary container for rendering
+      const printContainer = document.createElement("div");
+      printContainer.style.position = "fixed";
+      printContainer.style.left = "-9999px";
+      printContainer.style.width = "210mm"; // A4 width
+      printContainer.style.background = "white";
+      document.body.appendChild(printContainer);
+
+      const root = ReactDOM.createRoot(printContainer);
+      root.render(React.createElement(InvoicePrint, { order: invoiceData }));
+
+      // Wait for rendering to complete
+      setTimeout(async () => {
+        try {
+          // Convert to canvas
+          const canvas = await html2canvas(printContainer, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            width: 794, // A4 width in pixels at 96 DPI
+            windowWidth: 794,
+          });
+
+          // Convert canvas to blob
+          canvas.toBlob(async (blob) => {
+            if (!blob) {
+              alert("Failed to generate image");
+              document.body.removeChild(printContainer);
+              return;
+            }
+
+            try {
+              // Save to downloads folder
+              const downloadDirPath = await downloadDir();
+              const invoicesPath = await join(downloadDirPath, "Dennep Pos Invoices");
+              await createDir(invoicesPath, { recursive: true });
+
+              const timestamp = new Date().toISOString().replace(/[:.]/g, "-").split("T")[0];
+              const time = new Date().toTimeString().split(" ")[0].replace(/:/g, "-");
+              const fileName = `invoice-${order.order_number}-${timestamp}_${time}.png`;
+              const filePath = await join(invoicesPath, fileName);
+
+              // Convert blob to array buffer
+              const arrayBuffer = await blob.arrayBuffer();
+              const uint8Array = new Uint8Array(arrayBuffer);
+
+              // Write file using Tauri API
+              await writeTextFile(filePath, ""); // Create file first
+              const { writeBinaryFile } = await import("@tauri-apps/api/fs");
+              await writeBinaryFile(filePath, uint8Array);
+
+              alert(`✅ Invoice saved as image!\nLocation: ${invoicesPath}\\${fileName}`);
+            } catch (error) {
+              console.error("Error saving image:", error);
+              alert("Failed to save invoice as image.");
+            } finally {
+              document.body.removeChild(printContainer);
+            }
+          }, "image/png");
+        } catch (error) {
+          console.error("Error generating image:", error);
+          alert("Failed to generate invoice image.");
+          document.body.removeChild(printContainer);
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("Error preparing invoice for export:", error);
+      alert("Failed to prepare invoice for export.");
     }
   };
 
@@ -739,9 +850,17 @@ const OrdersPage: React.FC = () => {
       return;
     }
 
-    if (amount > (selectedOrder?.balance_due || 0)) {
+    // Calculate actual balance due including delivery charges
+    const actualBalanceDue = selectedOrder ? (() => {
+      const totalAmount = parseFloat(String(selectedOrder.total_amount)) || 0;
+      const deliveryCharge = parseFloat(String(selectedOrder.delivery_charge)) || 0;
+      const advancePaid = parseFloat(String(selectedOrder.advance_paid)) || 0;
+      return Math.max(0, totalAmount + deliveryCharge - advancePaid);
+    })() : 0;
+
+    if (amount > actualBalanceDue) {
       setPaymentMessage(
-        `❌ Amount cannot exceed balance due (Rs. ${parseFloat(String(selectedOrder?.balance_due || 0)).toFixed(2)})`
+        `❌ Amount cannot exceed balance due (Rs. ${actualBalanceDue.toFixed(2)})`
       );
       return;
     }
@@ -776,6 +895,7 @@ const OrdersPage: React.FC = () => {
         }
       );
 
+
       const result = await response.json();
       if (result.success) {
         setPaymentMessage(
@@ -783,10 +903,24 @@ const OrdersPage: React.FC = () => {
         );
         setPaymentAmount("");
         setBankPaymentData(null);
-        setTimeout(() => {
-          refetchOrders();
-          handleCloseModal();
-        }, 1500);
+        
+        // Refetch orders list to update the main table
+        refetchOrders();
+        
+        // Also refetch the specific order details to update the modal immediately
+        if (selectedOrderId && shopId) {
+          try {
+            const orderResponse = await fetch(
+              `${API_URL}/orders/${selectedOrderId}?shop_id=${shopId}`
+            );
+            const orderResult = await orderResponse.json();
+            if (orderResult.success && orderResult.data.items) {
+              setOrderItems(orderResult.data.items);
+            }
+          } catch (error) {
+            console.error("Error refetching order details:", error);
+          }
+        }
       } else {
         setPaymentMessage(`❌ Error: ${result.error}`);
       }
@@ -1470,7 +1604,12 @@ const OrdersPage: React.FC = () => {
                           className="w-full px-4 py-2 bg-gray-600 border border-gray-500 text-white placeholder-gray-400 rounded-lg focus:border-green-500 focus:outline-none"
                         />
                         <p className="text-xs text-gray-400 mt-1">
-                          Balance Due: Rs. {parseFloat(String(selectedOrder.balance_due)).toFixed(2)}
+                          Balance Due: Rs. {(() => {
+                            const totalAmount = parseFloat(String(selectedOrder.total_amount)) || 0;
+                            const deliveryCharge = parseFloat(String(selectedOrder.delivery_charge)) || 0;
+                            const advancePaid = parseFloat(String(selectedOrder.advance_paid)) || 0;
+                            return Math.max(0, totalAmount + deliveryCharge - advancePaid).toFixed(2);
+                          })()}
                         </p>
                       </div>
                     )}
@@ -1817,6 +1956,14 @@ const OrdersPage: React.FC = () => {
                   </button>
                 )}
 
+                {/* Export as Image Button */}
+                <button
+                  onClick={() => exportInvoiceAsImage(selectedOrder)}
+                  className="flex-1 min-w-[150px] bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg"
+                >
+                  📸 Export as Image
+                </button>
+
                 {/* Close Button */}
                 <button
                   onClick={handleCloseModal}
@@ -2108,7 +2255,12 @@ const OrdersPage: React.FC = () => {
             setPaymentAmount(data.paidAmount);
             setShowBankPaymentModal(false);
           }}
-          totalAmount={selectedOrder ? parseFloat(String(selectedOrder.balance_due || 0)) : 0}
+          totalAmount={selectedOrder ? (() => {
+            const totalAmount = parseFloat(String(selectedOrder.total_amount)) || 0;
+            const deliveryCharge = parseFloat(String(selectedOrder.delivery_charge)) || 0;
+            const advancePaid = parseFloat(String(selectedOrder.advance_paid)) || 0;
+            return Math.max(0, totalAmount + deliveryCharge - advancePaid);
+          })() : 0}
           isEditingOrder={true}
         />
       )}

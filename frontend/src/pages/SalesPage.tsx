@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { Command } from "@tauri-apps/api/shell";
-import { writeTextFile } from "@tauri-apps/api/fs";
-import { join } from "@tauri-apps/api/path";
-import { tempdir } from "@tauri-apps/api/os";
+import { writeTextFile, createDir, writeBinaryFile, BaseDirectory } from "@tauri-apps/api/fs";
+import { join, downloadDir } from "@tauri-apps/api/path";
+import html2canvas from 'html2canvas';
 import BankPaymentModal, {
   BankPaymentData,
 } from "../components/BankPaymentModal";
@@ -423,10 +423,8 @@ const SalesPage: React.FC = () => {
         (customer.last_name && customer.last_name.toLowerCase().includes(query))
     );
 
-    // Show local results immediately
     setCustomers(localFiltered);
 
-    // Fetch from API for more accurate results
     const searchTimer = setTimeout(async () => {
       setIsLoadingCustomers(true);
       try {
@@ -442,12 +440,11 @@ const SalesPage: React.FC = () => {
       } finally {
         setIsLoadingCustomers(false);
       }
-    }, 50); // Very fast debounce for API call
+    }, 50);
 
     return () => clearTimeout(searchTimer);
   }, [customerSearch, shopId, allCustomers]);
 
-  // Load all products on component mount
   useEffect(() => {
     if (!shopId) return;
 
@@ -468,13 +465,11 @@ const SalesPage: React.FC = () => {
     loadProducts();
   }, [shopId]);
 
-  // Load categories, sizes, and colors for product creation
   useEffect(() => {
     if (!shopId) return;
 
     const loadProductMetadata = async () => {
       try {
-        // Load categories
         const categoriesResponse = await fetch(
           `${API_URL}/categories?shop_id=${shopId}`
         );
@@ -483,14 +478,12 @@ const SalesPage: React.FC = () => {
           setDbCategories(categoriesResult.data || []);
         }
 
-        // Load sizes
         const sizesResponse = await fetch(`${API_URL}/sizes?shop_id=${shopId}`);
         const sizesResult = await sizesResponse.json();
         if (sizesResult.success) {
           setDbSizes(sizesResult.data || []);
         }
 
-        // Load colors
         const colorsResponse = await fetch(
           `${API_URL}/colors?shop_id=${shopId}`
         );
@@ -506,7 +499,6 @@ const SalesPage: React.FC = () => {
     loadProductMetadata();
   }, [shopId]);
 
-  // Search products on key up - with instant local filtering
   useEffect(() => {
     if (!productSearch.trim()) {
       setProducts(allProducts);
@@ -515,7 +507,6 @@ const SalesPage: React.FC = () => {
 
     if (!shopId) return;
 
-    // Instant local filtering
     const query = productSearch.toLowerCase();
     const localFiltered = allProducts.filter(
       (product) =>
@@ -533,7 +524,6 @@ const SalesPage: React.FC = () => {
 
     setProducts(localFiltered);
 
-    // Fetch from API for more accurate results
     const searchTimer = setTimeout(async () => {
       setIsLoadingProducts(true);
       try {
@@ -554,7 +544,6 @@ const SalesPage: React.FC = () => {
     return () => clearTimeout(searchTimer);
   }, [productSearch, shopId, allProducts]);
 
-  // Load stock data when product is selected
   useEffect(() => {
     if (!selectedProduct || !shopId) {
       setProductStock([]);
@@ -576,7 +565,6 @@ const SalesPage: React.FC = () => {
         if (result.success && result.data) {
           setProductStock(result.data);
 
-          // Get unique sizes from stock data
           const sizesMap = new Map();
           result.data.forEach((stock: StockData) => {
             if (!sizesMap.has(stock.size_id)) {
@@ -603,7 +591,6 @@ const SalesPage: React.FC = () => {
     loadProductStock();
   }, [selectedProduct, shopId]);
 
-  // Update available colors when size is selected
   useEffect(() => {
     if (!selectedSize || productStock.length === 0) {
       setAvailableColors([]);
@@ -611,7 +598,6 @@ const SalesPage: React.FC = () => {
       return;
     }
 
-    // Get colors available for the selected size
     const colorsForSize = productStock
       .filter(
         (stock) => stock.size_name === selectedSize && stock.stock_qty > 0
@@ -631,14 +617,12 @@ const SalesPage: React.FC = () => {
     setSelectedColor("");
   }, [selectedSize, productStock]);
 
-  // Helper function to safely convert price to number
   const parsePrice = (price: any): number => {
     if (typeof price === "number") return price;
     if (typeof price === "string") return parseFloat(price) || 0;
     return 0;
   };
 
-  // Helper function to get price based on customer type
   const getProductPrice = (product: Product): number => {
     if (!product) return 0;
 
@@ -658,7 +642,6 @@ const SalesPage: React.FC = () => {
     return typeof price === "number" && !isNaN(price) ? price : 0;
   };
 
-  // Helper function to safely get wholesale price for display
   const getWholesalePrice = (product: Product): number => {
     if (!product) return 0;
     const price =
@@ -668,7 +651,6 @@ const SalesPage: React.FC = () => {
     return typeof price === "number" && !isNaN(price) ? price : 0;
   };
 
-  // Update selectedPrice when customerTypeFilter changes and a product is selected
   useEffect(() => {
     if (selectedProduct) {
       const newPrice = getProductPrice(selectedProduct);
@@ -676,20 +658,16 @@ const SalesPage: React.FC = () => {
     }
   }, [customerTypeFilter]);
 
-  // Update all cart item prices when customerTypeFilter changes
   useEffect(() => {
     if (cartItems.length === 0 || allProducts.length === 0) return;
 
-    // Update prices for all cart items based on customer type
     const updatedCartItems = cartItems.map((item) => {
-      // Find the product in allProducts to get the correct price
       const product = allProducts.find(
         (p) => (p.id || p.product_id) === item.productId
       );
 
       if (product) {
         const newPrice = getProductPrice(product);
-        // Only update if price actually changed to avoid unnecessary re-renders
         if (item.price !== newPrice) {
           return {
             ...item,
@@ -701,7 +679,6 @@ const SalesPage: React.FC = () => {
       return item;
     });
 
-    // Only update state if something changed
     const hasChanges = updatedCartItems.some(
       (item, idx) => item.price !== cartItems[idx].price
     );
@@ -710,7 +687,6 @@ const SalesPage: React.FC = () => {
     }
   }, [customerTypeFilter]);
 
-  // Filtered data
   const filteredCustomers = useMemo(() => {
     return customers;
   }, [customers]);
@@ -719,27 +695,22 @@ const SalesPage: React.FC = () => {
     return products;
   }, [products]);
 
-  // Calculations
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
   const total = subtotal;
 
-  // Calculate balance due when editing order (if cart items change)
-  // Include delivery charge in the calculation: (total + delivery_charge) - advance_paid
   const balanceDue = editingOrderId
     ? Math.max(0, total + deliveryCharge - previouslyPaidAmount)
     : 0;
 
-  // Handlers
   const handleAddCustomer = async () => {
     setIsCreatingCustomer(true);
     setCustomerModalError("");
     setCustomerModalSuccess("");
 
     try {
-      // Validation
       if (
         !customerFormData.customer_id ||
         String(customerFormData.customer_id).trim() === ""
@@ -764,7 +735,6 @@ const SalesPage: React.FC = () => {
         return;
       }
 
-      // Create customer via API
       const response = await fetch(`${API_URL}/customers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -781,7 +751,6 @@ const SalesPage: React.FC = () => {
       if (result.success) {
         setCustomerModalSuccess("Customer created successfully!");
 
-        // Reload customers list
         const customersResponse = await fetch(
           `${API_URL}/customers?shop_id=${shopId}`
         );
@@ -791,7 +760,6 @@ const SalesPage: React.FC = () => {
           setAllCustomers(data);
           setCustomers(data);
 
-          // Auto-select the newly created customer
           const newCustomer = data.find(
             (c: any) => c.customer_id === parseInt(customerFormData.customer_id)
           );
@@ -800,7 +768,6 @@ const SalesPage: React.FC = () => {
           }
         }
 
-        // Close modal after short delay
         setTimeout(() => {
           setShowAddCustomerModal(false);
           setCustomerFormData({ customer_id: "", mobile: "", email: "" });
@@ -809,7 +776,6 @@ const SalesPage: React.FC = () => {
           setIsCreatingCustomer(false);
         }, 1000);
       } else {
-        // Check if it's a duplicate error
         const errorMessage = result.error || "Failed to create customer";
         if (
           errorMessage.includes("unique_mobile_per_shop") ||
@@ -845,7 +811,6 @@ const SalesPage: React.FC = () => {
     setProductModalSuccess("");
 
     try {
-      // Validation
       const productCode = String(formData.code).trim();
       if (!productCode) {
         setProductModalError("Product Code is required");
@@ -907,7 +872,6 @@ const SalesPage: React.FC = () => {
         return;
       }
 
-      // Get category ID
       const category = dbCategories.find(
         (cat: any) =>
           cat.category_name.toLowerCase() === selectedCategory.toLowerCase()
@@ -919,7 +883,6 @@ const SalesPage: React.FC = () => {
         return;
       }
 
-      // Build color and size ID maps
       const uniqueColors = stockRows
         .map((row) => row.color)
         .filter((c, i, a) => a.indexOf(c) === i);
@@ -933,7 +896,6 @@ const SalesPage: React.FC = () => {
       dbColors?.forEach((c: any) => colorIdMap.set(c.color_name, c.color_id));
       dbSizes?.forEach((s: any) => sizeIdMap.set(s.size_name, s.size_id));
 
-      // Create missing colors
       for (const colorName of uniqueColors) {
         let colorId = colorIdMap.get(colorName);
         if (!colorId) {
@@ -950,7 +912,6 @@ const SalesPage: React.FC = () => {
         }
       }
 
-      // Create missing sizes
       for (const sizeName of uniqueSizes) {
         let sizeId = sizeIdMap.get(sizeName);
         if (!sizeId) {
@@ -971,7 +932,6 @@ const SalesPage: React.FC = () => {
         }
       }
 
-      // Build stock payload
       const stockPayload: Array<{
         sizeId: number;
         colorId: number;
@@ -992,7 +952,6 @@ const SalesPage: React.FC = () => {
         }
       }
 
-      // Create product
       const response = await fetch(`${API_URL}/products`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1014,7 +973,6 @@ const SalesPage: React.FC = () => {
       if (result.success) {
         setProductModalSuccess("Product created successfully!");
 
-        // Reload products list
         const productsResponse = await fetch(
           `${API_URL}/products?shop_id=${shopId}`
         );
@@ -1025,7 +983,6 @@ const SalesPage: React.FC = () => {
           setProducts(data);
         }
 
-        // Reload categories, sizes, colors
         const categoriesResponse = await fetch(
           `${API_URL}/categories?shop_id=${shopId}`
         );
@@ -1048,7 +1005,6 @@ const SalesPage: React.FC = () => {
           setDbColors(colorsResult.data || []);
         }
 
-        // Close modal after short delay
         setTimeout(() => {
           handleCloseProductModal();
           setIsCreatingProduct(false);
@@ -1091,7 +1047,6 @@ const SalesPage: React.FC = () => {
       return;
     }
 
-    // Get available quantity for this product/size/color combination
     const availableQty =
       productStock.find(
         (stock) =>
@@ -1100,7 +1055,6 @@ const SalesPage: React.FC = () => {
 
     const requestedQty = parseInt(selectedQty);
 
-    // Validate quantity against available stock
     if (requestedQty > availableQty) {
       setMessage({
         type: "error",
@@ -1109,7 +1063,6 @@ const SalesPage: React.FC = () => {
       return;
     }
 
-    // Calculate total quantity already in cart for this product
     const cartQuantityForProduct = cartItems
       .filter((item) => {
         const isSameProduct =
@@ -1120,7 +1073,6 @@ const SalesPage: React.FC = () => {
       })
       .reduce((sum, item) => sum + item.quantity, 0);
 
-    // Total would be: currently available - already in cart - requested
     const totalRequestedQty = cartQuantityForProduct + requestedQty;
     if (totalRequestedQty > availableQty) {
       const remaining = availableQty - cartQuantityForProduct;
@@ -1133,11 +1085,9 @@ const SalesPage: React.FC = () => {
 
     const price = parseFloat(selectedPrice) || getProductPrice(selectedProduct);
     const productId = selectedProduct.id || selectedProduct.product_id;
-    // Round price to 2 decimal places for consistent comparison
     const roundedPrice = Math.round(price * 100) / 100;
     const uniqueId = `${productId}-${selectedSize}-${selectedColor}-${roundedPrice}`;
 
-    // Get product costs
     const productCost =
       parsePrice(
         selectedProduct.product_cost ||
@@ -1146,29 +1096,41 @@ const SalesPage: React.FC = () => {
       ) || 0;
     const printCost = parsePrice(selectedProduct.print_cost || 0) || 0;
 
-    // Get color_id and size_id from product
+    // Get the correct size_id and color_id from the productStock data
+    // This ensures we use the same IDs that exist in the shop_product_stock table
     let colorId = 1;
     let sizeId = 1;
 
-    if (selectedProduct.colors && selectedProduct.colors.length > 0) {
-      const colorMatch = selectedProduct.colors.find(
-        (c) => c.color_name === selectedColor
-      );
-      if (colorMatch) {
-        colorId = colorMatch.color_id;
+    // Find the stock entry that matches the selected size and color
+    const stockEntry = productStock.find(
+      (stock) => stock.size_name === selectedSize && stock.color_name === selectedColor
+    );
+
+    if (stockEntry) {
+      colorId = stockEntry.color_id;
+      sizeId = stockEntry.size_id;
+    } else {
+      // Fallback: try to get from product's colors/sizes arrays
+      if (selectedProduct.colors && selectedProduct.colors.length > 0) {
+        const colorMatch = selectedProduct.colors.find(
+          (c) => c.color_name === selectedColor
+        );
+        if (colorMatch) {
+          colorId = colorMatch.color_id;
+        }
+      }
+
+      if (selectedProduct.sizes && selectedProduct.sizes.length > 0) {
+        const sizeMatch = selectedProduct.sizes.find(
+          (s) => s.size_name === selectedSize
+        );
+        if (sizeMatch) {
+          sizeId = sizeMatch.size_id;
+        }
       }
     }
 
-    if (selectedProduct.sizes && selectedProduct.sizes.length > 0) {
-      const sizeMatch = selectedProduct.sizes.find(
-        (s) => s.size_name === selectedSize
-      );
-      if (sizeMatch) {
-        sizeId = sizeMatch.size_id;
-      }
-    }
 
-    // Check if this exact product/size/color/price combination already exists in cart
     const existingItemIndex = cartItems.findIndex((item) => {
       const itemRoundedPrice = Math.round(item.price * 100) / 100;
       return (
@@ -1180,7 +1142,6 @@ const SalesPage: React.FC = () => {
     });
 
     if (existingItemIndex >= 0) {
-      // Item already exists - increase quantity
       const updatedItems = [...cartItems];
       updatedItems[existingItemIndex].quantity += requestedQty;
       setCartItems(updatedItems);
@@ -1189,7 +1150,6 @@ const SalesPage: React.FC = () => {
         text: `✓ Qty updated: ${selectedProduct.name || selectedProduct.product_name} (${selectedSize}, ${selectedColor}) @ Rs. ${price.toFixed(2)}`,
       });
     } else {
-      // New item - add to cart
       const cartItem: CartItem = {
         id: uniqueId,
         productId: productId,
@@ -1223,36 +1183,44 @@ const SalesPage: React.FC = () => {
   const handleRemoveFromCart = (id: string) => {
     setCartItems(cartItems.filter((item) => item.id !== id));
   };
+  const resetSalesState = () => {
+    setCartItems([]);
+    setPaidAmount("");
+    setOrderNotes("");
+    setSelectedCustomer(null);
+    setPaymentMethod("cash");
+    setBankPaymentDetails(null);
+    setEditingOrderId(null);
+    setPreviouslyPaidAmount(0);
+    setCurrentOrderNumber(null);
+  };
 
-  const handleSaveOrder = async () => {
-    // Validation
+  const saveOrderInternal = async (): Promise<{
+    success: boolean;
+    data?: any;
+    error?: string;
+  }> => {
     if (!selectedCustomer) {
-      setMessage({ type: "error", text: "Please select a customer" });
-      return;
+      return { success: false, error: "Please select a customer" };
     }
     if (cartItems.length === 0) {
-      setMessage({ type: "error", text: "Please add items to cart" });
-      return;
+      return { success: false, error: "Please add items to cart" };
     }
 
-    // Validation based on payment method
     if (paymentMethod === "cash") {
       if (!paidAmount) {
-        setMessage({
-          type: "error",
-          text: "Cash payment selected: Please enter paid amount to continue",
-        });
-        return;
+        return {
+          success: false,
+          error: "Cash payment selected: Please enter paid amount to continue",
+        };
       }
     } else if (paymentMethod === "bank") {
       if (!bankPaymentDetails) {
-        setMessage({ type: "error", text: "Please add bank payment details" });
-        return;
+        return { success: false, error: "Please add bank payment details" };
       }
     }
 
     try {
-      // Get paid amount based on payment method
       let newPayment = 0;
       if (paymentMethod === "cash") {
         newPayment = parseFloat(paidAmount) || 0;
@@ -1260,24 +1228,24 @@ const SalesPage: React.FC = () => {
         newPayment = parseFloat(bankPaymentDetails?.paidAmount || "0") || 0;
       }
 
-      // Get Sri Lankan datetime
       const sriLankanDateTime = getSriLankanDateTime();
 
       let savedOrderId: number | undefined;
       let orderNumber: string;
+      let finalTotal = 0;
+      let finalPaid = 0;
+      let finalBalance = 0;
+      let finalStatus = "";
 
       if (editingOrderId) {
-        // EDITING EXISTING ORDER
         savedOrderId = parseInt(editingOrderId);
+        orderNumber = currentOrderNumber || editingOrderId;
 
-        // For editing: calculate grand total including delivery charge
         const grandTotal = total + deliveryCharge;
 
-        // Calculate total paid including new payment
         const totalPaidNow = previouslyPaidAmount + newPayment;
         const newBalance = Math.max(0, grandTotal - totalPaidNow);
 
-        // Determine payment status based on grand total
         let paymentStatus = "unpaid";
         if (totalPaidNow >= grandTotal) {
           paymentStatus = "fully_paid";
@@ -1285,14 +1253,18 @@ const SalesPage: React.FC = () => {
           paymentStatus = "partial";
         }
 
-        // Update order with new total and payment information
+        finalTotal = grandTotal;
+        finalPaid = totalPaidNow;
+        finalBalance = newBalance;
+        finalStatus = paymentStatus;
+
         const updateOrderPayload = {
           shop_id: shopId,
           total_items: cartItems.length,
           total_amount: total,
           delivery_charge: deliveryCharge,
-          final_amount: grandTotal, // final_amount should be grand total (total + delivery)
-          advance_paid: totalPaidNow, // advance_paid is all payments made so far
+          final_amount: grandTotal,
+          advance_paid: totalPaidNow,
           balance_due: newBalance,
           payment_status: paymentStatus,
           payment_method:
@@ -1302,7 +1274,6 @@ const SalesPage: React.FC = () => {
           notes: orderNotes || null,
         };
 
-        // Update order
         const updateResponse = await fetch(
           `${API_URL}/orders/${savedOrderId}`,
           {
@@ -1314,16 +1285,12 @@ const SalesPage: React.FC = () => {
 
         const updateResult = await updateResponse.json();
         if (!updateResult.success) {
-          setMessage({
-            type: "error",
-            text: `Failed to update order: ${updateResult.error}`,
-          });
-          return;
+          return {
+            success: false,
+            error: `Failed to update order: ${updateResult.error}`,
+          };
         }
 
-        // Delete old order items and create new ones
-        // (The backend should handle this, or we handle it via a delete endpoint)
-        // For now, we'll just create new items - they should be added to the table
         const itemsPayload = {
           shop_id: shopId,
           order_id: savedOrderId,
@@ -1348,18 +1315,18 @@ const SalesPage: React.FC = () => {
 
         const itemsResult = await itemsResponse.json();
         if (!itemsResult.success) {
-          setMessage({
-            type: "error",
-            text: `Failed to update order items: ${itemsResult.error}`,
-          });
-          return;
+          return {
+            success: false,
+            error: `Failed to update order items: ${itemsResult.error}`,
+          };
         }
 
-        // Record the new payment if any payment is made
         if (newPayment > 0) {
-          // Calculate remaining balance to ensure we don't record overpayment
           const grandTotal = total + deliveryCharge;
-          const remainingBalance = Math.max(0, grandTotal - previouslyPaidAmount);
+          const remainingBalance = Math.max(
+            0,
+            grandTotal - previouslyPaidAmount
+          );
           const actualPaymentToRecord = Math.min(newPayment, remainingBalance);
 
           if (actualPaymentToRecord > 0) {
@@ -1382,7 +1349,6 @@ const SalesPage: React.FC = () => {
                 body: JSON.stringify(paymentPayload),
               });
             } else if (paymentMethod === "bank" && bankPaymentDetails) {
-              // Determine payment method: online_transfer or bank_deposit
               const bankPayMethod = bankPaymentDetails.isOnlineTransfer
                 ? "online_transfer"
                 : "bank_deposit";
@@ -1415,39 +1381,37 @@ const SalesPage: React.FC = () => {
           }
         }
       } else {
-        // CREATING NEW ORDER
-        // Determine payment status and amounts based on whether paid amount is less than total
         let paymentStatus = "";
         let advancePaid = 0;
         let balanceDue = 0;
         let finalAmount = 0;
 
         if (newPayment > 0) {
-          // Cap the payment at the order total (don't record excess as payment - it's change)
           const actualPayment = Math.min(newPayment, total);
 
           if (actualPayment < total) {
-            // Partial payment
             paymentStatus = "partial";
             advancePaid = actualPayment;
             balanceDue = total - actualPayment;
-            finalAmount = total; // final_amount is always total + delivery (delivery=0 at this stage)
+            finalAmount = total;
           } else {
-            // Full payment (payment >= total)
             paymentStatus = "fully_paid";
             advancePaid = actualPayment;
             balanceDue = 0;
-            finalAmount = total; // final_amount is always total + delivery (delivery=0 at this stage)
+            finalAmount = total;
           }
         } else {
-          // No payment made
           paymentStatus = "unpaid";
           advancePaid = 0;
           balanceDue = total;
-          finalAmount = total; // final_amount is always total + delivery (delivery=0 at this stage)
+          finalAmount = total;
         }
 
-        // Generate order number (000001000 format)
+        finalTotal = finalAmount;
+        finalPaid = advancePaid;
+        finalBalance = balanceDue;
+        finalStatus = paymentStatus;
+
         const orderNumberResponse = await fetch(
           `${API_URL}/orders/generate-number?shop_id=${shopId}`
         );
@@ -1455,7 +1419,6 @@ const SalesPage: React.FC = () => {
         orderNumber =
           orderNumberData.orderNumber || `${String(Date.now()).slice(-9)}`;
 
-        // Create order object
         const orderPayload = {
           shop_id: shopId,
           order_number: orderNumber,
@@ -1486,7 +1449,6 @@ const SalesPage: React.FC = () => {
           })),
         };
 
-        // Save order to database
         const orderResponse = await fetch(`${API_URL}/orders`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1495,21 +1457,17 @@ const SalesPage: React.FC = () => {
 
         const orderResult = await orderResponse.json();
         if (!orderResult.success) {
-          setMessage({
-            type: "error",
-            text: `Failed to save order: ${orderResult.error}`,
-          });
-          return;
+          return {
+            success: false,
+            error: `Failed to save order: ${orderResult.error}`,
+          };
         }
 
         savedOrderId = orderResult.data?.order_id;
 
-        // Store the order number for invoice generation
         setCurrentOrderNumber(orderNumber);
 
-        // Save payment if amount is paid
         if (newPayment > 0) {
-          // Cap payment amount at order total - don't record excess (it's change given back)
           const actualPaymentToRecord = Math.min(newPayment, total);
 
           if (paymentMethod === "cash") {
@@ -1531,7 +1489,6 @@ const SalesPage: React.FC = () => {
               body: JSON.stringify(paymentPayload),
             });
           } else if (paymentMethod === "bank" && bankPaymentDetails) {
-            // Determine payment method: online_transfer or bank_deposit
             const bankPayMethod = bankPaymentDetails.isOnlineTransfer
               ? "online_transfer"
               : "bank_deposit";
@@ -1562,376 +1519,270 @@ const SalesPage: React.FC = () => {
             });
           }
         }
-
-        // Success message
-        const paymentStatusText =
-          paymentStatus === "fully_paid"
-            ? "✓ Fully Paid"
-            : paymentStatus === "partial"
-              ? "⚠ Partially Paid"
-              : "⏳ Unpaid";
-        const displayMessage = `✓ Order ${orderNumber} created! Total: Rs. ${total.toFixed(2)} | Paid: Rs. ${finalAmount.toFixed(2)} | Status: ${paymentStatusText}${balanceDue > 0 ? ` | Balance Due: Rs. ${balanceDue.toFixed(2)}` : ""}`;
-        setMessage({ type: "success", text: displayMessage });
       }
 
-      // Reset form after both create and update
-      setCartItems([]);
-      setPaidAmount("");
-      setOrderNotes("");
-      setSelectedCustomer(null);
-      setPaymentMethod("cash");
-      setBankPaymentDetails(null);
-      setEditingOrderId(null);
-      setPreviouslyPaidAmount(0);
+      return {
+        success: true,
+        data: {
+          orderNumber,
+          total: finalTotal,
+          paid: finalPaid,
+          status: finalStatus,
+          balance: finalBalance,
+        },
+      };
     } catch (error: any) {
-      setMessage({
-        type: "error",
-        text: `Error saving order: ${error.message}`,
-      });
       console.error("Save order error:", error);
+      return { success: false, error: error.message };
     }
   };
 
-  const handlePrintBill = async () => {
-    if (!selectedCustomer || cartItems.length === 0) {
+  const handleSaveOrder = async () => {
+    const result = await saveOrderInternal();
+    if (result.success && result.data) {
+      const { orderNumber, total, paid, status, balance } = result.data;
+      const paymentStatusText =
+        status === "fully_paid"
+          ? "✓ Fully Paid"
+          : status === "partial"
+          ? "⚠ Partially Paid"
+          : "⏳ Unpaid";
+      const displayMessage = `✓ Order ${orderNumber} created! Total: Rs. ${total.toFixed(
+        2
+      )} | Paid: Rs. ${paid.toFixed(
+        2
+      )} | Status: ${paymentStatusText}${balance > 0 ? ` | Balance Due: Rs. ${balance.toFixed(2)}` : ""}`;
+      setMessage({ type: "success", text: displayMessage });
+      resetSalesState();
+    } else if (result.error) {
+      setMessage({ type: "error", text: result.error });
+    }
+  };
+
+  const handleSaveAndExport = async () => {
+    const result = await saveOrderInternal();
+    if (result.success && result.data) {
+      const { orderNumber, total, paid, balance } = result.data;
+      const displayMessage = `✓ Order ${orderNumber} saved and exported as image!`;
+      setMessage({ type: "success", text: displayMessage });
+
+      try {
+        // Prepare invoice data for InvoicePrint component
+        const invoiceData = {
+          order_id: 0,
+          order_number: orderNumber,
+          customer_id: selectedCustomer?.customer_id || 0,
+          total_items: cartItems.length,
+          total_amount: subtotal,
+          final_amount: total,
+          advance_paid: paid,
+          balance_due: balance || 0,
+          payment_status: (balance > 0 ? (paid > 0 ? "partial" : "unpaid") : "fully_paid") as "unpaid" | "partial" | "fully_paid",
+          payment_method: paymentMethod as "cash" | "card" | "online" | "bank" | "other",
+          order_status: "pending" as const,
+          notes: orderNotes || null,
+          order_date: new Date().toISOString(),
+          recipient_name: selectedCustomer?.first_name || selectedCustomer?.last_name || "",
+          customer_mobile: selectedCustomer?.mobile || "",
+          recipient_phone: selectedCustomer?.mobile || "",
+          delivery_charge: deliveryCharge,
+          delivery_line1: null,
+          delivery_line2: null,
+          delivery_city: null,
+          items: cartItems.map(item => ({
+            product_name: item.productName,
+            size_name: item.size,
+            color_name: item.color,
+            quantity: item.quantity,
+            sold_price: item.price,
+            total_price: item.price * item.quantity,
+          })),
+        };
+
+        // Create a temporary container for rendering
+        const printContainer = document.createElement("div");
+        printContainer.style.position = "fixed";
+        printContainer.style.left = "-9999px";
+        printContainer.style.width = "210mm"; // A4 width
+        printContainer.style.background = "white";
+        document.body.appendChild(printContainer);
+
+        const root = ReactDOM.createRoot(printContainer);
+        root.render(React.createElement(InvoicePrint, { order: invoiceData }));
+
+        // Wait for rendering to complete
+        setTimeout(async () => {
+          try {
+            // Convert to canvas
+            const canvas = await html2canvas(printContainer, {
+              scale: 2,
+              useCORS: true,
+              allowTaint: true,
+              backgroundColor: "#ffffff",
+              width: 794, // A4 width in pixels at 96 DPI
+              windowWidth: 794,
+            });
+
+            // Convert canvas to blob
+            canvas.toBlob(async (blob) => {
+              if (!blob) {
+                setMessage({ type: "error", text: "Failed to generate image" });
+                document.body.removeChild(printContainer);
+                return;
+              }
+
+              try {
+                // Save to downloads folder
+                const { downloadDir } = await import("@tauri-apps/api/path");
+                const { createDir, writeBinaryFile } = await import("@tauri-apps/api/fs");
+                const { join } = await import("@tauri-apps/api/path");
+
+                const downloadDirPath = await downloadDir();
+                const invoicesPath = await join(downloadDirPath, "Dennep Pos Invoices");
+                await createDir(invoicesPath, { recursive: true });
+
+                const timestamp = new Date().toISOString().replace(/[:.]/g, "-").split("T")[0];
+                const time = new Date().toTimeString().split(" ")[0].replace(/:/g, "-");
+                const fileName = `invoice-${orderNumber}-${timestamp}_${time}.png`;
+                const filePath = await join(invoicesPath, fileName);
+
+                // Convert blob to array buffer
+                const arrayBuffer = await blob.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+
+                // Write file using Tauri API
+                await writeBinaryFile(filePath, uint8Array);
+
+                setMessage({ 
+                  type: "success", 
+                  text: `✅ Invoice saved as image!\nLocation: Dennep Pos Invoices\\${fileName}` 
+                });
+              } catch (error) {
+                console.error("Error saving image:", error);
+                setMessage({ type: "error", text: "Failed to save invoice as image." });
+              } finally {
+                document.body.removeChild(printContainer);
+              }
+            }, "image/png");
+          } catch (error) {
+            console.error("Error generating image:", error);
+            setMessage({ type: "error", text: "Failed to generate invoice image." });
+            document.body.removeChild(printContainer);
+          }
+        }, 1000);
+      } catch (error) {
+        console.error("Error preparing invoice for export:", error);
+        setMessage({ type: "error", text: "Failed to prepare invoice for export." });
+      }
+
+      resetSalesState();
+    } else if (result.error) {
+      setMessage({ type: "error", text: result.error });
+    }
+  };
+
+  const handleSimplePrint = async () => {
+    const result = await saveOrderInternal();
+    if (result.success && result.data) {
+      const { orderNumber, total, paid, balance } = result.data;
       setMessage({
-        type: "error",
-        text: "Please select customer and add items",
+        type: "success",
+        text: `✓ Order ${orderNumber} saved and ready to print`,
       });
-      return;
-    }
 
-    // Calculate if payment is fully paid
-    const paidAmt = parseFloat(paidAmount) || 0;
-    const balance = total - paidAmt;
-
-    // Only allow printing if payment is fully paid or more
-    if (paymentMethod === "cash") {
-      if (!paidAmount) {
-        setMessage({
-          type: "error",
-          text: "Please enter cash amount to print bill",
-        });
-        return;
-      }
-      if (balance > 0) {
-        setMessage({
-          type: "error",
-          text: `Cannot print bill. Balance due: Rs. ${balance.toFixed(
-            2
-          )}. Full or more payment required to print.`,
-        });
-        return;
-      }
-    } else if (paymentMethod === "bank") {
-      if (!bankPaymentDetails) {
-        setMessage({ type: "error", text: "Please add bank payment details" });
-        return;
-      }
-      const bankPaidAmt = parseFloat(bankPaymentDetails.paidAmount) || 0;
-      const bankBalance = total - bankPaidAmt;
-      if (bankBalance > 0) {
-        setMessage({
-          type: "error",
-          text: `Cannot print bill. Balance due: Rs. ${bankBalance.toFixed(
-            2
-          )}. Full or more payment required to print.`,
-        });
-        return;
-      }
-    }
-
-    try {
-      // Generate order number first
-      let orderNumber: string;
-      if (currentOrderNumber) {
-        orderNumber = currentOrderNumber;
-      } else {
-        const orderNumberResponse = await fetch(
-          `${API_URL}/orders/generate-number?shop_id=${shopId}`
-        );
-        const orderNumberData = await orderNumberResponse.json();
-        orderNumber =
-          orderNumberData.orderNumber || `${String(Date.now()).slice(-9)}`;
-        setCurrentOrderNumber(orderNumber);
-      }
-
-      // Calculate final amount with delivery charge
-      const grandTotal = subtotal + deliveryCharge;
-
-      // Prepare order data for InvoicePrint component
+      // Prepare invoice data for InvoicePrint component
       const invoiceData = {
+        order_id: 0,
         order_number: orderNumber,
-        customer_id: selectedCustomer.customer_id,
-        total_items: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+        customer_id: selectedCustomer?.customer_id || 0,
+        total_items: cartItems.length,
         total_amount: subtotal,
-        final_amount: grandTotal,
-        advance_paid: parseFloat(paidAmount) || 0,
-        balance_due: 0,
-        payment_status: "fully_paid" as const,
+        final_amount: total,
+        advance_paid: paid,
+        balance_due: balance || 0,
+        payment_status: (balance > 0 ? (paid > 0 ? "partial" : "unpaid") : "fully_paid") as "unpaid" | "partial" | "fully_paid",
+        payment_method: paymentMethod as "cash" | "card" | "online" | "bank" | "other",
+        order_status: "pending" as const,
+        notes: orderNotes || null,
         order_date: new Date().toISOString(),
-        customer_mobile: selectedCustomer.mobile,
+        recipient_name: selectedCustomer?.first_name || selectedCustomer?.last_name || "",
+        customer_mobile: selectedCustomer?.mobile || "",
+        recipient_phone: selectedCustomer?.mobile || "",
         delivery_charge: deliveryCharge,
-        delivery_line1: "",
-        delivery_line2: "",
-        delivery_city: "",
-        items: cartItems.map((item) => ({
+        delivery_line1: null,
+        delivery_line2: null,
+        delivery_city: null,
+        items: cartItems.map(item => ({
           product_name: item.productName,
-          quantity: item.quantity,
-          sold_price: parseFloat(item.price.toFixed(2)),
-          total_price: parseFloat((item.price * item.quantity).toFixed(2)),
           size_name: item.size,
           color_name: item.color,
+          quantity: item.quantity,
+          sold_price: item.price,
+          total_price: item.price * item.quantity,
         })),
       };
 
-      // Create a hidden div to render the invoice
+      // Create a temporary container for rendering
       const printContainer = document.createElement("div");
       printContainer.style.position = "fixed";
       printContainer.style.left = "-9999px";
+      printContainer.style.width = "210mm";
+      printContainer.style.background = "white";
       document.body.appendChild(printContainer);
 
       const root = ReactDOM.createRoot(printContainer);
       root.render(React.createElement(InvoicePrint, { order: invoiceData }));
-      
-      // Wait for rendering and then print
+
+      // Wait for rendering then print silently using Tauri
       setTimeout(async () => {
         try {
-          const invoiceHTML = printContainer.innerHTML;
-          const tempDirPath = await tempdir();
-          const tempFilePath = await join(tempDirPath, `invoice-${Date.now()}.html`);
-
-          const fullHtml = `
+          // Get the rendered HTML
+          const htmlContent = `
             <!DOCTYPE html>
-            <html lang="en">
+            <html>
             <head>
               <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Invoice</title>
-              <script src="https://cdn.tailwindcss.com"></script>
+              <title>Invoice ${orderNumber}</title>
               <style>
-                @page {
-                  size: A4 portrait;
-                  margin: 15mm;
-                }
-                body {
-                  margin: 0;
-                  padding: 0;
-                  font-family: Arial, sans-serif;
-                }
-                @media print {
-                  body { margin: 0; padding: 0; background: white; }
-                  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                }
+                @page { size: A4; margin: 15mm; }
+                body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
               </style>
             </head>
             <body>
-              ${invoiceHTML}
+              ${printContainer.innerHTML}
             </body>
             </html>
           `;
 
-          await writeTextFile(tempFilePath, fullHtml);
+          // Call Tauri command to print silently
+          const { invoke } = await import('@tauri-apps/api/tauri');
+          await invoke('print_invoice', {
+            htmlContent: htmlContent,
+            invoiceNumber: orderNumber
+          });
 
-          // Use PowerShell to print silently on Windows
-          const command = new Command('powershell', ['-NoProfile', '-Command', `Start-Process -FilePath "${tempFilePath}" -Verb Print`]);
-          const output = await command.execute();
-
-          if (output.code !== 0) {
-            setMessage({
-              type: "error",
-              text: `Failed to print bill: ${output.stderr}`,
-            });
-          } else {
-             // Save order to database after printing
-            // Get payment amount based on payment method
-            let newPayment = 0;
-            if (paymentMethod === "cash") {
-              newPayment = parseFloat(paidAmount) || 0;
-            } else if (paymentMethod === "bank") {
-              newPayment =
-                parseFloat(bankPaymentDetails?.paidAmount || "0") || 0;
-            }
-
-            // Get Sri Lankan datetime
-            const sriLankanDateTime = getSriLankanDateTime();
-
-            // Create order payload
-            const orderPayload = {
-              shop_id: shopId,
-              order_number: orderNumber,
-              customer_id: selectedCustomer.customer_id,
-              user_id: null,
-              total_items: cartItems.length,
-              order_status: "pending",
-              total_amount: total,
-              delivery_charge: deliveryCharge,
-              final_amount: grandTotal,
-              advance_paid: newPayment,
-              balance_due: 0,
-              payment_status: "fully_paid",
-              payment_method:
-                paymentMethod === "cash"
-                  ? "cash"
-                  : bankPaymentDetails?.bank || "bank",
-              recipient_phone: selectedCustomer.mobile || null,
-              notes: orderNotes || null,
-              order_date: sriLankanDateTime.dateString,
-              items: cartItems.map((item) => ({
-                product_id: item.productId,
-                color_id: item.colorId,
-                size_id: item.sizeId,
-                quantity: item.quantity,
-                sold_price: item.price,
-                total_price: item.price * item.quantity,
-              })),
-            };
-
-            // Save order to database (this will also reduce stock quantities)
-            const orderResponse = await fetch(`${API_URL}/orders`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(orderPayload),
-            });
-
-            const orderResult = await orderResponse.json();
-            if (!orderResult.success) {
-              setMessage({
-                type: "error",
-                text: `Order printed but failed to save: ${orderResult.error}`,
-              });
-              return;
-            }
-
-            const savedOrderId = orderResult.data?.order_id;
-
-            // Save payment if amount is paid
-            if (newPayment > 0) {
-              if (paymentMethod === "cash") {
-                const paymentPayload = {
-                  shop_id: shopId,
-                  order_id: savedOrderId,
-                  customer_id: selectedCustomer.customer_id,
-                  payment_amount: newPayment,
-                  payment_date: sriLankanDateTime.dateString,
-                  payment_time: sriLankanDateTime.timeString,
-                  payment_method: "cash",
-                  payment_status: "completed",
-                  notes: null,
-                };
-
-                await fetch(`${API_URL}/payments`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(paymentPayload),
-                });
-              } else if (paymentMethod === "bank" && bankPaymentDetails) {
-                const bankPayMethod = bankPaymentDetails.isOnlineTransfer
-                  ? "online_transfer"
-                  : "bank_deposit";
-                const notesText = bankPaymentDetails.isOnlineTransfer
-                  ? `Bank: ${bankPaymentDetails.bank}, Online Transfer, Receipt: ${bankPaymentDetails.receiptNumber}`
-                  : `Bank: ${bankPaymentDetails.bank}, Branch: ${bankPaymentDetails.branch}, Receipt: ${bankPaymentDetails.receiptNumber}`;
-
-                const paymentPayload = {
-                  shop_id: shopId,
-                  order_id: savedOrderId,
-                  customer_id: selectedCustomer.customer_id,
-                  payment_amount: newPayment,
-                  payment_date: sriLankanDateTime.dateString,
-                  payment_time: sriLankanDateTime.timeString,
-                  payment_method: bankPayMethod,
-                  bank_name: bankPaymentDetails.bank,
-                  branch_name: bankPaymentDetails.branch || null,
-                  bank_account_id: bankPaymentDetails.bankAccountId,
-                  transaction_id: bankPaymentDetails.receiptNumber,
-                  payment_status: "completed",
-  
-                  notes: notesText,
-                };
-
-                await fetch(`${API_URL}/payments`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(paymentPayload),
-                });
-              }
-            }
-
-            // Reset the sales page form after successful save
-            handleCancelOrder();
-
-            // Show success message
-            setMessage({
-              type: "success",
-              text: "✅ Order saved and printed successfully! Stock quantities updated. Form has been reset.",
-            });
-          }
-        } catch(e) {
-            console.error("Error printing bill:", e);
-            setMessage({
-                type: "error",
-                text: "Failed to print bill.",
-            });
+          setMessage({
+            type: "success",
+            text: `✅ Invoice ${orderNumber} sent to printer!`
+          });
+        } catch (error) {
+          console.error('Print error:', error);
+          setMessage({
+            type: "error",
+            text: `Failed to print: ${error}`
+          });
         } finally {
-            // Clean up the hidden div
-            document.body.removeChild(printContainer);
+          document.body.removeChild(printContainer);
         }
-      }, 1000); // Delay to ensure rendering and styles are applied
-    } catch (error) {
-      console.error("Error preparing invoice:", error);
-      setMessage({
-        type: "error",
-        text: "Failed to prepare invoice for printing",
-      });
+      }, 1000);
+
+      resetSalesState();
+    } else if (result.error) {
+      setMessage({ type: "error", text: result.error });
     }
   };
 
-  const handleSaveBillAsImage = () => {
-    if (!selectedCustomer || cartItems.length === 0) {
-      setMessage({
-        type: "error",
-        text: "Please select customer and add items",
-      });
-      return;
-    }
 
-    // Only allow saving if cash payment is complete
-    if (paymentMethod === "cash") {
-      if (!paidAmount) {
-        setMessage({
-          type: "error",
-          text: "Please enter cash amount to save bill",
-        });
-        return;
-      }
-    } else if (paymentMethod === "bank") {
-      setMessage({
-        type: "info",
-        text: "Bank payments cannot be saved immediately. Bill will be generated once payment is verified.",
-      });
-      return;
-    }
-
-    const html = generateOrderBillHTML({
-      selectedCustomer,
-      cartItems,
-      subtotal,
-      total,
-      paidAmount,
-      orderNumber: currentOrderNumber || undefined,
-      shopName: shopName || undefined,
-    });
-
-    // Generate filename with invoice number and customer ID
-    const invoiceNumber = `IN${currentOrderNumber || Date.now()}`;
-    const customerId = selectedCustomer.customer_id
-      ? `C${String(selectedCustomer.customer_id).padStart(7, "0")}`
-      : "CXXXXXX";
-    const filename = `${invoiceNumber}_${customerId}`;
-
-    saveAsPDF(html, filename, "orders");
-  };
 
   const handleCancelOrder = () => {
     setCartItems([]);
@@ -1944,15 +1795,12 @@ const SalesPage: React.FC = () => {
     setPreviouslyPaidAmount(0);
   };
 
-  // New payment system handlers
   const handlePaymentMethodChange = (method: "cash" | "bank") => {
     setPaymentMethod(method);
     if (method === "cash") {
-      // Clear bank details when switching to cash
       setBankPaymentDetails(null);
       setPaidAmount("");
     } else {
-      // Clear paid amount when switching to bank
       setPaidAmount("");
     }
   };
@@ -2022,7 +1870,6 @@ const SalesPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6 flex flex-col min-h-0">
           {/* Customer Selection */}
           <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 space-y-4">
-            {/* Customer Type Filter - Radio Buttons (Hidden in edit mode) */}
             {!editingOrderId && (
               <div className="flex-shrink-0">
                 <label className="block text-sm font-semibold text-red-400 mb-2">
@@ -2092,7 +1939,6 @@ const SalesPage: React.FC = () => {
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/30"
                 />
 
-                {/* Customer Dropdown */}
                 {customerSearch && filteredCustomers.length > 0 && (
                   <div className="absolute top-full left-0 right-0 bg-gray-700 border border-red-600/50 rounded-lg max-h-40 overflow-y-auto z-50 mt-1">
                     {isLoadingCustomers ? (
@@ -2121,7 +1967,6 @@ const SalesPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Add New Customer Button */}
                 {customerSearch && filteredCustomers.length === 0 && (
                   <button
                     onClick={() => setShowAddCustomerModal(true)}
@@ -2133,7 +1978,6 @@ const SalesPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Selected Customer Display */}
             {selectedCustomer && (
               <div className="bg-gray-700/50 border border-red-600/30 rounded p-3">
                 <div className="flex justify-between items-start">
@@ -2184,7 +2028,6 @@ const SalesPage: React.FC = () => {
                     className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/30"
                   />
 
-                  {/* Product Dropdown */}
                   {showProductSearch &&
                     productSearch &&
                     filteredProducts.length > 0 && (
@@ -2224,7 +2067,6 @@ const SalesPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Product Selection Panel - Sequential Dropdowns */}
               {selectedProduct && (
                 <div className="flex-1 overflow-y-auto min-h-0">
                   <div className="bg-gray-700/50 border border-red-600/30 rounded-lg p-4 space-y-3">
@@ -2237,9 +2079,7 @@ const SalesPage: React.FC = () => {
                       </p>
                     </div>
 
-                    {/* Row 1: Size and Color in same row */}
                     <div className="grid grid-cols-2 gap-3">
-                      {/* Size Selection Dropdown */}
                       <div>
                         <label className="block text-xs font-semibold text-red-400 mb-2">
                           Select Size
@@ -2262,7 +2102,6 @@ const SalesPage: React.FC = () => {
                         </select>
                       </div>
 
-                      {/* Color Selection Dropdown - Only show after size selected */}
                       {selectedSize && (
                         <div>
                           <label className="block text-xs font-semibold text-red-400 mb-2">
@@ -2291,7 +2130,6 @@ const SalesPage: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Row 2: Quantity and Price in same row */}
                     {selectedSize &&
                       selectedColor &&
                       (() => {
@@ -2319,7 +2157,6 @@ const SalesPage: React.FC = () => {
 
                         return (
                           <div className="grid grid-cols-2 gap-3">
-                            {/* Quantity Input */}
                             <div>
                               <label className="block text-xs font-semibold text-red-400 mb-2">
                                 Qty (Avl: {availableQty}, Cart:{" "}
@@ -2341,7 +2178,6 @@ const SalesPage: React.FC = () => {
                               )}
                             </div>
 
-                            {/* Price Input */}
                             <div>
                               <label className="block text-xs font-semibold text-red-400 mb-2">
                                 Price (Rs.)
@@ -2406,7 +2242,6 @@ const SalesPage: React.FC = () => {
                         );
                       })()}
 
-                    {/* Row 3: Add to Cart Button - Full width */}
                     {selectedSize && selectedColor && selectedQty && (
                       <button
                         onClick={handleAddProductToCart}
@@ -2416,7 +2251,6 @@ const SalesPage: React.FC = () => {
                       </button>
                     )}
 
-                    {/* Cancel Selection */}
                     <button
                       onClick={() => {
                         setSelectedProduct(null);
@@ -2467,7 +2301,6 @@ const SalesPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Cart Items */}
           <div className="flex-1 overflow-y-auto space-y-2 mb-4">
             {cartItems.length > 0 ? (
               cartItems.map((item) => (
@@ -2510,7 +2343,6 @@ const SalesPage: React.FC = () => {
               </div>
             )}
 
-            {/* Price Preview - Show what will be added when price is entered */}
             {selectedProduct &&
               selectedSize &&
               selectedColor &&
@@ -2549,7 +2381,6 @@ const SalesPage: React.FC = () => {
               )}
           </div>
 
-          {/* Totals */}
           <div className="space-y-2 border-t border-gray-700 pt-3 mb-3">
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Subtotal:</span>
@@ -2579,7 +2410,6 @@ const SalesPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Payment Status Display (when editing order) - Compact */}
             {editingOrderId && previouslyPaidAmount !== undefined && (
               <div className="mt-2 pt-2 border-t border-gray-700 grid grid-cols-2 gap-2 text-xs">
                 {previouslyPaidAmount > 0 && (
@@ -2607,7 +2437,6 @@ const SalesPage: React.FC = () => {
             )}
           </div>
 
-          {/* New Payment System */}
           <div className="mb-3 pb-3 border-b border-gray-700">
             <PaymentMethodSelector
               paymentMethod={paymentMethod}
@@ -2626,7 +2455,6 @@ const SalesPage: React.FC = () => {
               isEditingOrder={!!editingOrderId}
             />
 
-            {/* Cash Amount Input - Only for Cash Payment */}
             {paymentMethod === "cash" && (
               <div className="space-y-1 mt-3">
                 <label className="block text-xs font-semibold text-green-400">
@@ -2678,7 +2506,6 @@ const SalesPage: React.FC = () => {
             )}
           </div>
 
-          {/* Bank Payment Modal */}
           <BankPaymentModal
             isOpen={showBankPaymentModal}
             onClose={() => setShowBankPaymentModal(false)}
@@ -2687,8 +2514,7 @@ const SalesPage: React.FC = () => {
             isEditingOrder={!!editingOrderId}
           />
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-2 mt-2">
+          <div className="grid grid-cols-3 gap-2 mt-2">
             <button
               onClick={handleSaveOrder}
               disabled={!selectedCustomer || cartItems.length === 0}
@@ -2696,25 +2522,18 @@ const SalesPage: React.FC = () => {
             >
               {editingOrderId ? "📝 Update" : "✓ Save"}
             </button>
+
             <button
-              onClick={handlePrintBill}
-              disabled={
-                !selectedCustomer ||
-                cartItems.length === 0 ||
-                (() => {
-                  // Check if payment allows printing (only for full payment)
-                  if (paymentMethod === "cash") {
-                    const paidAmt = parseFloat(paidAmount) || 0;
-                    return paidAmt === 0 || paidAmt < total; // Disable if not paid or partial
-                  } else if (paymentMethod === "bank") {
-                    if (!bankPaymentDetails) return true; // Disable if no bank details
-                    const bankPaidAmt =
-                      parseFloat(bankPaymentDetails.paidAmount) || 0;
-                    return bankPaidAmt < total; // Disable if not full payment
-                  }
-                  return true; // Disable if no payment method selected
-                })()
-              }
+              onClick={handleSaveAndExport}
+              disabled={!selectedCustomer || cartItems.length === 0}
+              className="bg-purple-600 text-white py-2 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors text-sm"
+            >
+              📥 Export
+            </button>
+
+            <button
+              onClick={handleSimplePrint}
+              disabled={!selectedCustomer || cartItems.length === 0}
               className="border-2 border-blue-600 text-blue-400 py-2 rounded-lg font-semibold hover:bg-blue-900/20 disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors text-sm"
             >
               🖨️ Print
@@ -2723,11 +2542,9 @@ const SalesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Customer Modal */}
       {showAddCustomerModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-6 border-b border-red-600 flex justify-between items-center sticky top-0">
               <h2 className="text-2xl font-bold">Add New Customer</h2>
               <button
@@ -2747,9 +2564,7 @@ const SalesPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="p-6 space-y-5">
-              {/* Error Message */}
               {customerModalError && (
                 <div className="bg-red-900/30 border-2 border-red-600 text-red-300 p-3 rounded-lg flex items-start gap-3">
                   <span className="text-xl">✕</span>
@@ -2759,7 +2574,6 @@ const SalesPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Success Message */}
               {customerModalSuccess && (
                 <div className="bg-green-900/30 border-2 border-green-600 text-green-300 p-3 rounded-lg flex items-start gap-3">
                   <span className="text-xl">✓</span>
@@ -2769,7 +2583,6 @@ const SalesPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Customer ID */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-2">
                   Customer ID <span className="text-red-500">*</span>
@@ -2800,7 +2613,6 @@ const SalesPage: React.FC = () => {
                 />
               </div>
 
-              {/* Mobile Number */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-2">
                   Mobile Number <span className="text-red-500">*</span>
@@ -2831,7 +2643,6 @@ const SalesPage: React.FC = () => {
                 />
               </div>
 
-              {/* Email */}
               <div>
                 <label className="block text-sm font-semibold text-red-400 mb-2">
                   Email (Optional)
@@ -2855,7 +2666,6 @@ const SalesPage: React.FC = () => {
                 />
               </div>
 
-              {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-700">
                 <button
                   onClick={handleAddCustomer}
@@ -2886,7 +2696,6 @@ const SalesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Add Notes Modal */}
       {showNotesModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700 space-y-4">
@@ -2919,7 +2728,6 @@ const SalesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Add Product Modal */}
       <AddProductModal
         isOpen={showAddProductModal}
         onClose={handleCloseProductModal}

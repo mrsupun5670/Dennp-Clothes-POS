@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import "./App.css";
 import POSLayout from "./components/layout/POSLayout";
 import { ShopProvider } from "./context/ShopContext";
+import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { ShopDetailsModal } from "./components/ShopDetailsModal";
 import { ShopSelector } from "./components/ShopSelector";
+import ProtectedPage from "./components/ProtectedPage";
 import SalesPage from "./pages/SalesPage";
 import ProductsPage from "./pages/ProductsPage";
 import InventoryPage from "./pages/InventoryPage";
@@ -14,8 +16,9 @@ import BankAccountsPage from "./pages/BankAccountsPage";
 import StockPage from "./pages/StockPage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
+import NotesPage from "./pages/NotesPage";
 
-type PageType = "sales" | "products" | "inventory" | "customers" | "orders" | "payments" | "bankaccounts" | "stock" | "reports" | "settings";
+type PageType = "sales" | "products" | "inventory" | "customers" | "orders" | "payments" | "bankaccounts" | "stock" | "reports" | "settings" | "notes";
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>("sales");
@@ -38,23 +41,25 @@ function App() {
       case "sales":
         return <SalesPage />;
       case "products":
-        return <ProductsPage />;
+        return <ProtectedPage><ProductsPage /></ProtectedPage>;
       case "inventory":
-        return <InventoryPage />;
+        return <ProtectedPage><InventoryPage /></ProtectedPage>;
       case "customers":
-        return <CustomersPage />;
+        return <ProtectedPage><CustomersPage /></ProtectedPage>;
       case "orders":
-        return <OrdersPage />;
+        return <ProtectedPage><OrdersPage /></ProtectedPage>;
       case "payments":
-        return <PaymentsPage />;
+        return <ProtectedPage><PaymentsPage /></ProtectedPage>;
       case "bankaccounts":
-        return <BankAccountsPage />;
+        return <ProtectedPage><BankAccountsPage /></ProtectedPage>;
       case "stock":
-        return <StockPage />;
+        return <ProtectedPage><StockPage /></ProtectedPage>;
       case "reports":
-        return <ReportsPage />;
+        return <ProtectedPage><ReportsPage /></ProtectedPage>;
       case "settings":
-        return <SettingsPage />;
+        return <ProtectedPage><SettingsPage /></ProtectedPage>;
+      case "notes":
+        return <ProtectedPage><NotesPage /></ProtectedPage>;
       default:
         return <SalesPage />;
     }
@@ -62,11 +67,13 @@ function App() {
 
   return (
     <ShopProvider>
-      <ShopSelector />
-      <POSLayout currentPage={currentPage} onPageChange={setCurrentPage}>
-        {renderPage()}
-      </POSLayout>
-      <ShopDetailsModal />
+      <AdminAuthProvider>
+        <ShopSelector />
+        <POSLayout currentPage={currentPage} onPageChange={setCurrentPage}>
+          {renderPage()}
+        </POSLayout>
+        <ShopDetailsModal />
+      </AdminAuthProvider>
     </ShopProvider>
   );
 }

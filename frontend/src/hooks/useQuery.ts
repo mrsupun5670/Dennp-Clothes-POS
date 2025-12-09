@@ -60,8 +60,10 @@ export function useQuery<T>(
   }, [queryKeyString, options.enabled]);
 
   const refetch = useCallback(() => {
+    // Clear cache to ensure fresh data
+    cache.delete(queryKeyString);
     fetchData(true);
-  }, [fetchData]);
+  }, [fetchData, queryKeyString]);
 
   return { data, isLoading, error, refetch };
 }

@@ -3,6 +3,9 @@
   windows_subsystem = "windows"
 )]
 
+use std::fs;
+use std::process::Command;
+
 fn main() {
   tauri::Builder::default()
     .setup(|_app| {
@@ -25,6 +28,7 @@ fn main() {
       get_products,
       get_inventory,
       update_inventory,
+      print_invoice,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
@@ -78,4 +82,52 @@ fn update_inventory(product_id: i32, _quantity: i32) -> String {
     "message": format!("Inventory updated for product {}", product_id)
   })
   .to_string()
+}
+
+#[tauri::command]
+fn print_invoice(html_content: String, invoice_number: String) -> Result<String, String> {
+  #[cfg(target_os = "windows")]
+  {
+    use std::env;
+    
+    // Create temp directory for invoice
+    let temp_dir = env::temp_dir();
+    let file_path = temp_dir.join(format!("invoice_{}.html", invoice_number));
+    
+    // Write HTML to temp file
+    fs::write(&file_path, &html_content)
+      .map_err(|e| format!("Failed to write HTML file: {}", e))?;
+    
+    // Print using PowerShell with default printer
+    let output = Command::new("powershell")
+      .args(&[
+        "-Command",
+        &format!(
+          "Start-Process -FilePath '{}' -Verb Print -WindowStyle Hidden",
+          file_path.display()
+        )
+      ])
+      .output()
+      .map_err(|e| format!("Failed to execute print command: {}", e))?;
+    
+    // Clean up temp file after a delay (give time for printing)
+    std::thread::spawn(move || {
+      std::thread::sleep(std::time::Duration::from_secs(5));
+      let _ = fs::remove_file(&file_path);
+    });
+    
+    if output.status.success() {
+      Ok(serde_json::json!({
+        "success": true,
+        "message": "Invoice sent to printer"
+      }).to_string())
+    } else {
+      Err(format!("Print command failed: {}", String::from_utf8_lossy(&output.stderr)))
+    }
+  }
+  
+  #[cfg(not(target_os = "windows"))]
+  {
+    Err("Silent printing is only supported on Windows".to_string())
+  }
 }

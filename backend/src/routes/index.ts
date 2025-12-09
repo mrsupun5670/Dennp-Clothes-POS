@@ -12,6 +12,8 @@ import paymentRoutes from './paymentRoutes';
 import analyticsRoutes from './analyticsRoutes';
 import bankCollectionRoutes from './bankCollectionRoutes';
 import reportsRoutes from './reportsRoutes';
+import noteRoutes from './noteRoutes';
+import paymentNoteRoutes from './paymentNoteRoutes';
 
 const router = Router();
 
@@ -28,6 +30,9 @@ router.use('/bank-collections', bankCollectionRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/reports', reportsRoutes);
+router.use('/notes', noteRoutes);
+router.use('/payment-notes', paymentNoteRoutes);
+
 
 // TODO: Add additional routes
 // router.use('/payment-reconciliation', paymentReconciliationRoutes);

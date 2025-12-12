@@ -242,50 +242,48 @@ const InventoryPage: React.FC = () => {
         </div>
       )}
 
-      {/* Header Section */}
-      <div className="flex justify-between items-center">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-red-500">Shop Inventory</h1>
-            <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
-              {totalItems} items
-            </span>
-          </div>
-          <p className="text-gray-400 mt-2">
-            {shopId ? `Shop #${shopId} - Manage inventory items` : "Select a shop to view inventory"}
-          </p>
+      {/* Compact Header - Single Row with Inline Summary */}
+      <div className="flex items-center gap-4">
+        {/* Title and Count */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <h1 className="text-2xl font-bold text-red-500">Inventory</h1>
+          <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
+            {totalItems}
+          </span>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => {
-              const html = generateInventoryHTML(filteredMaterials);
-              printContent(html, 'Inventory Report');
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
-            title="Print Report"
-          >
-            🖨️ Print
-          </button>
-          <button
-            onClick={handleAddClick}
-            className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-semibold"
-          >
-            + Add Inventory
-          </button>
-        </div>
-      </div>
 
-      {/* Search Bar */}
-      <div className="space-y-2">
-        <label className="block text-sm font-semibold text-red-400">
-          Search Materials
-        </label>
+        {/* Inline Total Value Card */}
+        <div className="bg-gradient-to-r from-green-900/40 to-green-800/20 border border-green-600/30 rounded-lg px-3 py-2 flex-shrink-0">
+          <p className="text-xs text-green-300 font-semibold">Total Value</p>
+          <p className="text-lg font-bold text-green-400">Rs. {totalValue.toFixed(2)}</p>
+        </div>
+
+        {/* Print Button */}
+        <button
+          onClick={() => {
+            const html = generateInventoryHTML(filteredMaterials);
+            printContent(html, 'Inventory Report');
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm"
+        >
+          🖨️ Print
+        </button>
+
+        {/* Add Inventory Button */}
+        <button
+          onClick={handleAddClick}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-semibold text-sm"
+        >
+          ➕ Add
+        </button>
+
+        {/* Search Bar */}
         <input
           type="text"
-          placeholder="Search by material name..."
+          placeholder="🔍 Search by material name..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-4 py-3 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-colors"
+          className="flex-1 px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
         />
       </div>
 

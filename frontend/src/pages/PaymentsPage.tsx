@@ -180,146 +180,105 @@ const PaymentsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Header Section */}
-      <div className="flex justify-between items-center">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-red-500">Payments</h1>
-            <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
-              {filteredPayments.length} payments
-            </span>
-          </div>
-          <p className="text-gray-400 mt-2">
-            Manage and track all payment transactions
-          </p>
+      {/* Compact Header - Row 1: Main Controls with Inline Summary Cards */}
+      <div className="flex items-center gap-4">
+        {/* Title and Count */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <h1 className="text-2xl font-bold text-red-500">Payments</h1>
+          <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
+            {filteredPayments.length}
+          </span>
         </div>
+
+        {/* Inline Summary Cards - Compact */}
+        <div className="bg-gradient-to-r from-blue-900/40 to-blue-800/20 border border-blue-600/30 rounded-lg px-3 py-2 flex-shrink-0">
+          <p className="text-xs text-blue-300 font-semibold">Transactions</p>
+          <p className="text-lg font-bold text-blue-400">{summary.total_count}</p>
+        </div>
+
+        <div className="bg-gradient-to-r from-green-900/40 to-green-800/20 border border-green-600/30 rounded-lg px-3 py-2 flex-shrink-0">
+          <p className="text-xs text-green-300 font-semibold">Total Amount</p>
+          <p className="text-lg font-bold text-green-400">Rs. {(parseFloat(String(summary?.total_amount)) || 0).toFixed(2)}</p>
+        </div>
+
+        <div className="bg-gradient-to-r from-yellow-900/40 to-yellow-800/20 border border-yellow-600/30 rounded-lg px-3 py-2 flex-shrink-0">
+          <p className="text-xs text-yellow-300 font-semibold">Completed</p>
+          <p className="text-lg font-bold text-yellow-400">{completedPercentage}%</p>
+        </div>
+
+        {/* Search Bar */}
+        <input
+          type="text"
+          placeholder="🔍 Search by ID, order, or transaction..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-1 px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
+        />
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Total Payments Card */}
-        <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/20 border-2 border-blue-600/40 rounded-lg p-6 hover:border-blue-600/60 transition-all">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-semibold text-blue-400 mb-1">
-                TOTAL TRANSACTIONS
-              </p>
-              <p className="text-3xl font-bold text-blue-300">
-                {summary.total_count}
-              </p>
-            </div>
-            <div className="text-3xl text-blue-400">💳</div>
-          </div>
-          <p className="text-xs text-gray-400 mt-3">
-            All recorded payments
-          </p>
-        </div>
-
-        {/* Total Amount Card */}
-        <div className="bg-gradient-to-br from-green-900/40 to-green-800/20 border-2 border-green-600/40 rounded-lg p-6 hover:border-green-600/60 transition-all">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-semibold text-green-400 mb-1">
-                TOTAL AMOUNT
-              </p>
-              <p className="text-3xl font-bold text-green-300">
-                Rs. {(parseFloat(String(summary?.total_amount)) || 0).toFixed(2)}
-              </p>
-            </div>
-            <div className="text-3xl text-green-400">💰</div>
-          </div>
-          <p className="text-xs text-gray-400 mt-3">
-            Sum of all transactions
-          </p>
-        </div>
-
-        {/* Completed Payments Card */}
-        <div className="bg-gradient-to-br from-yellow-900/40 to-yellow-800/20 border-2 border-yellow-600/40 rounded-lg p-6 hover:border-yellow-600/60 transition-all">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-semibold text-yellow-400 mb-1">
-                COMPLETED
-              </p>
-              <p className="text-3xl font-bold text-yellow-300">
-                {completedPercentage}%
-              </p>
-            </div>
-            <div className="text-3xl text-yellow-400">✓</div>
-          </div>
-          <div className="w-full bg-gray-700 rounded-full h-2 mt-3">
-            <div
-              className="bg-yellow-500 h-2 rounded-full transition-all"
-              style={{ width: `${completedPercentage}%` }}
-            ></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-red-400">
-            Search
-          </label>
-          <input
-            type="text"
-            placeholder="Search by ID, order, or transaction..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-red-400">
-            Payment Method
-          </label>
-          <select
-            value={filterMethod}
-            onChange={(e) => setFilterMethod(e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
+      {/* Compact Header - Row 2: Payment Method Filter Chips */}
+      <div className="flex items-center gap-2">
+        {[
+          {
+            value: "all",
+            label: "All Methods",
+            color: "bg-gray-600 hover:bg-gray-700",
+          },
+          {
+            value: "cash",
+            label: "💵 Cash",
+            color: "bg-green-600 hover:bg-green-700",
+          },
+          {
+            value: "online_transfer",
+            label: "🌐 Online Transfer",
+            color: "bg-blue-600 hover:bg-blue-700",
+          },
+          {
+            value: "bank_deposit",
+            label: "🏦 Bank Deposit",
+            color: "bg-purple-600 hover:bg-purple-700",
+          },
+        ].map((method) => (
+          <button
+            key={method.value}
+            onClick={() => setFilterMethod(method.value)}
+            className={`px-4 py-2 rounded-full font-semibold text-sm text-white transition-all ${
+              filterMethod === method.value
+                ? `${method.color} ring-2 ring-offset-2 ring-offset-gray-800`
+                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+            }`}
           >
-            <option value="all">All Methods</option>
-            <option value="cash">Cash</option>
-            <option value="online_transfer">Online Transfer</option>
-            <option value="bank_deposit">Bank Deposit</option>
-          </select>
-        </div>
+            {method.label}
+          </button>
+        ))}
 
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-red-400">
-            Status
-          </label>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
-          >
-            <option value="all">All Status</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-            <option value="failed">Failed</option>
-            <option value="refunded">Refunded</option>
-          </select>
-        </div>
+        {/* Status Filter Dropdown */}
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
+        >
+          <option value="all">📊 All Status</option>
+          <option value="completed">✅ Completed</option>
+          <option value="pending">⏳ Pending</option>
+          <option value="failed">❌ Failed</option>
+          <option value="refunded">🔄 Refunded</option>
+        </select>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-red-400">
-            Date Range
-          </label>
-          <select
-            value={filterDateRange}
-            onChange={(e) =>
-              setFilterDateRange(e.target.value as "all" | "today" | "week" | "month")
-            }
-            className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
-          >
-            <option value="all">All Time</option>
-            <option value="today">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-          </select>
-        </div>
+        {/* Date Range Filter Dropdown */}
+        <select
+          value={filterDateRange}
+          onChange={(e) =>
+            setFilterDateRange(e.target.value as "all" | "today" | "week" | "month")
+          }
+          className="px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
+        >
+          <option value="all">📅 All Time</option>
+          <option value="today">📆 Today</option>
+          <option value="week">📅 This Week</option>
+          <option value="month">📆 This Month</option>
+        </select>
       </div>
 
       {/* Payments Table */}

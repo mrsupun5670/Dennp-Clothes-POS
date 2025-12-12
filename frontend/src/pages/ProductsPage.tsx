@@ -98,7 +98,12 @@ const ProductsPage: React.FC = () => {
         throw new Error(result.error || "Failed to fetch products");
       }
     },
-    { enabled: shopId !== null }
+    { 
+      enabled: shopId !== null,
+      cacheTime: 5 * 60 * 1000,
+      staleTime: 2 * 60 * 1000,
+      refetchOnMount: false
+    }
   );
 
   const { data: dbCategories, refetch: refetchCategories } = useQuery<any[]>(
@@ -202,6 +207,10 @@ const ProductsPage: React.FC = () => {
   }, [showAddCategoryModal]);
 
   // Fetch stock details for all products when products load
+  // OPTIMIZATION: Commented out to prevent excessive API requests
+  // This was making individual API calls for every product on page load
+  // Stock details are now loaded on-demand when editing a product
+  /*
   useEffect(() => {
     if (dbProducts && shopId && dbProducts.length > 0) {
       const fetchAllStockDetails = async () => {
@@ -234,6 +243,7 @@ const ProductsPage: React.FC = () => {
       fetchAllStockDetails();
     }
   }, [dbProducts, shopId]);
+  */
 
   // --- HELPER FUNCTIONS ---
 
@@ -375,34 +385,43 @@ const ProductsPage: React.FC = () => {
    */
   const handleSaveProduct = async () => {
     // === SYNCHRONOUS VALIDATION ===
-    const productCode = String(formData.code).trim();
-    if (!productCode) {
-      showNotification("Product Code is required", "error");
-      return;
+    
+    // Product code validation - only when creating new product
+    if (!isEditMode) {
+      const productCode = String(formData.code).trim();
+      if (!productCode) {
+        showNotification("Product Code is required", "error");
+        return;
+      }
+
+      // Product code can be alphanumeric (removed numeric-only restriction)
+      // Just check it's not empty and doesn't have special characters
+      if (!/^[a-zA-Z0-9-_]+$/.test(productCode)) {
+        showNotification("Product Code can only contain letters, numbers, hyphens, and underscores", "error");
+        return;
+      }
+
+      // Check for duplicate product code (only when creating)
+      if (dbProducts) {
+        const duplicateCode = dbProducts.some(
+          (p: any) => p.product_id?.toString() === productCode
+        );
+        if (duplicateCode) {
+          showNotification("A product with this code already exists.", "error");
+          return;
+        }
+      }
     }
 
-    // Validate that product code is numeric only
-    if (!/^\d+$/.test(productCode)) {
-      showNotification("Product Code must be numeric only (integers)", "error");
-      return;
-    }
+    // Product name validation (for both create and edit)
     if (!formData.name.trim()) {
       showNotification("Product Name is required", "error");
       return;
     }
 
-    // Check for duplicate product code and product name (only if creating new product)
+    // Check for duplicate product name (only if creating new product)
     if (!isEditMode && dbProducts) {
       const productNameTrim = formData.name.trim().toLowerCase();
-
-      // Check for duplicate product code
-      const duplicateCode = dbProducts.some(
-        (p: any) => p.product_id?.toString() === productCode
-      );
-      if (duplicateCode) {
-        showNotification("A product with this code already exists.", "error");
-        return;
-      }
 
       // Check for duplicate product name
       const duplicateName = dbProducts.some(
@@ -568,7 +587,7 @@ const ProductsPage: React.FC = () => {
         // Create new product with product_code as product_id (with stock data)
         const createPayload = {
           ...basePayload,
-          product_id: productCode, // Use product code as product_id (numeric string)
+          product_id: String(formData.code).trim(), // Use product code from formData
           stock: stockPayload, // Include stock data
         };
         const createResponse = await fetch(`${API_URL}/products`, {
@@ -599,7 +618,7 @@ const ProductsPage: React.FC = () => {
           await fetch(`${API_URL}/products/${productId}/colors`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ color_id: colorId }),
+            body: JSON.stringify({ shop_id: shopId, color_id: colorId }),
           });
         }
       }
@@ -610,7 +629,7 @@ const ProductsPage: React.FC = () => {
           await fetch(`${API_URL}/products/${productId}/sizes`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ size_id: sizeId }),
+            body: JSON.stringify({ shop_id: shopId, size_id: sizeId }),
           });
         }
       }
@@ -872,11 +891,11 @@ const ProductsPage: React.FC = () => {
     }
   };
 
-  // Filter and sort products (using total_stock property from API for qty)
+  // Filter and sort products (using stockDetails from API response)
   const filteredAndSortedProducts = useMemo(() => {
     const productsToFilter = (dbProducts || []).map((p: any) => {
-      // Get stock details for this product
-      const stockDetails = productStockDetailsMap.get(p.product_id) || [];
+      // Get stock details directly from the product (API returns this)
+      const stockDetails = p.stockDetails || [];
 
       // Build color and size display with quantities
       const colorMap = new Map<string, number>();
@@ -893,34 +912,24 @@ const ProductsPage: React.FC = () => {
         }
       });
 
-      const colorDisplay = Array.from(colorMap.entries())
+      const finalColors = Array.from(colorMap.entries())
         .map(([name, qty]) => `${name} (${qty})`)
-        .join(", ");
+        .join(", ") || "N/A";
 
-      const sizeDisplay = Array.from(sizeMap.entries())
+      const finalSizes = Array.from(sizeMap.entries())
         .map(([name, qty]) => `${name} (${qty})`)
-        .join(", ");
-
-      // Fallback to original colors/sizes if no stock details
-      const finalColors =
-        colorDisplay ||
-        p.colors?.map((c: any) => c.color_name).join(", ") ||
-        "N/A";
-      const finalSizes =
-        sizeDisplay ||
-        p.sizes?.map((s: any) => s.size_name).join(", ") ||
-        "N/A";
+        .join(", ") || "N/A";
 
       return {
         id: p.product_id,
         code: p.product_id, // Use product_id (product code) instead of SKU
         name: p.product_name,
-        colors: finalColors, // Now includes quantities from stock or fallback to product colors
-        sizes: finalSizes, // Now includes quantities from stock or fallback to product sizes
+        colors: finalColors, // Now includes quantities from stock
+        sizes: finalSizes, // Now includes quantities from stock
         stockDetails: stockDetails, // Store full details for edit modal
         cost: parseFloat(p.product_cost) || 0,
         printCost: parseFloat(p.print_cost) || 0,
-        qty: p.total_stock || 0, // Assuming API returns total stock as 'total_stock'
+        qty: p.stock || 0, // Use stock from API
         retailPrice: parseFloat(p.retail_price) || 0,
         wholesalePrice: parseFloat(p.wholesale_price) || 0,
         category_id: p.category_id,
@@ -973,110 +982,110 @@ const ProductsPage: React.FC = () => {
     }
 
     return result;
-  }, [searchQuery, sortBy, stockFilter, dbProducts, productStockDetailsMap]);
+  }, [searchQuery, sortBy, stockFilter, dbProducts]);
 
   // --- RENDER (JSX) ---
   return (
     <div className="space-y-6 h-full flex flex-col">
-      {/* Header Section */}
-      <div className="flex justify-between items-center">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-red-500">Product Catalog</h1>
-            <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
-              {filteredAndSortedProducts.length} products
-            </span>
-          </div>
-          <p className="text-gray-400 mt-2">
-            {shopId
-              ? `Shop #${shopId} - Manage your products`
-              : "Select a shop to view products"}
-          </p>
+      {/* Compact Header - Row 1: Main Controls */}
+      <div className="flex items-center gap-4">
+        {/* Title and Count */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <h1 className="text-2xl font-bold text-red-500">Products</h1>
+          <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
+            {filteredAndSortedProducts.length}
+          </span>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => {
-              const html = generateProductsHTML(filteredAndSortedProducts);
-              printContent(html, "Products Report");
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
-            title="Print directly"
-          >
-            🖨️ Print
-          </button>
 
-          <button
-            onClick={handleAddProductClick}
-            className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-semibold"
-          >
-            + Add Product
-          </button>
-        </div>
-      </div>
+        {/* Print Button */}
+        <button
+          onClick={() => {
+            const html = generateProductsHTML(filteredAndSortedProducts);
+            printContent(html, "Products Report");
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm"
+        >
+          🖨️ Print
+        </button>
 
-      {/* Search Bar */}
-      <div className="space-y-2">
-        <label className="block text-sm font-semibold text-red-400">
-          Search Products
-        </label>
+        {/* Add Product Button */}
+        <button
+          onClick={handleAddProductClick}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-semibold text-sm"
+        >
+          ➕ Add
+        </button>
+
+        {/* Search Bar */}
         <input
           type="text"
-          placeholder="Search by product code, name, or color..."
+          placeholder="🔍 Search by code, name, or color..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-4 py-3 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-colors"
+          className="flex-1 px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
         />
       </div>
 
-      {/* Filters Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 mb-2">
-            Sort By
-          </label>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
-          >
-            <option value="date">Date (Newest First)</option>
-            <option value="name">Name (A-Z)</option>
-            <option value="code">Product Code</option>
-            <option value="price-high">Retail Price (High to Low)</option>
-            <option value="price-low">Retail Price (Low to High)</option>
-            <option value="cost-high">Cost Price (High to Low)</option>
-            <option value="cost-low">Cost Price (Low to High)</option>
-            <option value="qty-high">Quantity (High to Low)</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 mb-2">
-            Stock Status
-          </label>
-          <select
-            value={stockFilter}
-            onChange={(e) => setStockFilter(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
-          >
-            <option value="all">All Products</option>
-            <option value="low">Low Stock (≤ 3)</option>
-            <option value="out">Out of Stock</option>
-            <option value="in">In Stock</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 mb-2">
-            Action
-          </label>
+      {/* Compact Header - Row 2: Stock Filter Chips */}
+      <div className="flex items-center gap-2">
+        {[
+          {
+            value: "all",
+            label: "All Products",
+            color: "bg-gray-600 hover:bg-gray-700",
+          },
+          {
+            value: "in",
+            label: "In Stock",
+            color: "bg-green-600 hover:bg-green-700",
+          },
+          {
+            value: "low",
+            label: "Low Stock (≤ 3)",
+            color: "bg-yellow-600 hover:bg-yellow-700",
+          },
+          {
+            value: "out",
+            label: "Out of Stock",
+            color: "bg-red-600 hover:bg-red-700",
+          },
+        ].map((filter) => (
           <button
-            onClick={handleResetFilters}
-            className="w-full px-3 py-2 bg-red-600/20 border border-red-600 text-red-400 text-sm rounded-lg hover:bg-red-600/30 transition-colors font-semibold"
+            key={filter.value}
+            onClick={() => setStockFilter(filter.value)}
+            className={`px-4 py-2 rounded-full font-semibold text-sm text-white transition-all ${
+              stockFilter === filter.value
+                ? `${filter.color} ring-2 ring-offset-2 ring-offset-gray-800`
+                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+            }`}
           >
-            Reset Filters
+            {filter.label}
           </button>
-        </div>
+        ))}
+
+        {/* Sort Dropdown */}
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
+        >
+          <option value="date">⏱️ Date (Newest First)</option>
+          <option value="name">🔤 Name (A-Z)</option>
+          <option value="code">🏷️ Product Code</option>
+          <option value="price-high">💰 Price (High to Low)</option>
+          <option value="price-low">💵 Price (Low to High)</option>
+          <option value="cost-high">📊 Cost (High to Low)</option>
+          <option value="cost-low">📉 Cost (Low to High)</option>
+          <option value="qty-high">📦 Quantity (High to Low)</option>
+        </select>
+
+        {/* Reset Filters Button */}
+        <button
+          onClick={handleResetFilters}
+          className="px-4 py-2 bg-red-600/20 border border-red-600 text-red-400 text-sm rounded-lg hover:bg-red-600/30 transition-colors font-semibold"
+        >
+          🔄 Reset
+        </button>
       </div>
 
       {/* Products Table - Scrollable */}
@@ -1095,28 +1104,28 @@ const ProductsPage: React.FC = () => {
               {/* Sticky Table Header */}
               <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Product Code
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Colors
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Sizes
                   </th>
-                  <th className="px-6 py-3 text-right font-semibold text-red-400">
+                  <th className="px-4 py-2 text-right font-semibold text-red-400 text-xs">
                     Product Cost (Rs.)
                   </th>
-                  <th className="px-6 py-3 text-right font-semibold text-red-400">
+                  <th className="px-4 py-2 text-right font-semibold text-red-400 text-xs">
                     Print Cost (Rs.)
                   </th>
-                  <th className="px-6 py-3 text-right font-semibold text-red-400">
+                  <th className="px-4 py-2 text-right font-semibold text-red-400 text-xs">
                     Retail Price (Rs.)
                   </th>
-                  <th className="px-6 py-3 text-right font-semibold text-red-400">
+                  <th className="px-4 py-2 text-right font-semibold text-red-400 text-xs">
                     Wholesale Price (Rs.)
                   </th>
                 </tr>
@@ -1207,16 +1216,16 @@ const ProductsPage: React.FC = () => {
                 {/* Product Code */}
                 <div>
                   <label className="block text-sm font-semibold text-red-400 mb-2">
-                    Product Code (Numeric){" "}
+                    Product Code (Alphanumeric) {" "}
                     <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g., 1001"
+                    placeholder="e.g., PROD-001 or ABC123"
                     value={formData.code}
                     onChange={(e) => {
-                      // Only allow digits
-                      const value = e.target.value.replace(/\D/g, "");
+                      // Allow alphanumeric, hyphens, and underscores
+                      const value = e.target.value.replace(/[^a-zA-Z0-9-_]/g, "");
                       setFormData({ ...formData, code: value });
                     }}
                     disabled={isEditMode}

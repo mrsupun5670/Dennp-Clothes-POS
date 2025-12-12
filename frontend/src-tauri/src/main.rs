@@ -3,7 +3,6 @@
   windows_subsystem = "windows"
 )]
 
-use std::fs;
 use std::process::Command;
 
 fn main() {
@@ -17,7 +16,20 @@ fn main() {
       println!("Running on macOS");
 
       #[cfg(target_os = "windows")]
-      println!("Running on Windows");
+      {
+        println!("Running on Windows");
+        
+        // Auto-start backend server in hidden mode
+        println!("Starting backend server...");
+        let backend_script = r"C:\Program Files\Dennp Clothes POS\start-backend-hidden.vbs";
+        
+        match Command::new("wscript.exe")
+          .arg(backend_script)
+          .spawn() {
+            Ok(_) => println!("Backend server started successfully"),
+            Err(e) => eprintln!("Failed to start backend server: {}", e),
+          }
+      }
 
       Ok(())
     })
@@ -85,36 +97,22 @@ fn update_inventory(product_id: i32, _quantity: i32) -> String {
 }
 
 #[tauri::command]
-fn print_invoice(html_content: String, invoice_number: String) -> Result<String, String> {
+fn print_invoice(image_path: String) -> Result<String, String> {
   #[cfg(target_os = "windows")]
   {
-    use std::env;
+    use std::path::Path;
     
-    // Create temp directory for invoice
-    let temp_dir = env::temp_dir();
-    let file_path = temp_dir.join(format!("invoice_{}.html", invoice_number));
+    // Verify the image file exists
+    if !Path::new(&image_path).exists() {
+      return Err(format!("Image file not found: {}", image_path));
+    }
     
-    // Write HTML to temp file
-    fs::write(&file_path, &html_content)
-      .map_err(|e| format!("Failed to write HTML file: {}", e))?;
-    
-    // Print using PowerShell with default printer
-    let output = Command::new("powershell")
-      .args(&[
-        "-Command",
-        &format!(
-          "Start-Process -FilePath '{}' -Verb Print -WindowStyle Hidden",
-          file_path.display()
-        )
-      ])
+    // Print using mspaint with /pt flag (print to default printer)
+    // /pt prints the file and closes mspaint automatically
+    let output = Command::new("mspaint.exe")
+      .args(&["/pt", &image_path])
       .output()
       .map_err(|e| format!("Failed to execute print command: {}", e))?;
-    
-    // Clean up temp file after a delay (give time for printing)
-    std::thread::spawn(move || {
-      std::thread::sleep(std::time::Duration::from_secs(5));
-      let _ = fs::remove_file(&file_path);
-    });
     
     if output.status.success() {
       Ok(serde_json::json!({

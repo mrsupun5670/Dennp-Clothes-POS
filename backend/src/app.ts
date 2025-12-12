@@ -11,8 +11,15 @@ const app = express();
 
 // Middleware
 app.use(helmet());
+
+// Log Origin for debugging
+app.use((req, _res, next) => {
+  logger.info(`[Incoming Request] Method: ${req.method} Path: ${req.path} Origin: ${req.headers.origin}`);
+  next();
+});
+
 app.use(cors({
-  origin: config.cors.origin,
+  origin: true, // Allow all origins explicitly for debugging
   credentials: true,
 }));
 app.use(express.json());
@@ -40,7 +47,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 });
 
 // API Routes
-app.use(`/api/${config.server.apiVersion}`, routes);
+app.use('/api', routes);
 
 // Health check
 app.get('/health', (_req: Request, res: Response) => {

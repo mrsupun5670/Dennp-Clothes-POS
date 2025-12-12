@@ -357,7 +357,13 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order }) => {
             </div>
           </div>
 
-
+          {/* Order Notes Section */}
+          {order.notes && (
+            <div className="mt-6 p-4 bg-gray-50 border border-gray-300 rounded">
+              <p className="text-sm font-bold text-gray-900 mb-2">📝 Order Note:</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{order.notes}</p>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="mt-8">
@@ -372,7 +378,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order }) => {
 
         {/* Software Credit - At the very bottom of the page */}
         <div className="absolute bottom-2 left-0 right-0 text-center">
-          <p className="text-[8px] text-gray-400">
+          <p className="text-[14px] text-gray-400">
             Software by zipzipy.com (078 89 15 271)
           </p>
         </div>

@@ -199,14 +199,14 @@ class CustomerModel {
   }
 
   /**
-   * Search customers by mobile or email (customer_name removed from database)
+   * Search customers by customer_id, mobile or email
    */
   async searchCustomers(shopId: number, searchTerm: string): Promise<Customer[]> {
     try {
       const searchPattern = `%${searchTerm}%`;
       const results = await query(
-        'SELECT * FROM customers WHERE shop_id = ? AND (mobile LIKE ? OR email LIKE ?) ORDER BY customer_id DESC',
-        [shopId, searchPattern, searchPattern]
+        'SELECT * FROM customers WHERE shop_id = ? AND (customer_id LIKE ? OR mobile LIKE ? OR email LIKE ?) ORDER BY customer_id DESC',
+        [shopId, searchPattern, searchPattern, searchPattern]
       );
 
       logger.debug('Searched customers', { shopId, searchTerm, count: (results as any[]).length });

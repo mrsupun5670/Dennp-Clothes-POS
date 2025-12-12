@@ -8,6 +8,7 @@ import BankPaymentModal, {
   BankPaymentData,
 } from "../components/BankPaymentModal";
 import PaymentMethodSelector from "../components/PaymentMethodSelector";
+import { parsePaymentAmount } from "../utils/paymentUtils";
 import AddProductModal from "../components/AddProductModal";
 import {
   printContent,
@@ -162,8 +163,15 @@ const SalesPage: React.FC = () => {
     { color_id: number; color_name: string }[]
   >([]);
 
-  // Load order from sessionStorage on component mount
+  // Customer type filter (wholesale/retail)
+  const [customerTypeFilter, setCustomerTypeFilter] = useState<
+    "wholesale" | "retail"
+  >("wholesale");
+
+
+  // Restore draft data from sessionStorage on component mount
   React.useEffect(() => {
+    // First check if there's an order to edit - this takes priority
     const orderData = sessionStorage.getItem("orderToEdit");
     if (orderData) {
       try {
@@ -224,6 +232,41 @@ const SalesPage: React.FC = () => {
       } catch (error) {
         console.error("Error loading order data:", error);
       }
+    } else {
+      // If not editing an order, restore any draft data
+      const draftData = sessionStorage.getItem("salesPageDraft");
+      if (draftData) {
+        try {
+          const draft = JSON.parse(draftData);
+          
+          if (draft.selectedCustomer) {
+            setSelectedCustomer(draft.selectedCustomer);
+          }
+          if (draft.cartItems && Array.isArray(draft.cartItems)) {
+            setCartItems(draft.cartItems);
+          }
+          if (draft.paidAmount !== undefined) {
+            setPaidAmount(draft.paidAmount);
+          }
+          if (draft.orderNotes) {
+            setOrderNotes(draft.orderNotes);
+          }
+          if (draft.deliveryCharge !== undefined) {
+            setDeliveryCharge(draft.deliveryCharge);
+          }
+          if (draft.paymentMethod) {
+            setPaymentMethod(draft.paymentMethod);
+          }
+          if (draft.bankPaymentDetails) {
+            setBankPaymentDetails(draft.bankPaymentDetails);
+          }
+          if (draft.customerTypeFilter) {
+            setCustomerTypeFilter(draft.customerTypeFilter);
+          }
+        } catch (error) {
+          console.error("Error loading draft data:", error);
+        }
+      }
     }
 
     // Clear navigation flag
@@ -231,6 +274,47 @@ const SalesPage: React.FC = () => {
       sessionStorage.removeItem("navigateToSales");
     }
   }, []);
+
+  // Save draft data to sessionStorage whenever key data changes
+  React.useEffect(() => {
+    // Don't save draft if we're editing an existing order
+    if (editingOrderId) {
+      return;
+    }
+
+    // Only save if there's actual data to persist
+    if (
+      selectedCustomer ||
+      cartItems.length > 0 ||
+      paidAmount ||
+      orderNotes ||
+      deliveryCharge > 0 ||
+      bankPaymentDetails
+    ) {
+      const draftData = {
+        selectedCustomer,
+        cartItems,
+        paidAmount,
+        orderNotes,
+        deliveryCharge,
+        paymentMethod,
+        bankPaymentDetails,
+        customerTypeFilter,
+        timestamp: new Date().toISOString(),
+      };
+      sessionStorage.setItem("salesPageDraft", JSON.stringify(draftData));
+    }
+  }, [
+    selectedCustomer,
+    cartItems,
+    paidAmount,
+    orderNotes,
+    deliveryCharge,
+    paymentMethod,
+    bankPaymentDetails,
+    customerTypeFilter,
+    editingOrderId,
+  ]);
 
   // Modal States
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
@@ -325,14 +409,12 @@ const SalesPage: React.FC = () => {
   const [customerSearch, setCustomerSearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customerTypeFilter, setCustomerTypeFilter] = useState<
-    "wholesale" | "retail"
-  >("wholesale");
   const [newCustomer, setNewCustomer] = useState<NewCustomer>({
     name: "",
     email: "",
     mobile: "",
   });
+
 
   // Customer modal state
   const [customerFormData, setCustomerFormData] = useState({
@@ -1193,6 +1275,10 @@ const SalesPage: React.FC = () => {
     setEditingOrderId(null);
     setPreviouslyPaidAmount(0);
     setCurrentOrderNumber(null);
+    setDeliveryCharge(0);
+    
+    // Clear the draft data from sessionStorage
+    sessionStorage.removeItem("salesPageDraft");
   };
 
   const saveOrderInternal = async (): Promise<{
@@ -1223,9 +1309,9 @@ const SalesPage: React.FC = () => {
     try {
       let newPayment = 0;
       if (paymentMethod === "cash") {
-        newPayment = parseFloat(paidAmount) || 0;
+        newPayment = parsePaymentAmount(paidAmount);
       } else if (paymentMethod === "bank") {
-        newPayment = parseFloat(bankPaymentDetails?.paidAmount || "0") || 0;
+        newPayment = parsePaymentAmount(bankPaymentDetails?.paidAmount || "0");
       }
 
       const sriLankanDateTime = getSriLankanDateTime();
@@ -1243,18 +1329,19 @@ const SalesPage: React.FC = () => {
 
         const grandTotal = total + deliveryCharge;
 
-        const totalPaidNow = previouslyPaidAmount + newPayment;
-        const newBalance = Math.max(0, grandTotal - totalPaidNow);
+        // For repayment: final_amount increases, balance_due decreases, advance_paid stays same
+        const newFinalAmount = previouslyPaidAmount + newPayment;
+        const newBalance = Math.max(0, grandTotal - newFinalAmount);
 
         let paymentStatus = "unpaid";
-        if (totalPaidNow >= grandTotal) {
+        if (newFinalAmount >= grandTotal) {
           paymentStatus = "fully_paid";
-        } else if (totalPaidNow > 0) {
+        } else if (newFinalAmount > 0) {
           paymentStatus = "partial";
         }
 
         finalTotal = grandTotal;
-        finalPaid = totalPaidNow;
+        finalPaid = newFinalAmount;  // This is what will be shown to user
         finalBalance = newBalance;
         finalStatus = paymentStatus;
 
@@ -1263,8 +1350,8 @@ const SalesPage: React.FC = () => {
           total_items: cartItems.length,
           total_amount: total,
           delivery_charge: deliveryCharge,
-          final_amount: grandTotal,
-          advance_paid: totalPaidNow,
+          final_amount: newFinalAmount,  // Updated: old final + new payment
+          advance_paid: previouslyPaidAmount,  // Stays the same (original advance)
           balance_due: newBalance,
           payment_status: paymentStatus,
           payment_method:
@@ -1387,24 +1474,26 @@ const SalesPage: React.FC = () => {
         let finalAmount = 0;
 
         if (newPayment > 0) {
-          const actualPayment = Math.min(newPayment, total);
-
-          if (actualPayment < total) {
-            paymentStatus = "partial";
-            advancePaid = actualPayment;
-            balanceDue = total - actualPayment;
-            finalAmount = total;
-          } else {
+          if (newPayment >= total) {
+            // Full payment or overpayment
             paymentStatus = "fully_paid";
-            advancePaid = actualPayment;
+            advancePaid = 0;  // No advance when fully paid
             balanceDue = 0;
-            finalAmount = total;
+            finalAmount = newPayment;  // final_amount = what was paid
+            // Note: If overpayment, excess should be returned to customer
+          } else {
+            // Partial payment
+            paymentStatus = "partial";
+            advancePaid = newPayment;  // advance_paid = what was paid
+            balanceDue = total - newPayment;
+            finalAmount = newPayment;  // final_amount = what was paid
           }
         } else {
+          // No payment
           paymentStatus = "unpaid";
           advancePaid = 0;
           balanceDue = total;
-          finalAmount = total;
+          finalAmount = 0;
         }
 
         finalTotal = finalAmount;
@@ -1782,6 +1871,140 @@ const SalesPage: React.FC = () => {
     }
   };
 
+  // Combined function: Export as image AND print
+  const handlePrintAndExport = async () => {
+    const result = await saveOrderInternal();
+    if (result.success && result.data) {
+      const { orderNumber, total, paid, balance } = result.data;
+      
+      // Prepare invoice data
+      const invoiceData = {
+        order_id: 0,
+        order_number: orderNumber,
+        customer_id: selectedCustomer?.customer_id || 0,
+        total_items: cartItems.length,
+        total_amount: subtotal,
+        final_amount: total,
+        advance_paid: paid,
+        balance_due: balance || 0,
+        payment_status: (balance > 0 ? (paid > 0 ? "partial" : "unpaid") : "fully_paid") as "unpaid" | "partial" | "fully_paid",
+        payment_method: paymentMethod as "cash" | "card" | "online" | "bank" | "other",
+        order_status: "pending" as const,
+        notes: orderNotes || null,
+        order_date: new Date().toISOString(),
+        recipient_name: selectedCustomer?.first_name || selectedCustomer?.last_name || "",
+        customer_mobile: selectedCustomer?.mobile || "",
+        recipient_phone: selectedCustomer?.mobile || "",
+        delivery_charge: deliveryCharge,
+        delivery_line1: null,
+        delivery_line2: null,
+        delivery_city: null,
+        items: cartItems.map(item => ({
+          product_name: item.productName,
+          size_name: item.size,
+          color_name: item.color,
+          quantity: item.quantity,
+          sold_price: item.price,
+          total_price: item.price * item.quantity,
+        })),
+      };
+
+      // Create a temporary container for rendering
+      const printContainer = document.createElement("div");
+      printContainer.style.position = "fixed";
+      printContainer.style.left = "-9999px";
+      printContainer.style.width = "210mm"; // A4 width
+      printContainer.style.background = "white";
+      document.body.appendChild(printContainer);
+
+      const root = ReactDOM.createRoot(printContainer);
+      root.render(React.createElement(InvoicePrint, { order: invoiceData }));
+
+      // Wait for rendering to complete
+      setTimeout(async () => {
+        try {
+          // Step 1: Export as image and get the file path
+          const canvas = await html2canvas(printContainer, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            width: 794, // A4 width in pixels at 96 DPI
+            windowWidth: 794,
+          });
+
+          // Save image to downloads folder
+          const { downloadDir } = await import("@tauri-apps/api/path");
+          const { createDir, writeBinaryFile } = await import("@tauri-apps/api/fs");
+          const { join } = await import("@tauri-apps/api/path");
+
+          const downloadDirPath = await downloadDir();
+          const invoicesPath = await join(downloadDirPath, "Dennep Pos Invoices");
+          await createDir(invoicesPath, { recursive: true });
+
+          const timestamp = new Date().toISOString().replace(/[:.]/g, "-").split("T")[0];
+          const time = new Date().toTimeString().split(" ")[0].replace(/:/g, "-");
+          const fileName = `invoice-${orderNumber}-${timestamp}_${time}.png`;
+          const filePath = await join(invoicesPath, fileName);
+
+          // Convert canvas to blob and save
+          await new Promise<void>((resolve, reject) => {
+            canvas.toBlob(async (blob) => {
+              if (!blob) {
+                reject(new Error("Failed to generate image"));
+                return;
+              }
+
+              try {
+                const arrayBuffer = await blob.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+                await writeBinaryFile(filePath, uint8Array);
+                console.log(`✅ Invoice saved as image: ${fileName}`);
+                resolve();
+              } catch (error) {
+                console.error("Error saving image:", error);
+                reject(error);
+              }
+            }, "image/png");
+          });
+
+          // Step 2: Print the saved image using Tauri
+          try {
+            console.log(`🖨️ Attempting to print image: ${filePath}`);
+            const { invoke } = await import('@tauri-apps/api/tauri');
+            const result = await invoke('print_invoice', {
+              imagePath: filePath
+            });
+            console.log('🖨️ Print command result:', result);
+
+            setMessage({
+              type: "success",
+              text: `✅ Invoice ${orderNumber} saved as image and sent to printer!`
+            });
+          } catch (printError) {
+            console.error('❌ Print error:', printError);
+            setMessage({
+              type: "success",
+              text: `✅ Invoice ${orderNumber} saved as image! (Print failed: ${printError})`
+            });
+          }
+        } catch (error) {
+          console.error('Export error:', error);
+          setMessage({
+            type: "error",
+            text: `Failed to export: ${error}`
+          });
+        } finally {
+          document.body.removeChild(printContainer);
+        }
+      }, 1000);
+
+      resetSalesState();
+    } else if (result.error) {
+      setMessage({ type: "error", text: result.error });
+    }
+  };
+
 
 
   const handleCancelOrder = () => {
@@ -1822,20 +2045,20 @@ const SalesPage: React.FC = () => {
     : [];
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
+    <div className="space-y-4 h-full flex flex-col">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold text-red-500">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-red-500">
             {editingOrderId
               ? `Edit Order: ${currentOrderNumber || editingOrderId}`
               : "Sales & Orders"}
           </h1>
-          <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
+          <span className="text-xs font-semibold text-red-400 bg-red-900/30 px-2 py-1 rounded-full">
             {cartItems.length} items
           </span>
         </div>
-        <p className="text-gray-400 mt-2">
+        <p className="text-gray-400 mt-1 text-sm">
           {editingOrderId
             ? "Update order items and details"
             : "Create orders from online or WhatsApp enquiries"}
@@ -1845,7 +2068,7 @@ const SalesPage: React.FC = () => {
       {/* Message Display */}
       {message && (
         <div
-          className={`p-4 rounded-lg border-2 flex items-start gap-3 animate-in fade-in ${
+          className={`p-3 rounded-lg border-2 flex items-start gap-2 animate-in fade-in ${
             message.type === "error"
               ? "bg-red-900/40 border-red-600 text-red-300"
               : message.type === "success"
@@ -1853,21 +2076,21 @@ const SalesPage: React.FC = () => {
                 : "bg-blue-900/40 border-blue-600 text-blue-300"
           }`}
         >
-          <span className="text-xl font-bold mt-0.5">
+          <span className="text-lg font-bold mt-0.5">
             {message.type === "error"
               ? "✕"
               : message.type === "success"
                 ? "✓"
                 : "ℹ"}
           </span>
-          <p className="flex-1">{message.text}</p>
+          <p className="flex-1 text-sm">{message.text}</p>
         </div>
       )}
 
       {/* Main Content - Two Columns */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
         {/* Left Side - Customer & Products */}
-        <div className="lg:col-span-2 space-y-6 flex flex-col min-h-0">
+        <div className="lg:col-span-2 space-y-4 flex flex-col min-h-0">
           {/* Customer Selection */}
           <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 space-y-4">
             {!editingOrderId && (
@@ -2514,15 +2737,7 @@ const SalesPage: React.FC = () => {
             isEditingOrder={!!editingOrderId}
           />
 
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            <button
-              onClick={handleSaveOrder}
-              disabled={!selectedCustomer || cartItems.length === 0}
-              className="bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors text-sm"
-            >
-              {editingOrderId ? "📝 Update" : "✓ Save"}
-            </button>
-
+          <div className="grid grid-cols-2 gap-2 mt-2">
             <button
               onClick={handleSaveAndExport}
               disabled={!selectedCustomer || cartItems.length === 0}
@@ -2532,9 +2747,9 @@ const SalesPage: React.FC = () => {
             </button>
 
             <button
-              onClick={handleSimplePrint}
+              onClick={handlePrintAndExport}
               disabled={!selectedCustomer || cartItems.length === 0}
-              className="border-2 border-blue-600 text-blue-400 py-2 rounded-lg font-semibold hover:bg-blue-900/20 disabled:border-gray-600 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors text-sm"
+              className="bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors text-sm"
             >
               🖨️ Print
             </button>

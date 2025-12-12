@@ -45,9 +45,12 @@ class OrderModel {
     try {
       let sql = `
         SELECT o.*,
-               COALESCE(c.mobile, o.recipient_phone) as customer_mobile
+               COALESCE(c.mobile, o.recipient_phone) as customer_mobile,
+               GROUP_CONCAT(DISTINCT p.payment_method SEPARATOR ', ') as payment_method
         FROM orders o
         LEFT JOIN customers c ON o.customer_id = c.customer_id
+        LEFT JOIN payments p ON o.order_id = p.order_id
+        GROUP BY o.order_id
         ORDER BY o.created_at DESC
       `;
       let params: any[] = [];
@@ -55,10 +58,13 @@ class OrderModel {
       if (shopId) {
         sql = `
           SELECT o.*,
-                 COALESCE(c.mobile, o.recipient_phone) as customer_mobile
+                 COALESCE(c.mobile, o.recipient_phone) as customer_mobile,
+                 GROUP_CONCAT(DISTINCT p.payment_method SEPARATOR ', ') as payment_method
           FROM orders o
           LEFT JOIN customers c ON o.customer_id = c.customer_id
+          LEFT JOIN payments p ON o.order_id = p.order_id
           WHERE o.shop_id = ?
+          GROUP BY o.order_id
           ORDER BY o.created_at DESC
         `;
         params = [shopId];
@@ -192,11 +198,11 @@ class OrderModel {
         'customer_id',
         'total_items',
         'total_amount',
-        'delivery_charge',
+        // 'delivery_charge', // Handled specially below to add to balance_due
         'final_amount',
         'advance_paid',
-        'balance_due',
-        'payment_status',
+        // 'balance_due', // Calculated by backend, not updated directly
+        // 'payment_status', // Set by backend based on payment calculations
         'order_status',
         'recipient_phone',
         'recipient_phone1',
@@ -224,6 +230,45 @@ class OrderModel {
         values.push(JSON.stringify(orderData.delivery_address));
       }
 
+
+      // SIMPLE LOGIC: If delivery_charge is being added, add it to balance_due and set status to partial
+      logger.info('=== DELIVERY CHARGE DEBUG ===', {
+        orderId,
+        hasDeliveryCharge: 'delivery_charge' in orderData,
+        deliveryChargeValue: orderData.delivery_charge,
+        deliveryChargeType: typeof orderData.delivery_charge
+      });
+      
+      if ('delivery_charge' in orderData && typeof orderData.delivery_charge === 'number' && orderData.delivery_charge > 0) {
+        // Get current order to get current balance_due
+        const currentOrder = await this.getOrderById(orderId, shopId);
+        if (currentOrder) {
+          // IMPORTANT: Convert balance_due to number (it comes from DB as string)
+          const currentBalance = parseFloat(currentOrder.balance_due as any) || 0;
+          const deliveryCharge = orderData.delivery_charge;
+          const newBalance = currentBalance + deliveryCharge;
+          
+          // Add delivery_charge field itself
+          fields.push('delivery_charge = ?');
+          values.push(deliveryCharge);
+          
+          // Add balance_due update to the query
+          fields.push('balance_due = ?');
+          values.push(newBalance);
+          
+          // Set payment_status to partial
+          fields.push('payment_status = ?');
+          values.push('partial');
+          
+          logger.error('DELIVERY CHARGE: ' + JSON.stringify({
+            orderId,
+            deliveryCharge,
+            oldBalance: currentBalance,
+            newBalance
+          }));
+        }
+      }
+
       if (fields.length === 0) {
         logger.warn('No fields to update');
         return false;
@@ -246,6 +291,10 @@ class OrderModel {
       values.push(shopId);
 
       const sql = `UPDATE orders SET ${fields.join(', ')} WHERE order_id = ? AND shop_id = ?`;
+      
+      logger.error('SQL QUERY: ' + sql);
+      logger.error('SQL VALUES: ' + JSON.stringify(values));
+      
       const results = await query(sql, values);
       const affectedRows = (results as any).affectedRows;
 
@@ -258,8 +307,8 @@ class OrderModel {
   }
 
   /**
-   * Recalculate payment status based on final_amount and advance_paid
-   * Should be called after updating delivery_charge or recording payments
+   * Recalculate payment status when delivery_charge is added
+   * Calculates: balance_due = (total_amount + delivery_charge) - final_amount
    */
   async recalculatePaymentStatus(orderId: number, shopId: number): Promise<boolean> {
     try {
@@ -270,17 +319,18 @@ class OrderModel {
         return false;
       }
 
-      // Calculate final amount (total_amount + delivery_charge)
-      const finalAmount = order.total_amount + (order.delivery_charge || 0);
-
-      // Calculate balance due
-      const balanceDue = Math.max(0, finalAmount - (order.advance_paid || 0));
+      // Calculate grand total including delivery charge
+      const grandTotal = order.total_amount + (order.delivery_charge || 0);
+      
+      // Calculate balance due: grand total minus what's been paid (final_amount)
+      const totalPaid = order.final_amount || 0;
+      const newBalanceDue = Math.max(0, grandTotal - totalPaid);
 
       // Determine payment status
       let paymentStatus: 'unpaid' | 'partial' | 'fully_paid';
-      if (order.advance_paid === 0) {
+      if (totalPaid === 0) {
         paymentStatus = 'unpaid';
-      } else if (balanceDue > 0) {
+      } else if (newBalanceDue > 0) {
         paymentStatus = 'partial';
       } else {
         paymentStatus = 'fully_paid';
@@ -297,22 +347,22 @@ class OrderModel {
       const seconds = String(dateObj.getSeconds()).padStart(2, "0");
       const updated_at = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
-      // Update order with recalculated values
+      // Update balance_due and payment_status
       const results = await query(
         `UPDATE orders
-         SET final_amount = ?,
-             balance_due = ?,
+         SET balance_due = ?,
              payment_status = ?,
              updated_at = ?
          WHERE order_id = ? AND shop_id = ?`,
-        [finalAmount, balanceDue, paymentStatus, updated_at, orderId, shopId]
+        [newBalanceDue, paymentStatus, updated_at, orderId, shopId]
       );
 
       const affectedRows = (results as any).affectedRows;
       logger.info('Payment status recalculated', {
         orderId,
-        finalAmount,
-        balanceDue,
+        grandTotal,
+        totalPaid,
+        newBalanceDue,
         paymentStatus,
         affectedRows
       });

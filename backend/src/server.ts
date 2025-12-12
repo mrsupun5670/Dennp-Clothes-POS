@@ -4,7 +4,7 @@ import { logger } from './utils/logger';
 
 const PORT = config.server.port;
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Server is running on port ${PORT}`);
   logger.info(`Environment: ${config.server.nodeEnv}`);
   logger.info(`API URL: ${config.server.apiUrl}`);

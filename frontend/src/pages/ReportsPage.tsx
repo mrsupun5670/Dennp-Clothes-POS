@@ -154,114 +154,115 @@ const ReportsPage: React.FC = () => {
 
   return (
     <div className="space-y-3 h-full flex flex-col">
-      {/* Header and Controls - Compact */}
-      <div className="space-y-2">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-red-500">Reports</h1>
-            <p className="text-xs text-gray-400 mt-1">View sales and cost analytics</p>
-          </div>
+      {/* Compact Single-Row Header - All controls in one line */}
+      <div className="flex items-center gap-4">
+        {/* Title */}
+        <div className="flex-shrink-0">
+          <h1 className="text-2xl font-bold text-red-500">Reports</h1>
         </div>
 
-        {/* View Buttons and Time Period - Horizontal Layout */}
-        <div className="flex gap-4 items-end">
-          <div className="flex gap-2">
-            <button onClick={() => setCurrentView("sold-items")} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${currentView === "sold-items" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}>
-              📊 Sold Items
+        {/* View Buttons (Sold Items / Costs Chips) */}
+        <div className="flex gap-2">
+          <button onClick={() => setCurrentView("sold-items")} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${currentView === "sold-items" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}>
+            📊 Sold Items
+          </button>
+          <button onClick={() => setCurrentView("costs")} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${currentView === "costs" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}>
+            💰 Costs
+          </button>
+        </div>
+
+        {/* Time Period */}
+        <div className="flex items-center gap-2">
+          <select value={timePeriod} onChange={(e) => setTimePeriod(e.target.value as TimePeriod)} className="px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none">
+            <option value="today">Today</option>
+            <option value="week">Last 7 Days</option>
+            <option value="month">Last Month</option>
+            <option value="3months">Last 3 Months</option>
+            <option value="12months">Last 12 Months</option>
+            <option value="custom">Custom Range</option>
+          </select>
+
+          {/* Custom Date Range - Inline */}
+          {timePeriod === "custom" && (
+            <>
+              <input
+                type="date"
+                value={customFromDate}
+                onChange={(e) => setCustomFromDate(e.target.value)}
+                className="px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                placeholder="From"
+              />
+              <input
+                type="date"
+                value={customToDate}
+                onChange={(e) => setCustomToDate(e.target.value)}
+                className="px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                placeholder="To"
+              />
+            </>
+          )}
+        </div>
+
+        {/* Print Buttons */}
+        <div className="flex gap-2">
+          {currentView === "sold-items" && (
+            <button
+              onClick={() => {
+                const html = generateSalesReportHTML(filteredSoldItems);
+                printContent(html, 'Sales Report');
+              }}
+              className="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors font-semibold flex items-center gap-1"
+              title="Print Sales Report"
+            >
+              🖨️ Print
             </button>
-            <button onClick={() => setCurrentView("costs")} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${currentView === "costs" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}>
-              💰 Costs
-            </button>
-          </div>
-
-          <div className="flex items-end gap-3">
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-red-400">Time Period</label>
-              <select value={timePeriod} onChange={(e) => setTimePeriod(e.target.value as TimePeriod)} className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none">
-                <option value="today">Today</option>
-                <option value="week">Last 7 Days</option>
-                <option value="month">Last Month</option>
-                <option value="3months">Last 3 Months</option>
-                <option value="12months">Last 12 Months</option>
-                <option value="custom">Custom Range</option>
-              </select>
-            </div>
-
-            {/* Custom Date Range Pickers - Show only when Custom Range is selected */}
-            {timePeriod === "custom" && (
-              <div className="flex items-end gap-2">
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-red-400">From Date</label>
-                  <input
-                    type="date"
-                    value={customFromDate}
-                    onChange={(e) => setCustomFromDate(e.target.value)}
-                    className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-red-400">To Date</label>
-                  <input
-                    type="date"
-                    value={customToDate}
-                    onChange={(e) => setCustomToDate(e.target.value)}
-                    className="px-3 py-1 bg-gray-700 border-2 border-red-600/30 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Export Buttons */}
-          <div className="flex gap-2">
-            {currentView === "sold-items" && (
+          )}
+          {currentView === "costs" && (
+            <>
               <button
                 onClick={() => {
-                  const html = generateSalesReportHTML(filteredSoldItems);
-                  printContent(html, 'Sales Report');
+                  const html = generateProductCostsReportHTML(costBreakdown || {});
+                  printContent(html, 'Product Costs Report');
                 }}
-                className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
-                title="Print Sales Report"
+                className="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors font-semibold"
+                title="Print Product Costs"
               >
-                🖨️ Print Sales
+                🖨️ P.Costs
               </button>
-            )}
-            {currentView === "costs" && (
-              <>
-                <button
-                  onClick={() => {
-                    const html = generateProductCostsReportHTML(costBreakdown || {});
-                    printContent(html, 'Product Costs Report');
-                  }}
-                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
-                  title="Print Product Costs"
-                >
-                  🖨️ Product Costs
-                </button>
-                <button
-                  onClick={() => {
-                    const html = generateDeliveryCostsReportHTML(costBreakdown || {});
-                    printContent(html, 'Delivery Costs Report');
-                  }}
-                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
-                  title="Print Delivery Costs"
-                >
-                  🖨️ Delivery Costs
-                </button>
-                <button
-                  onClick={() => {
-                    const html = generateProfitsReportHTML(costBreakdown || {});
-                    printContent(html, 'Profits Report');
-                  }}
-                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
-                  title="Print Profits Report"
-                >
-                  🖨️ Profits
-                </button>
-              </>
-            )}
-          </div>
+              <button
+                onClick={() => {
+                  const html = generateDeliveryCostsReportHTML(costBreakdown || {});
+                  printContent(html, 'Delivery Costs Report');
+                }}
+                className="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors font-semibold"
+                title="Print Delivery Costs"
+              >
+                🖨️ D.Costs
+              </button>
+              <button
+                onClick={() => {
+                  const html = generateProfitsReportHTML(costBreakdown || {});
+                  printContent(html, 'Profits Report');
+                }}
+                className="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors font-semibold"
+                title="Print Profits"
+              >
+                🖨️ Profits
+              </button>
+            </>
+          )}
         </div>
+
+        {/* Search Bar - Only show for Sold Items view */}
+        {currentView === "sold-items" && (
+          <input
+            type="text"
+            placeholder="🔍 Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded text-sm focus:border-red-500 focus:outline-none"
+          />
+        )}
       </div>
 
       {currentView === "sold-items" && (
@@ -272,15 +273,6 @@ const ReportsPage: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* Search Bar */}
-              <input
-                type="text"
-                placeholder="🔍 Search by product name or order number..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded text-sm focus:border-red-500 focus:outline-none"
-              />
-
               {/* Summary Metrics */}
               <div className="grid grid-cols-4 gap-2">
                 <div className="bg-green-900/40 border border-green-600/50 rounded p-2">

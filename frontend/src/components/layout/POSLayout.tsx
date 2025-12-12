@@ -39,30 +39,29 @@ const POSLayout: React.FC<POSLayoutProps> = ({ currentPage, onPageChange, childr
       {/* Top Header - Microsoft Word Style */}
       <header className="bg-black/95 shadow-lg border-b-2 border-red-600">
         {/* Logo and Title Bar */}
-        <div className="px-6 py-3 border-b border-red-600/30 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="px-4 py-2 border-b border-red-600/30 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <img
               src="/dennep png.png"
               alt="Dennep Logo"
-              className="h-12 w-12 object-contain"
+              className="h-10 w-10 object-contain"
             />
             <div>
-              <h1 className="text-xl font-bold text-red-500">Dennep Clothes POS</h1>
+              <h1 className="text-lg font-bold text-red-500">Dennep Clothes POS</h1>
               <p className="text-xs text-gray-400">Inventory & Sales Management System</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <ShopBadge size="sm" />
-            <ShopStatus />
-            <div className="text-sm text-red-400 font-mono bg-gray-900/50 px-3 py-2 rounded border border-red-600/30">
+            <div className="text-xs text-red-400 font-mono bg-gray-900/50 px-2 py-1 rounded border border-red-600/30">
               {new Date().toLocaleTimeString()}
             </div>
             {isAdminAuthenticated && (
-              <div className="flex items-center gap-2 pl-4 border-l border-red-600/30">
-                <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-700 rounded-full flex items-center justify-center font-bold text-white text-sm">
+              <div className="flex items-center gap-2 pl-3 border-l border-red-600/30">
+                <div className="w-7 h-7 bg-gradient-to-br from-red-600 to-red-700 rounded-full flex items-center justify-center font-bold text-white text-xs">
                   A
                 </div>
-                <span className="text-sm font-medium text-red-400">Admin</span>
+                <span className="text-xs font-medium text-red-400">Admin</span>
                 <button
                   onClick={handleLogout}
                   className="ml-2 px-2 py-1 bg-gray-700 hover:bg-gray-600 text-red-400 text-xs font-semibold rounded border border-red-600/30 transition-colors duration-200"
@@ -74,11 +73,11 @@ const POSLayout: React.FC<POSLayoutProps> = ({ currentPage, onPageChange, childr
             )}
             <button
               onClick={handleCloseApp}
-              className="ml-4 px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-semibold rounded border border-red-700 transition-colors duration-200 flex items-center gap-2"
+              className="ml-3 px-2 py-1 bg-red-600 hover:bg-red-700 text-white font-semibold rounded border border-red-700 transition-colors duration-200 flex items-center gap-1 text-xs"
               title="Close Application"
             >
               <span>✕</span>
-              <span className="text-xs">Close</span>
+              <span>Close</span>
             </button>
           </div>
         </div>
@@ -89,21 +88,21 @@ const POSLayout: React.FC<POSLayoutProps> = ({ currentPage, onPageChange, childr
             <button
               key={item.id}
               onClick={() => onPageChange(item.id)}
-              className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-all duration-200 whitespace-nowrap ${
+              className={`flex items-center gap-2 px-3 py-2 border-b-2 transition-all duration-200 whitespace-nowrap ${
                 currentPage === item.id
                   ? "border-b-red-600 bg-red-600/20 text-red-500 font-semibold"
                   : "border-b-transparent text-gray-300 hover:text-red-400 hover:bg-gray-800/50"
               }`}
             >
-              <span className="text-lg">{item.icon}</span>
-              <span className="text-sm">{item.label}</span>
+              <span className="text-base">{item.icon}</span>
+              <span className="text-xs">{item.label}</span>
             </button>
           ))}
         </nav>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-auto p-8 bg-gradient-to-b from-gray-900 via-gray-800 to-black">
+      <main className="flex-1 overflow-auto p-4 bg-gradient-to-b from-gray-900 via-gray-800 to-black">
         {children}
       </main>
     </div>

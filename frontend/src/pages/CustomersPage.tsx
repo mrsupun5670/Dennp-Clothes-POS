@@ -87,7 +87,7 @@ const CustomersPage: React.FC = () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${API_URL}/customers/search?q=${encodeURIComponent(query)}`
+        `${API_URL}/customers/search?shop_id=${shopId}&q=${encodeURIComponent(query)}`
       );
       const result = await response.json();
       if (result.success) {
@@ -200,22 +200,27 @@ const CustomersPage: React.FC = () => {
     }
   };
 
-  // Handle search with debounce
-  useEffect(() => {
-    const delayDebounce = setTimeout(() => {
-      if (searchQuery.trim()) {
-        searchCustomers(searchQuery);
-      } else {
-        refetchCustomers();
-      }
-    }, 500);
+  // Search is now handled by client-side filtering in filteredCustomers useMemo
 
-    return () => clearTimeout(delayDebounce);
-  }, [searchQuery, refetchCustomers]);
-
-  // Filter customers based on status
+  // Filter customers based on search query and status
   const filteredCustomers = useMemo(() => {
     let result = [...(customers || [])];
+
+    // Filter by search query (customer_id, mobile, or email)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((customer) => {
+        const customerId = String(customer.customer_id).toLowerCase();
+        const mobile = customer.mobile.toLowerCase();
+        const email = (customer.email || "").toLowerCase();
+        
+        return (
+          customerId.includes(query) ||
+          mobile.includes(query) ||
+          email.includes(query)
+        );
+      });
+    }
 
     // Filter by status
     if (statusFilter !== "all") {
@@ -225,7 +230,7 @@ const CustomersPage: React.FC = () => {
     }
 
     return result;
-  }, [customers, statusFilter]);
+  }, [customers, searchQuery, statusFilter]);
 
   const handleAddClick = () => {
     setIsEditMode(false);
@@ -337,99 +342,84 @@ const CustomersPage: React.FC = () => {
         </div>
       )}
 
-      {/* Header Section */}
-      <div className="flex justify-between items-center">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-red-500">Customers</h1>
-            <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
-              {filteredCustomers.length} customers
-            </span>
-          </div>
-          <p className="text-gray-400 mt-2">
-            Manage customer information and profiles
-          </p>
+      {/* Compact Header - Row 1: Main Controls */}
+      <div className="flex items-center gap-4">
+        {/* Title and Count */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <h1 className="text-2xl font-bold text-red-500">Customers</h1>
+          <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
+            {filteredCustomers.length}
+          </span>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => {
-              const html = generateCustomersHTML(filteredCustomers);
-              printContent(html, 'Customers Report');
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
-            title="Print Report"
-          >
-            🖨️ Print
-          </button>
-          <button
-            onClick={handleAddClick}
-            className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-semibold"
-          >
-            + Add Customer
-          </button>
-        </div>
-      </div>
 
-      {/* Search Bar */}
-      <div className="space-y-2">
-        <label className="block text-sm font-semibold text-red-400">
-          Search Customers
-        </label>
+        {/* Print Button */}
+        <button
+          onClick={() => {
+            const html = generateCustomersHTML(filteredCustomers);
+            printContent(html, 'Customers Report');
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm"
+          title="Print Report"
+        >
+          🖨️ Print
+        </button>
+
+        {/* Add Customer Button */}
+        <button
+          onClick={handleAddClick}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-semibold text-sm"
+        >
+          ➕ Add
+        </button>
+
+        {/* Search Bar */}
         <input
           type="text"
-          placeholder="Search by name or mobile..."
+          placeholder="🔍 Search by name or mobile..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-4 py-3 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-colors"
+          className="flex-1 px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
         />
       </div>
 
-      {/* Status Filter */}
-      <div className="space-y-2">
-        <label className="block text-sm font-semibold text-red-400">
-          Filter by Status
-        </label>
-        <div className="flex gap-2 flex-wrap">
-          {[
-            {
-              value: "all",
-              label: "All Customers",
-              color: "bg-gray-600 hover:bg-gray-700",
-              count: customers?.length || 0,
-            },
-            {
-              value: "active",
-              label: "Active",
-              color: "bg-green-600 hover:bg-green-700",
-              count: customers?.filter((c) => c.customer_status === "active")
-                .length || 0,
-            },
-            {
-              value: "inactive",
-              label: "Inactive",
-              color: "bg-yellow-600 hover:bg-yellow-700",
-              count: customers?.filter((c) => c.customer_status === "inactive")
-                .length || 0,
-            },
-          ].map((filter) => (
-            <button
-              key={filter.value}
-              onClick={() =>
-                setStatusFilter(filter.value as "all" | "active" | "inactive")
-              }
-              className={`px-4 py-2 rounded-full font-semibold text-white transition-all ${
-                statusFilter === filter.value
-                  ? `${filter.color} ring-2 ring-offset-2 ring-offset-gray-800`
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-              }`}
-            >
-              {filter.label}
-              <span className="ml-2 bg-black/30 px-2 py-0.5 rounded-full text-xs">
-                {filter.count}
-              </span>
-            </button>
-          ))}
-        </div>
+      {/* Compact Header - Row 2: Status Filter Chips */}
+      <div className="flex gap-2">
+        {[
+          {
+            value: "all",
+            label: "All Customers",
+            color: "bg-gray-600 hover:bg-gray-700",
+            count: customers?.length || 0,
+          },
+          {
+            value: "active",
+            label: "Active",
+            color: "bg-green-600 hover:bg-green-700",
+            count: customers?.filter((c) => c.customer_status === "active")
+              .length || 0,
+          },
+          {
+            value: "inactive",
+            label: "Inactive",
+            color: "bg-yellow-600 hover:bg-yellow-700",
+            count: customers?.filter((c) => c.customer_status === "inactive")
+              .length || 0,
+          },
+        ].map((filter) => (
+          <button
+            key={filter.value}
+            onClick={() =>
+              setStatusFilter(filter.value as "all" | "active" | "inactive")
+            }
+            className={`px-4 py-2 rounded-lg font-semibold text-sm text-white transition-all ${
+              statusFilter === filter.value
+                ? `${filter.color} ring-2 ring-red-500`
+                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+            }`}
+          >
+            {filter.label} ({filter.count})
+          </button>
+        ))}
       </div>
 
       {/* Customers Table - Scrollable */}

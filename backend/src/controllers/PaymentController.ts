@@ -85,7 +85,8 @@ class PaymentController {
       }
 
       // CAP PAYMENT AT ORDER TOTAL - Don't allow overpayment recording
-      let actualPaymentAmount = parseFloat(payment_amount);
+      // Round to 2 decimal places to prevent floating-point precision errors
+      let actualPaymentAmount = Math.round(parseFloat(payment_amount) * 100) / 100;
 
       if (order_id) {
         // Get order details

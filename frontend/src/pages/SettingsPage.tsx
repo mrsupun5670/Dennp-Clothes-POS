@@ -43,7 +43,7 @@ const SettingsPage: React.FC = () => {
       <div className="max-w-2xl mx-auto">
         <div className="bg-gray-800/50 backdrop-blur-sm border-2 border-red-600/30 rounded-lg shadow-2xl p-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-red-500 mb-2">Settings</h1>
+            <h1 className="text-2xl font-bold text-red-500 mb-2">Settings</h1>
             <p className="text-gray-400">Manage your admin account settings</p>
           </div>
 

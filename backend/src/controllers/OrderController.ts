@@ -372,15 +372,29 @@ class OrderController {
           return;
         }
 
-        // Check if payment is fully settled (final_amount >= total_amount)
-        if (order.balance_due > 0) {
+        // Check if payment is fully settled (balance_due should be 0 or less)
+        // Convert to number because balance_due comes from DB as string
+        const balanceDue = parseFloat(order.balance_due as any) || 0;
+        
+        logger.error('SHIPPED CHECK: ' + JSON.stringify({
+          orderId: id,
+          balance_due_raw: order.balance_due,
+          balance_due_parsed: balanceDue,
+          payment_status: order.payment_status,
+          total_amount: order.total_amount,
+          final_amount: order.final_amount,
+          delivery_charge: order.delivery_charge
+        }));
+        
+        if (balanceDue > 0.01) {  // Allow small rounding errors
           res.status(400).json({
             success: false,
-            error: `Payment not complete. Amount due: Rs. ${order.balance_due.toFixed(2)}. Please settle payment before marking as shipped.`,
+            error: `NEW CODE: Payment not complete. Rs. ${balanceDue.toFixed(2)} must be paid before marking as shipped`,
             details: {
               total_amount: order.total_amount,
               final_amount: order.final_amount,
-              balance_due: order.balance_due,
+              balance_due: balanceDue,
+              payment_status: order.payment_status,
             },
           });
           return;
@@ -401,11 +415,7 @@ class OrderController {
         return;
       }
 
-      // Recalculate payment status if delivery_charge was updated
-      // This ensures balance_due reflects the new delivery charge
-      if (updateData.delivery_charge !== undefined) {
-        await OrderModel.recalculatePaymentStatus(Number(id), shop_id);
-      }
+      // Delivery charge logic is now handled directly in updateOrder method
 
       res.json({
         success: true,

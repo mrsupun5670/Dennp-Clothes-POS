@@ -1,19 +1,20 @@
+/// <reference types="vite/client" />
 // API Configuration
 // Automatically detect API URL based on environment
 
 const getApiUrl = (): string => {
+  // Use environment variable if available (works for both dev and prod if set in .env)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
   // If running in development with Vite, use localhost on port 3002
-  if ((import.meta as any).env?.DEV) {
-    return 'http://localhost:3002/api/v1';
+  if (import.meta.env.DEV) {
+    return 'http://localhost:3002/api';
   }
 
-  // If running in Electron or production, use relative paths
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'http://localhost:3002/api/v1';
-  }
-
-  // Default to relative API path for production
-  return '/api/v1';
+  // Fallback (this was causing the issue in Tauri)
+  return 'http://localhost:3002/api'; 
 };
 
 export const API_URL = getApiUrl();

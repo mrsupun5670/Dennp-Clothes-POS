@@ -23,23 +23,77 @@ class ProductModel {
   /**
    * Get all products for specific shop
    */
-  async getAllProducts(shopId: number): Promise<Product[]> {
+  /**
+   * Get all products for specific shop with detailed stock information
+   */
+  async getAllProducts(shopId: number): Promise<any[]> {
     try {
-      const results = await query(
-        "SELECT * FROM products WHERE shop_id = ? ORDER BY created_at DESC",
-        [shopId]
-      );
-      // TODO: This is inefficient (N+1 problem). Refactor to use a single query with JOINs.
-      const products = await Promise.all(
-        (results as any[]).map((p) =>
-          this.getProductWithDetails(p.product_id, shopId)
-        )
-      );
-      logger.info("Retrieved all products for shop", {
+      const queryStr = `
+        SELECT 
+          p.product_id, 
+          p.product_name, 
+          p.category_id, 
+          p.product_cost, 
+          p.print_cost, 
+          p.retail_price, 
+          p.wholesale_price,
+          sps.stock_id,
+          sps.stock_qty,
+          sps.size_id,
+          sps.color_id,
+          c.color_name,
+          s.size_name
+        FROM products p
+        LEFT JOIN shop_product_stock sps ON p.product_id = sps.product_id AND p.shop_id = sps.shop_id
+        LEFT JOIN colors c ON sps.color_id = c.color_id
+        LEFT JOIN sizes s ON sps.size_id = s.size_id
+        WHERE p.shop_id = ?
+        ORDER BY p.created_at DESC, p.product_id
+      `;
+
+      const results = await query(queryStr, [shopId]);
+      
+      const productsMap = new Map<string, any>();
+
+      (results as any[]).forEach(row => {
+        if (!productsMap.has(row.product_id)) {
+          productsMap.set(row.product_id, {
+            product_id: row.product_id,
+            product_name: row.product_name,
+            category_id: row.category_id,
+            product_cost: row.product_cost,
+            print_cost: row.print_cost,
+            retail_price: row.retail_price,
+            wholesale_price: row.wholesale_price,
+            stock: 0,
+            stockDetails: []
+          });
+        }
+
+        const product = productsMap.get(row.product_id);
+
+        if (row.stock_id) {
+          const qty = Number(row.stock_qty) || 0;
+          product.stock += qty;
+          product.stockDetails.push({
+            stock_id: row.stock_id,
+            size_id: Number(row.size_id),
+            size_name: row.size_name || 'N/A',
+            color_id: Number(row.color_id),
+            color_name: row.color_name || 'N/A',
+            stock_qty: qty
+          });
+        }
+      });
+
+      const products = Array.from(productsMap.values());
+      
+      logger.info("Retrieved all products for shop with stock details", {
         shopId,
         count: products.length,
       });
-      return products as Product[];
+      
+      return products;
     } catch (error) {
       logger.error("Error fetching all products:", error);
       throw error;
@@ -832,9 +886,6 @@ class ProductModel {
     }
   }
 
-  /**
-   * Get product with all details (colors, sizes, category)
-   */
   async getProductWithDetails(productId: string, shopId: number): Promise<any> {
     try {
       const product = await this.getProductById(productId, shopId);
@@ -842,10 +893,11 @@ class ProductModel {
 
       const colors = await this.getProductColors(productId, shopId);
       const sizes = await this.getProductSizes(productId, shopId);
-      const stock = await this.getProductStock(productId, shopId);
+      const stockTotal = await this.getProductStock(productId, shopId);
+      const stockDetails = await this.getProductStockDetails(productId, shopId);
 
       logger.debug("Retrieved product with details", { productId, shopId });
-      return { ...product, colors, sizes, stock };
+      return { ...product, colors, sizes, stock: stockTotal, stockDetails };
     } catch (error) {
       logger.error("Error fetching product with details:", error);
       throw error;

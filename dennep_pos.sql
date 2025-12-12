@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Dec 07, 2025 at 05:59 PM
+-- Generation Time: Dec 11, 2025 at 09:12 AM
 -- Server version: 11.8.3-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -125,8 +125,8 @@ CREATE TABLE `bank_accounts` (
 --
 
 INSERT INTO `bank_accounts` (`bank_account_id`, `shop_id`, `bank_name`, `initial_balance`, `current_balance`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Commercial Bank', 150000.00, 151000.00, '2025-11-24 04:26:21', '2025-12-07 16:08:50'),
-(2, 1, 'Bank of Ceylon', 80000.00, 83000.00, '2025-11-24 04:26:21', '2025-12-07 17:08:59');
+(1, 1, 'Commercial Bank', 150000.00, 150000.00, '2025-11-24 04:26:21', '2025-12-11 06:27:24'),
+(2, 1, 'Bank of Ceylon', 80000.00, 80000.00, '2025-11-24 04:26:21', '2025-12-11 06:27:16');
 
 -- --------------------------------------------------------
 
@@ -233,8 +233,8 @@ CREATE TABLE `customers` (
 --
 
 INSERT INTO `customers` (`customer_id`, `shop_id`, `mobile`, `email`, `orders_count`, `total_spent`, `created_at`, `updated_at`) VALUES
-(1001, 1, '0772010915', 'supun9402@gmail.com', 1, 5000.00, '2025-12-06 17:27:36', '2025-12-07 17:38:41'),
-(1002, 1, '0778223712', NULL, 3, 6000.00, '2025-12-07 01:58:17', '2025-12-07 17:24:28');
+(1001, 1, '0772010915', 'supun9402@gmail.com', 2, 12000.00, '2025-12-06 17:27:36', '2025-12-07 18:47:37'),
+(1002, 1, '0778223712', NULL, 20, 82000.01, '2025-12-07 01:58:17', '2025-12-10 10:43:20');
 
 -- --------------------------------------------------------
 
@@ -284,16 +284,6 @@ CREATE TABLE `orders` (
   `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `orders`
---
-
-INSERT INTO `orders` (`order_id`, `shop_id`, `order_number`, `customer_id`, `user_id`, `total_items`, `order_status`, `total_amount`, `delivery_charge`, `final_amount`, `advance_paid`, `balance_due`, `payment_status`, `notes`, `delivery_line1`, `delivery_line2`, `delivery_postal_code`, `delivery_city`, `delivery_district`, `delivery_province`, `recipient_name`, `recipient_phone`, `recipient_phone1`, `tracking_number`, `created_at`, `updated_at`) VALUES
-(43, 1, '0001000', 1002, NULL, 1, 'pending', 2000.00, 0.00, 2000.00, 1000.00, 0.00, 'fully_paid', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '0778223712', NULL, NULL, '2025-12-07 21:38:48', '2025-12-07 16:09:50'),
-(44, 1, '0001001', 1002, NULL, 1, 'processing', 2000.00, 0.00, 2000.00, 2000.00, 0.00, 'fully_paid', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '0778223712', NULL, NULL, '2025-12-07 22:38:57', '2025-12-07 22:39:50'),
-(45, 1, '0001002', 1002, NULL, 1, 'pending', 2000.00, 0.00, 2000.00, 2000.00, 0.00, 'fully_paid', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '0778223712', NULL, NULL, '2025-12-07 22:54:27', '2025-12-07 22:54:27'),
-(46, 1, '0001003', 1001, NULL, 1, 'pending', 5000.00, 0.00, 5000.00, 5000.00, 0.00, 'fully_paid', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '0772010915', NULL, NULL, '2025-12-07 23:08:40', '2025-12-07 23:08:40');
-
 -- --------------------------------------------------------
 
 --
@@ -311,16 +301,6 @@ CREATE TABLE `order_items` (
   `total_price` decimal(12,2) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `order_items`
---
-
-INSERT INTO `order_items` (`item_id`, `order_id`, `product_id`, `color_id`, `size_id`, `quantity`, `sold_price`, `total_price`, `created_at`) VALUES
-(74, 43, '1003', 1, 1, 2, 1000.00, 2000.00, '2025-12-07 16:08:49'),
-(75, 44, '1003', 1, 1, 2, 1000.00, 2000.00, '2025-12-07 17:08:58'),
-(76, 45, '1003', 1, 1, 2, 1000.00, 2000.00, '2025-12-07 17:24:28'),
-(77, 46, '1003', 1, 1, 5, 1000.00, 5000.00, '2025-12-07 17:38:41');
 
 -- --------------------------------------------------------
 
@@ -346,16 +326,36 @@ CREATE TABLE `payments` (
   `updated_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------
+
 --
--- Dumping data for table `payments`
+-- Table structure for table `payment_notes`
 --
 
-INSERT INTO `payments` (`payment_id`, `shop_id`, `order_id`, `customer_id`, `payment_amount`, `payment_method`, `bank_name`, `branch_name`, `bank_account_id`, `transaction_id`, `payment_status`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
-(31, 1, 43, 1002, 1000.00, 'bank_deposit', 'Commercial Bank', 'Kurunegala', 1, 'Test 1', 'completed', 'Bank: Commercial Bank, Branch: Kurunegala, Receipt: Test 1', NULL, '2025-12-07 21:38:49', '2025-12-07 21:38:49'),
-(32, 1, 43, NULL, 1000.00, 'online_transfer', 'Bank of Ceylon', NULL, 2, 'Test', 'completed', 'balance payment - Bank: Bank of Ceylon, Branch: N/A', NULL, '2025-12-07 21:39:49', '2025-12-07 21:39:49'),
-(33, 1, 44, 1002, 2000.00, 'bank_deposit', 'Bank of Ceylon', 'Colombo', 2, 'R', 'completed', 'Bank: Bank of Ceylon, Branch: Colombo, Receipt: R', NULL, '2025-12-07 22:38:58', '2025-12-07 22:38:58'),
-(34, 1, 45, 1002, 2000.00, 'cash', NULL, NULL, NULL, NULL, 'completed', NULL, NULL, '2025-12-07 22:54:28', '2025-12-07 22:54:28'),
-(35, 1, 46, 1001, 5000.00, 'cash', NULL, NULL, NULL, NULL, 'completed', NULL, NULL, '2025-12-07 23:08:41', '2025-12-07 23:08:41');
+CREATE TABLE `payment_notes` (
+  `payment_note_id` int(11) NOT NULL,
+  `shop_id` int(11) NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `payment_method` enum('Cash','Bank Transfer','Bank Deposit') NOT NULL DEFAULT 'Cash',
+  `bank_name` varchar(100) DEFAULT NULL,
+  `bank_branch_name` varchar(100) DEFAULT NULL,
+  `payment_date` date NOT NULL,
+  `payment_time` time NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `payment_notes`
+--
+
+INSERT INTO `payment_notes` (`payment_note_id`, `shop_id`, `amount`, `payment_method`, `bank_name`, `bank_branch_name`, `payment_date`, `payment_time`, `created_at`, `updated_at`) VALUES
+(2, 1, 5000.00, 'Cash', NULL, NULL, '2025-12-08', '00:28:00', '2025-12-08 19:11:26', '2025-12-08 19:11:26'),
+(3, 1, 3000.00, 'Bank Transfer', 'Commercial Bank', NULL, '2025-12-08', '00:48:00', '2025-12-08 19:18:14', '2025-12-08 19:18:14'),
+(4, 1, 7000.00, 'Bank Deposit', 'Bank of Ceylon', 'Kurunegala', '2025-12-08', '00:48:00', '2025-12-08 19:18:30', '2025-12-08 19:18:30'),
+(5, 1, 5000.00, 'Bank Deposit', 'Commercial Bank', 'Kandy', '2025-12-09', '15:58:00', '2025-12-10 10:28:39', '2025-12-10 10:28:39'),
+(7, 1, 4000.00, 'Cash', NULL, NULL, '2025-12-10', '21:19:00', '2025-12-10 15:49:52', '2025-12-10 15:49:52'),
+(8, 1, 4000.00, 'Bank Transfer', 'Commercial Bank', NULL, '2025-12-11', '12:03:00', '2025-12-11 06:33:52', '2025-12-11 06:33:52');
 
 -- --------------------------------------------------------
 
@@ -385,7 +385,7 @@ INSERT INTO `products` (`product_id`, `shop_id`, `product_name`, `category_id`, 
 ('1002', 3, 'High-Waist Skinny Jean', 1, 6500.00, 4000.00, 500.00, 20.00, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
 ('1003', 1, 'Kids Elastic Trousers', 1, 1800.00, 1000.00, 600.00, 33.00, '2025-11-24 04:26:21', '2025-12-07 17:44:30'),
 ('1004', 2, 'Leather Formal Shoes', 4, 9000.00, 5500.00, 1000.00, 70.00, '2025-11-24 04:26:21', '2025-11-25 06:16:24'),
-('T-1005', 1, 'Test 1', 5, 1500.00, 1000.00, 500.00, 50.00, '2025-12-07 07:31:39', '2025-12-07 07:31:39');
+('T-1005', 1, 'Test 1', 5, 1500.00, 1000.00, 500.00, 50.00, '2025-12-07 07:31:39', '2025-12-11 09:10:14');
 
 -- --------------------------------------------------------
 
@@ -529,8 +529,8 @@ CREATE TABLE `shop_product_stock` (
 --
 
 INSERT INTO `shop_product_stock` (`stock_id`, `shop_id`, `product_id`, `size_id`, `color_id`, `stock_qty`, `created_at`, `updated_at`) VALUES
-(1, 1, '1001', 1, 1, 50, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(2, 1, '1001', 2, 2, 45, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
+(1, 1, '1001', 1, 1, 45, '2025-11-24 04:26:21', '2025-12-09 17:02:53'),
+(2, 1, '1001', 2, 2, 40, '2025-11-24 04:26:21', '2025-12-09 17:11:21'),
 (3, 1, '1002', 4, 3, 30, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
 (5, 1, '1004', 7, 1, 15, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
 (6, 2, '1001', 3, 3, 40, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
@@ -538,12 +538,9 @@ INSERT INTO `shop_product_stock` (`stock_id`, `shop_id`, `product_id`, `size_id`
 (8, 1, '1001', 3, 1, 15, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
 (15, 1, '1002', 4, 5, 14, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
 (16, 1, '1002', 5, 5, 14, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(39, 1, 'T-1005', 3, 1, 5, '2025-12-07 07:31:39', '2025-12-07 07:31:39'),
-(40, 1, 'T-1005', 2, 1, 10, '2025-12-07 07:31:39', '2025-12-07 07:31:39'),
-(41, 1, 'T-1005', 1, 8, 5, '2025-12-07 07:31:39', '2025-12-07 07:31:39'),
-(42, 1, 'T-1005', 2, 2, 10, '2025-12-07 07:31:39', '2025-12-07 07:31:39'),
-(43, 1, '1003', 6, 1, 8, '2025-12-07 17:44:30', '2025-12-07 17:44:30'),
-(44, 1, '1003', 6, 4, 20, '2025-12-07 17:44:30', '2025-12-07 17:44:30');
+(43, 1, '1003', 6, 1, 0, '2025-12-07 17:44:30', '2025-12-09 17:02:53'),
+(44, 1, '1003', 6, 4, 3, '2025-12-07 17:44:30', '2025-12-10 10:43:20'),
+(48, 1, 'T-1005', 3, 1, 5, '2025-12-11 09:10:14', '2025-12-11 09:10:14');
 
 -- --------------------------------------------------------
 
@@ -748,6 +745,14 @@ ALTER TABLE `payments`
   ADD KEY `idx_created_by` (`created_by`);
 
 --
+-- Indexes for table `payment_notes`
+--
+ALTER TABLE `payment_notes`
+  ADD PRIMARY KEY (`payment_note_id`),
+  ADD KEY `idx_shop_id` (`shop_id`),
+  ADD KEY `idx_payment_date` (`payment_date`);
+
+--
 -- Indexes for table `products`
 --
 ALTER TABLE `products`
@@ -860,7 +865,7 @@ ALTER TABLE `bank_accounts`
 -- AUTO_INCREMENT for table `bank_collections`
 --
 ALTER TABLE `bank_collections`
-  MODIFY `collection_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `collection_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `categories`
@@ -896,19 +901,25 @@ ALTER TABLE `districts`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=78;
+  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
+
+--
+-- AUTO_INCREMENT for table `payment_notes`
+--
+ALTER TABLE `payment_notes`
+  MODIFY `payment_note_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `product_colors`
@@ -944,7 +955,7 @@ ALTER TABLE `shop_inventory`
 -- AUTO_INCREMENT for table `shop_product_stock`
 --
 ALTER TABLE `shop_product_stock`
-  MODIFY `stock_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
+  MODIFY `stock_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
 
 --
 -- AUTO_INCREMENT for table `sizes`

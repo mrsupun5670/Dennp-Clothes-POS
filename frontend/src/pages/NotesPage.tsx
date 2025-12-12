@@ -8,6 +8,7 @@ import {
   PaymentNote,
 } from "../services/paymentNotesService";
 import { getShopBankAccounts, BankAccount } from "../services/bankAccountService";
+import { parsePaymentAmount } from "../utils/paymentUtils";
 
 interface Notification {
   type: "success" | "error";
@@ -18,10 +19,8 @@ const NotesPage: React.FC = () => {
   const { shopId: contextShopId } = useShop();
   const shopId = contextShopId || 1;
 
-  const [notes, setNotes] = useState<Note[]>([]);
   const [paymentNotes, setPaymentNotes] = useState<PaymentNote[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<Notification | null>(null);
   
@@ -56,18 +55,15 @@ const NotesPage: React.FC = () => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [notesData, paymentNotesData, bankAccountsData] = await Promise.all([
-          getShopNotes(shopId),
+        const [paymentNotesData, bankAccountsData] = await Promise.all([
           getPaymentNotes(shopId),
           getShopBankAccounts(shopId),
         ]);
-        setNotes(notesData || []);
         setPaymentNotes(paymentNotesData || []);
         setBankAccounts(bankAccountsData || []);
       } catch (error) {
         showNotification("error", "Failed to load data");
         console.error("Error loading data:", error);
-        setNotes([]);
         setPaymentNotes([]);
         setBankAccounts([]);
       } finally {
@@ -77,27 +73,6 @@ const NotesPage: React.FC = () => {
 
     loadData();
   }, [shopId]);
-
-  // Filter notes
-  const filteredNotes = useMemo(() => {
-    let result = [...notes];
-
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (n) =>
-          n.note_id.toString().includes(query) ||
-          n.order_id?.toString().includes(query) ||
-          n.notes?.toLowerCase().includes(query)
-      );
-    }
-
-    return result.sort(
-      (a, b) =>
-        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-    );
-  }, [notes, searchQuery]);
 
   const showNotification = (type: "success" | "error", message: string) => {
     setNotification({ type, message });
@@ -123,7 +98,7 @@ const NotesPage: React.FC = () => {
 
       await createPaymentNote({
         shop_id: shopId,
-        amount: parseFloat(paymentFormData.amount),
+        amount: parsePaymentAmount(paymentFormData.amount),
         payment_method: paymentFormData.payment_method,
         bank_name: paymentFormData.bank_name || undefined,
         bank_branch_name: paymentFormData.bank_branch_name || undefined,
@@ -191,52 +166,42 @@ const NotesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Header Section */}
-      <div className="flex justify-between items-center">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-red-500">Notes</h1>
-            <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
-              {filteredNotes.length} notes
-            </span>
-          </div>
-          <p className="text-gray-400 mt-2">
-            View all order notes and payment notes
-          </p>
+      {/* Compact Header - Single Row */}
+      <div className="flex items-center gap-4">
+        {/* Title and Count */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <h1 className="text-2xl font-bold text-red-500">Payment Notes</h1>
+          <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
+            {paymentNotes.length}
+          </span>
         </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Add Payment Button */}
         <button
           onClick={() => setShowPaymentModal(true)}
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 text-sm"
         >
-          <span>+</span> Add Payment
+          ➕ Add Payment
         </button>
       </div>
 
-      {/* Search and Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold text-red-400">
-            Search
-          </label>
-          <input
-            type="text"
-            placeholder="Search by ID, order, or content..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-          />
-        </div>
-      </div>
-
-      {/* Payment Notes Section */}
-      <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-        <h2 className="text-xl font-bold text-red-400 mb-4">Payment Notes ({paymentNotes.length})</h2>
-        {paymentNotes.length === 0 ? (
-          <p className="text-gray-400 text-center py-4">No payment notes yet</p>
+      {/* Payment Notes Table */}
+      <div className="flex-1 overflow-hidden flex flex-col bg-gray-800/50 border border-gray-700 rounded-lg">
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-gray-400">Loading payment notes...</p>
+          </div>
+        ) : paymentNotes.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-gray-400 text-lg">No payment notes yet</p>
+          </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto flex-1">
             <table className="w-full text-sm">
-              <thead className="bg-gray-700/80 border-b-2 border-red-600">
+              <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
                 <tr>
                   <th className="px-6 py-3 text-left font-semibold text-red-400">ID</th>
                   <th className="px-6 py-3 text-left font-semibold text-red-400">Amount</th>
@@ -282,63 +247,7 @@ const NotesPage: React.FC = () => {
         )}
       </div>
 
-      {/* Order Notes Table */}
-      <div className="flex-1 overflow-hidden flex flex-col bg-gray-800/50 border border-gray-700 rounded-lg">
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-gray-400">Loading notes...</p>
-          </div>
-        ) : filteredNotes.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-gray-400 text-lg">No notes found</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto overflow-y-auto flex-1">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
-                <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Note ID
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Order ID
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Note
-                  </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Date & Time
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-700">
-                {filteredNotes.map((note) => {
-                  return (
-                    <tr
-                      key={note.note_id}
-                      className="hover:bg-gray-700/30 transition-all"
-                    >
-                      <td className="px-6 py-4 text-gray-200 font-mono font-semibold">
-                        #{note.note_id}
-                      </td>
-                      <td className="px-6 py-4 text-gray-300">
-                        {note.order_id ? `#${note.order_id}` : "_"}
-                      </td>
-                      <td className="px-6 py-4 text-gray-300">
-                        {note.notes}
-                      </td>
-                      <td className="px-6 py-4 text-gray-400 text-xs">
-                        <div>{new Date(note.updated_at).toLocaleDateString()}</div>
-                        <div className="text-gray-500">{new Date(note.updated_at).toLocaleTimeString()}</div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+
 
       {/* Payment Note Modal */}
       {showPaymentModal && (

@@ -8,6 +8,7 @@ import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
 import { API_URL } from "../config/api";
 import { printContent, generateOrdersHTML, saveAsPDF } from "../utils/exportUtils";
+import { parsePaymentAmount } from "../utils/paymentUtils";
 import InvoicePrint from "../components/InvoicePrint";
 import BankPaymentModal, { BankPaymentData } from "../components/BankPaymentModal";
 
@@ -240,6 +241,10 @@ const OrdersPage: React.FC = () => {
   );
 
   // Fetch payment methods for all orders from payments table
+  // OPTIMIZATION: Commented out to prevent excessive API requests
+  // This was making individual API calls for every order on page load
+  // TODO: Move payment_method to main orders response or create bulk endpoint
+  /*
   useEffect(() => {
     const fetchPaymentMethods = async () => {
       if (!orders || orders.length === 0) return;
@@ -269,6 +274,19 @@ const OrdersPage: React.FC = () => {
     };
 
     fetchPaymentMethods();
+  }, [orders]);
+  */
+
+  // Extract payment methods from orders (now included in API response)
+  useEffect(() => {
+    if (orders && orders.length > 0) {
+      const paymentMap: { [orderId: number]: string } = {};
+      orders.forEach((order: any) => {
+        // Use payment_method from API response, fallback to "Not specified" if null/empty
+        paymentMap[order.order_id] = order.payment_method || "Not specified";
+      });
+      setOrderPayments(paymentMap);
+    }
   }, [orders]);
 
   // Filter and search orders
@@ -333,24 +351,9 @@ const OrdersPage: React.FC = () => {
 
   const printBill = async (order: Order) => {
     try {
-      if (order.payment_status !== "fully_paid") {
-        alert("❌ Payment must be fully paid before printing bill");
-        return;
-      }
+      // Allow printing regardless of payment status
 
-      const hasCompleteAddress =
-        order.delivery_line1 &&
-        order.delivery_city &&
-        order.delivery_district &&
-        order.delivery_province &&
-        order.delivery_postal_code;
-
-      if (!hasCompleteAddress) {
-        alert(
-          "❌ Complete delivery address is required to print bill (Line 1, City, District, Province, Postal Code)"
-        );
-        return;
-      }
+      // Allow printing for walk-in customers (no address required)
 
       if (!orderItems || orderItems.length === 0) {
         alert("❌ Order items not loaded. Please wait for items to load.");
@@ -436,19 +439,6 @@ const OrdersPage: React.FC = () => {
             invoiceNumber: order.order_number || 'TEMP'
           });
 
-
-          const command = new Command("powershell", [
-            "-NoProfile",
-            "-Command",
-            `Start-Process -FilePath "${tempFilePath}" -Verb Print`,
-          ]);
-          const output = await command.execute();
-
-          if (output.code !== 0) {
-            alert(`Failed to print bill: ${output.stderr}`);
-          } else {
-            alert("✅ Bill sent to printer successfully!");
-          }
         } catch (e) {
           console.error("Error printing bill:", e);
           alert("Failed to print bill.");
@@ -637,15 +627,12 @@ const OrdersPage: React.FC = () => {
 
     // Validate requirements for shipped status
     if (newStatus === "shipped") {
-      // Check 1: Payment must be fully paid - calculate actual balance due
-      const totalAmount = parseFloat(String(selectedOrder.total_amount)) || 0;
-      const deliveryCharge = parseFloat(String(selectedOrder.delivery_charge)) || 0;
-      const advancePaid = parseFloat(String(selectedOrder.advance_paid)) || 0;
-      const expectedTotal = totalAmount + deliveryCharge;
-      const actualBalanceDue = Math.max(0, expectedTotal - advancePaid);
+      // Check 1: Payment must be fully paid - use balance_due and payment_status from database
+      const balanceDue = parseFloat(String(selectedOrder.balance_due)) || 0;
+      const isFullyPaid = selectedOrder.payment_status === 'fully_paid';
 
-      if (actualBalanceDue > 0) {
-        setStatusMessage(`❌ Payment not complete. Rs. ${actualBalanceDue.toFixed(2)} must be paid before marking as shipped`);
+      if (balanceDue > 0 || !isFullyPaid) {
+        setStatusMessage(`❌ Cannot ship order. Balance due: Rs. ${balanceDue.toFixed(2)}, Payment status: ${selectedOrder.payment_status}`);
         return;
       }
 
@@ -844,7 +831,7 @@ const OrdersPage: React.FC = () => {
       return;
     }
 
-    const amount = parseFloat(paymentAmount);
+    const amount = parsePaymentAmount(paymentAmount);
     if (isNaN(amount) || amount <= 0) {
       setPaymentMessage("❌ Please enter a valid amount");
       return;
@@ -852,9 +839,9 @@ const OrdersPage: React.FC = () => {
 
     // Calculate actual balance due including delivery charges
     const actualBalanceDue = selectedOrder ? (() => {
-      const totalAmount = parseFloat(String(selectedOrder.total_amount)) || 0;
-      const deliveryCharge = parseFloat(String(selectedOrder.delivery_charge)) || 0;
-      const advancePaid = parseFloat(String(selectedOrder.advance_paid)) || 0;
+      const totalAmount = parsePaymentAmount(String(selectedOrder.total_amount));
+      const deliveryCharge = parsePaymentAmount(String(selectedOrder.delivery_charge));
+      const advancePaid = parsePaymentAmount(String(selectedOrder.advance_paid));
       return Math.max(0, totalAmount + deliveryCharge - advancePaid);
     })() : 0;
 
@@ -897,33 +884,23 @@ const OrdersPage: React.FC = () => {
 
 
       const result = await response.json();
-      if (result.success) {
-        setPaymentMessage(
-          `✅ Payment of Rs. ${amount.toFixed(2)} recorded successfully!`
-        );
-        setPaymentAmount("");
-        setBankPaymentData(null);
-        
-        // Refetch orders list to update the main table
-        refetchOrders();
-        
-        // Also refetch the specific order details to update the modal immediately
-        if (selectedOrderId && shopId) {
-          try {
-            const orderResponse = await fetch(
-              `${API_URL}/orders/${selectedOrderId}?shop_id=${shopId}`
-            );
-            const orderResult = await orderResponse.json();
-            if (orderResult.success && orderResult.data.items) {
-              setOrderItems(orderResult.data.items);
-            }
-          } catch (error) {
-            console.error("Error refetching order details:", error);
-          }
-        }
-      } else {
-        setPaymentMessage(`❌ Error: ${result.error}`);
-      }
+    if (result.success) {
+      setPaymentMessage(
+        `✅ Payment of Rs. ${amount.toFixed(2)} recorded successfully!`
+      );
+      setPaymentAmount("");
+      setBankPaymentData(null);
+      
+      // Refetch orders list to update the main table and modal
+      await refetchOrders();
+      
+      // Small delay to ensure React state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // The selectedOrder will automatically update since it's derived from orders array
+    } else {
+      setPaymentMessage(`❌ Error: ${result.error}`);
+    }
     } catch (error) {
       console.error("Error recording payment:", error);
       setPaymentMessage("❌ Failed to record payment");
@@ -1027,100 +1004,78 @@ const OrdersPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
-      {/* Header Section */}
-      <div className="flex justify-between items-center">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-red-500">Orders</h1>
-            <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
-              {totalOrders} orders
-            </span>
-          </div>
-          <p className="text-gray-400 mt-2">
-            Manage, settle payments, and track orders
-          </p>
+    <div className="space-y-4 h-full flex flex-col">
+      {/* Compact Header - Row 1: Main Controls */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <h1 className="text-2xl font-bold text-red-500">Orders</h1>
+          <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
+            {totalOrders}
+          </span>
         </div>
-        <div className="flex flex-col items-end gap-3">
-          <div className="text-right">
-            <p className="text-sm text-gray-400">Total Order Value</p>
-            <p className="text-2xl font-bold text-red-400">
-              Rs. {totalValue.toFixed(2)}
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              const html = generateOrdersHTML(filteredOrders);
-              printContent(html, 'Orders Report');
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
-            title="Print Report"
-          >
-            🖨️ Print
-          </button>
+        <div className="bg-gradient-to-r from-green-900/40 to-emerald-900/40 border border-green-600/50 rounded-lg px-4 py-2 flex-shrink-0">
+          <p className="text-xs text-green-300 font-semibold">Total Value</p>
+          <p className="text-lg font-bold text-green-400">Rs. {totalValue.toFixed(2)}</p>
         </div>
-      </div>
-
-      {/* Status Filter Chips */}
-      <div className="space-y-2">
-        <label className="block text-sm font-semibold text-red-400">
-          Filter by Status
-        </label>
-        <div className="flex gap-2 flex-wrap">
-          {[
-            {
-              value: "pending",
-              label: "Pending",
-              color: "bg-yellow-600 hover:bg-yellow-700",
-            },
-            {
-              value: "processing",
-              label: "Processing",
-              color: "bg-blue-600 hover:bg-blue-700",
-            },
-            {
-              value: "shipped",
-              label: "Shipped",
-              color: "bg-purple-600 hover:bg-purple-700",
-            },
-            {
-              value: "delivered",
-              label: "Delivered",
-              color: "bg-green-600 hover:bg-green-700",
-            },
-            {
-              value: "all",
-              label: "All Orders",
-              color: "bg-gray-600 hover:bg-gray-700",
-            },
-          ].map((status) => (
-            <button
-              key={status.value}
-              onClick={() => setSelectedStatus(status.value)}
-              className={`px-4 py-2 rounded-full font-semibold text-white transition-all ${
-                selectedStatus === status.value
-                  ? `${status.color} ring-2 ring-offset-2 ring-offset-gray-800`
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-              }`}
-            >
-              {status.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Search Bar */}
-      <div className="space-y-2">
-        <label className="block text-sm font-semibold text-red-400">
-          Search Orders
-        </label>
+        <button
+          onClick={() => {
+            const html = generateOrdersHTML(filteredOrders);
+            printContent(html, 'Orders Report');
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm"
+        >
+          🖨️ Print
+        </button>
         <input
           type="text"
-          placeholder="Search by customer ID, name, or order ID..."
+          placeholder="🔍 Search by customer, order number..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-4 py-3 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-colors"
+          className="flex-1 px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
         />
+      </div>
+
+      {/* Compact Header - Row 2: Status Filter Chips */}
+      <div className="flex gap-2">
+        {[
+          {
+            value: "pending",
+            label: "Pending",
+            color: "bg-yellow-600 hover:bg-yellow-700",
+          },
+          {
+            value: "processing",
+            label: "Processing",
+            color: "bg-blue-600 hover:bg-blue-700",
+          },
+          {
+            value: "shipped",
+            label: "Shipped",
+            color: "bg-purple-600 hover:bg-purple-700",
+          },
+          {
+            value: "delivered",
+            label: "Delivered",
+            color: "bg-green-600 hover:bg-green-700",
+          },
+          {
+            value: "all",
+            label: "All Orders",
+            color: "bg-gray-600 hover:bg-gray-700",
+          },
+        ].map((status) => (
+          <button
+            key={status.value}
+            onClick={() => setSelectedStatus(status.value)}
+            className={`px-4 py-2 rounded-full font-semibold text-white transition-all ${
+              selectedStatus === status.value
+                ? `${status.color} ring-2 ring-offset-2 ring-offset-gray-800`
+                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+            }`}
+          >
+            {status.label}
+          </button>
+        ))}
       </div>
 
       {/* Orders Table - Scrollable */}
@@ -1207,12 +1162,8 @@ const OrdersPage: React.FC = () => {
                           {order.payment_status.replace("_", " ")}
                         </span>
                         {(() => {
-                          // Calculate actual balance due
-                          const totalAmount = parseFloat(String(order.total_amount)) || 0;
-                          const deliveryCharge = parseFloat(String(order.delivery_charge)) || 0;
-                          const advancePaid = parseFloat(String(order.advance_paid)) || 0;
-                          const expectedTotal = totalAmount + deliveryCharge;
-                          const balanceDue = Math.max(0, expectedTotal - advancePaid);
+                          // Use balance_due from database (already calculated by backend)
+                          const balanceDue = parseFloat(String(order.balance_due)) || 0;
 
                           if (balanceDue > 0) {
                             return (
@@ -1458,27 +1409,15 @@ const OrdersPage: React.FC = () => {
                     </div>
                     <div>
                       {(() => {
-                        // Calculate actual balance due as difference between what should be paid and what was paid
-                        const totalAmount = parseFloat(String(selectedOrder.total_amount)) || 0;
-                        const deliveryCharge = parseFloat(String(selectedOrder.delivery_charge)) || 0;
-                        const advancePaid = parseFloat(String(selectedOrder.advance_paid)) || 0;
-
-                        // Expected total = products + delivery
-                        const expectedTotal = totalAmount + deliveryCharge;
-
-                        // Balance due = expected total - what's been paid
-                        const balanceDue = Math.max(0, expectedTotal - advancePaid);
+                        // Use balance_due from database
+                        const balanceDue = parseFloat(String(selectedOrder.balance_due)) || 0;
 
                         return (
                           <>
                             <p className="text-xs text-gray-400 font-semibold mb-1">
-                              {balanceDue > 0
-                                ? "Balance To Be Paid"
-                                : "Balance Paid"}
+                              Balance Due
                             </p>
-                            <p
-                              className={`font-bold text-lg ${balanceDue > 0 ? "text-red-400" : "text-green-400"}`}
-                            >
+                            <p className={`font-bold text-lg ${balanceDue > 0 ? "text-red-400" : "text-green-400"}`}>
                               Rs. {balanceDue.toFixed(2)}
                             </p>
                           </>
@@ -1489,12 +1428,8 @@ const OrdersPage: React.FC = () => {
 
                   {/* Outstanding Balance Warning */}
                   {(() => {
-                    // Recalculate balance due for warning
-                    const totalAmount = parseFloat(String(selectedOrder.total_amount)) || 0;
-                    const deliveryCharge = parseFloat(String(selectedOrder.delivery_charge)) || 0;
-                    const advancePaid = parseFloat(String(selectedOrder.advance_paid)) || 0;
-                    const expectedTotal = totalAmount + deliveryCharge;
-                    const balanceDue = Math.max(0, expectedTotal - advancePaid);
+                    // Use balance_due from database for warning
+                    const balanceDue = parseFloat(String(selectedOrder.balance_due)) || 0;
 
                     if (balanceDue > 0) {
                       return (

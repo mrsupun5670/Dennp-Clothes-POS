@@ -203,7 +203,7 @@ const BankAccountsPage: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-red-500">Bank Accounts</h1>
+            <h1 className="text-2xl font-bold text-red-500">Bank Accounts</h1>
             <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
               {bankAccounts.length} accounts
             </span>

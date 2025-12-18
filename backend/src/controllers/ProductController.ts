@@ -197,6 +197,8 @@ class ProductController {
           category_id,
           product_cost: product_cost || 0,
           print_cost: print_cost || 0,
+          sewing_cost: req.body.sewing_cost || 0,
+          extra_cost: req.body.extra_cost || 0,
           retail_price,
           wholesale_price,
         },

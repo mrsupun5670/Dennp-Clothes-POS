@@ -36,6 +36,25 @@ function App() {
     return () => clearInterval(checkNavigation);
   }, []);
 
+  // Global handler to prevent scroll wheel from changing number input values
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (
+        document.activeElement instanceof HTMLInputElement &&
+        document.activeElement.type === "number"
+      ) {
+        (document.activeElement as HTMLInputElement).blur();
+      }
+    };
+
+    // Add passive: false to allow preventDefault (though blur works even with passive)
+    window.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
+
   const renderPage = () => {
     switch (currentPage) {
       case "sales":

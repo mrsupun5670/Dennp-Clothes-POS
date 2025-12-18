@@ -1,0 +1,11 @@
+// FIX FOR InvoicePrint.tsx - Add 1-inch margins
+// Find line 175-178 in InvoicePrint.tsx and replace with this:
+
+      {/* A4 Invoice Container with 1-inch margins */}
+      <div
+        className="w-[210mm] min-h-[297mm] bg-white print:shadow-none relative"
+        style={{ fontFamily: "'Arial', sans-serif", padding: "25.4mm" }}
+      >
+
+// This adds 25.4mm (1 inch) padding on all sides
+// Works for both print and image export

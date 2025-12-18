@@ -28,6 +28,8 @@ export interface CostBreakdown {
   totalRevenue: number;
   totalProductCost: number;
   totalPrintCost: number;
+  totalSewingCost: number;
+  totalExtraCost: number;
   totalDeliveryCost: number;
   totalCost: number;
   totalProfit: number;

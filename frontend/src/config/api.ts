@@ -18,7 +18,7 @@ const getApiUrl = (): string => {
 };
 
 export const API_URL = getApiUrl();
-export const API_BASE_URL = API_URL.replace('/api/v1', '');
+export const API_BASE_URL = API_URL;
 
 // Helper function to make API calls
 export const apiCall = async (

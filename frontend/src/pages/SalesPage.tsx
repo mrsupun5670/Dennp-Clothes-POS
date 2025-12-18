@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { Command } from "@tauri-apps/api/shell";
 import { writeTextFile, createDir, writeBinaryFile, BaseDirectory } from "@tauri-apps/api/fs";
-import { join, downloadDir } from "@tauri-apps/api/path";
+import { join, documentDir } from "@tauri-apps/api/path";
 import html2canvas from 'html2canvas';
 import BankPaymentModal, {
   BankPaymentData,
@@ -142,6 +142,9 @@ const SalesPage: React.FC = () => {
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  
+  // Loading state for saving orders (prevent double-click)
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
 
   // Stock data interface
   interface StockData {
@@ -1293,16 +1296,19 @@ const SalesPage: React.FC = () => {
       return { success: false, error: "Please add items to cart" };
     }
 
-    if (paymentMethod === "cash") {
-      if (!paidAmount) {
-        return {
-          success: false,
-          error: "Cash payment selected: Please enter paid amount to continue",
-        };
-      }
-    } else if (paymentMethod === "bank") {
-      if (!bankPaymentDetails) {
-        return { success: false, error: "Please add bank payment details" };
+    // Payment validation - ONLY required for NEW orders, not when editing
+    if (!editingOrderId) {
+      if (paymentMethod === "cash") {
+        if (!paidAmount) {
+          return {
+            success: false,
+            error: "Cash payment selected: Please enter paid amount to continue",
+          };
+        }
+      } else if (paymentMethod === "bank") {
+        if (!bankPaymentDetails) {
+          return { success: false, error: "Please add bank payment details" };
+        }
       }
     }
 
@@ -1649,7 +1655,11 @@ const SalesPage: React.FC = () => {
   };
 
   const handleSaveAndExport = async () => {
-    const result = await saveOrderInternal();
+    if (isSavingOrder) return; // Prevent double-click
+    
+    setIsSavingOrder(true);
+    try {
+      const result = await saveOrderInternal();
     if (result.success && result.data) {
       const { orderNumber, total, paid, balance } = result.data;
       const displayMessage = `✓ Order ${orderNumber} saved and exported as image!`;
@@ -1721,13 +1731,13 @@ const SalesPage: React.FC = () => {
               }
 
               try {
-                // Save to downloads folder
-                const { downloadDir } = await import("@tauri-apps/api/path");
+                // Save to Documents folder
+                const { documentDir } = await import("@tauri-apps/api/path");
                 const { createDir, writeBinaryFile } = await import("@tauri-apps/api/fs");
                 const { join } = await import("@tauri-apps/api/path");
 
-                const downloadDirPath = await downloadDir();
-                const invoicesPath = await join(downloadDirPath, "Dennep Pos Invoices");
+                const documentDirPath = await documentDir();
+                const invoicesPath = await join(documentDirPath, "Dennep Pos Documents", "Invoices");
                 await createDir(invoicesPath, { recursive: true });
 
                 const timestamp = new Date().toISOString().replace(/[:.]/g, "-").split("T")[0];
@@ -1767,6 +1777,9 @@ const SalesPage: React.FC = () => {
       resetSalesState();
     } else if (result.error) {
       setMessage({ type: "error", text: result.error });
+    }
+    } finally {
+      setIsSavingOrder(false);
     }
   };
 
@@ -1822,37 +1835,83 @@ const SalesPage: React.FC = () => {
       const root = ReactDOM.createRoot(printContainer);
       root.render(React.createElement(InvoicePrint, { order: invoiceData }));
 
-      // Wait for rendering then print silently using Tauri
+      // Wait for rendering then save as image and print
       setTimeout(async () => {
         try {
-          // Get the rendered HTML
-          const htmlContent = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="UTF-8">
-              <title>Invoice ${orderNumber}</title>
-              <style>
-                @page { size: A4; margin: 15mm; }
-                body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-              </style>
-            </head>
-            <body>
-              ${printContainer.innerHTML}
-            </body>
-            </html>
-          `;
-
-          // Call Tauri command to print silently
-          const { invoke } = await import('@tauri-apps/api/tauri');
-          await invoke('print_invoice', {
-            htmlContent: htmlContent,
-            invoiceNumber: orderNumber
+          // Convert to canvas
+          const canvas = await html2canvas(printContainer, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            width: 794,
+            windowWidth: 794,
           });
+
+          // Save to Documents folder
+          const { documentDir } = await import("@tauri-apps/api/path");
+          const { createDir, writeBinaryFile } = await import("@tauri-apps/api/fs");
+          const { join } = await import("@tauri-apps/api/path");
+          const { Command } = await import("@tauri-apps/api/shell");
+
+          const documentDirPath = await documentDir();
+          const invoicesPath = await join(documentDirPath, "Dennep Pos Documents", "Invoices");
+          await createDir(invoicesPath, { recursive: true });
+
+          const timestamp = new Date().toISOString().replace(/[:.]/g, "-").split("T")[0];
+          const time = new Date().toTimeString().split(" ")[0].replace(/:/g, "-");
+          const fileName = `invoice-${orderNumber}-${timestamp}_${time}.png`;
+          const filePath = await join(invoicesPath, fileName);
+
+          // Rotate canvas 90 degrees clockwise to fix printer orientation
+          const rotatedCanvas = document.createElement('canvas');
+          rotatedCanvas.width = canvas.height;
+          rotatedCanvas.height = canvas.width;
+          const ctx = rotatedCanvas.getContext('2d');
+          if (ctx) {
+            ctx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+            ctx.rotate(90 * Math.PI / 180);
+            ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+          }
+
+          // Convert rotated canvas to blob and save
+          await new Promise<void>((resolve, reject) => {
+            rotatedCanvas.toBlob(async (blob) => {
+              if (!blob) {
+                reject(new Error("Failed to generate image"));
+                return;
+              }
+
+              try {
+                const arrayBuffer = await blob.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+                await writeBinaryFile(filePath, uint8Array);
+                console.log(`✅ Invoice saved: ${fileName}`);
+                resolve();
+              } catch (error) {
+                console.error("Error saving image:", error);
+                reject(error);
+              }
+            }, "image/png");
+          });
+
+          // Silent print to default printer using mspaint
+          console.log('🖨️ Printing to default printer...');
+          console.log('📁 File:', filePath);
+          
+          const command = new Command('cmd', [
+            '/c',
+            'mspaint',
+            '/pt',
+            filePath
+          ]);
+          
+          await command.execute();
+          console.log('✅ Print command sent to default printer');
 
           setMessage({
             type: "success",
-            text: `✅ Invoice ${orderNumber} sent to printer!`
+            text: `✅ Invoice ${orderNumber} saved and sent to printer!`
           });
         } catch (error) {
           console.error('Print error:', error);
@@ -1873,7 +1932,11 @@ const SalesPage: React.FC = () => {
 
   // Combined function: Export as image AND print
   const handlePrintAndExport = async () => {
-    const result = await saveOrderInternal();
+    if (isSavingOrder) return; // Prevent double-click
+    
+    setIsSavingOrder(true);
+    try {
+      const result = await saveOrderInternal();
     if (result.success && result.data) {
       const { orderNumber, total, paid, balance } = result.data;
       
@@ -1933,13 +1996,13 @@ const SalesPage: React.FC = () => {
             windowWidth: 794,
           });
 
-          // Save image to downloads folder
-          const { downloadDir } = await import("@tauri-apps/api/path");
+          // Save image to Documents folder
+          const { documentDir } = await import("@tauri-apps/api/path");
           const { createDir, writeBinaryFile } = await import("@tauri-apps/api/fs");
           const { join } = await import("@tauri-apps/api/path");
 
-          const downloadDirPath = await downloadDir();
-          const invoicesPath = await join(downloadDirPath, "Dennep Pos Invoices");
+          const documentDirPath = await documentDir();
+          const invoicesPath = await join(documentDirPath, "Dennep Pos Documents", "Invoices");
           await createDir(invoicesPath, { recursive: true });
 
           const timestamp = new Date().toISOString().replace(/[:.]/g, "-").split("T")[0];
@@ -1947,9 +2010,20 @@ const SalesPage: React.FC = () => {
           const fileName = `invoice-${orderNumber}-${timestamp}_${time}.png`;
           const filePath = await join(invoicesPath, fileName);
 
-          // Convert canvas to blob and save
+          // Rotate canvas 90 degrees clockwise to fix printer orientation
+          const rotatedCanvas = document.createElement('canvas');
+          rotatedCanvas.width = canvas.height;
+          rotatedCanvas.height = canvas.width;
+          const ctx = rotatedCanvas.getContext('2d');
+          if (ctx) {
+            ctx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+            ctx.rotate(90 * Math.PI / 180);
+            ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+          }
+
+          // Convert rotated canvas to blob and save
           await new Promise<void>((resolve, reject) => {
-            canvas.toBlob(async (blob) => {
+            rotatedCanvas.toBlob(async (blob) => {
               if (!blob) {
                 reject(new Error("Failed to generate image"));
                 return;
@@ -1968,26 +2042,19 @@ const SalesPage: React.FC = () => {
             }, "image/png");
           });
 
-          // Step 2: Print the saved image using Tauri
-          try {
-            console.log(`🖨️ Attempting to print image: ${filePath}`);
-            const { invoke } = await import('@tauri-apps/api/tauri');
-            const result = await invoke('print_invoice', {
-              imagePath: filePath
-            });
-            console.log('🖨️ Print command result:', result);
+          // Step 2: Silent print to default printer using mspaint
+          const command = new Command('cmd', [
+            '/c',
+            'mspaint',
+            '/pt',
+            filePath
+          ]);
+          await command.execute();
 
-            setMessage({
-              type: "success",
-              text: `✅ Invoice ${orderNumber} saved as image and sent to printer!`
-            });
-          } catch (printError) {
-            console.error('❌ Print error:', printError);
-            setMessage({
-              type: "success",
-              text: `✅ Invoice ${orderNumber} saved as image! (Print failed: ${printError})`
-            });
-          }
+          setMessage({
+            type: "success",
+            text: `✅ Invoice ${orderNumber} saved as image and sent to printer!`
+          });
         } catch (error) {
           console.error('Export error:', error);
           setMessage({
@@ -2002,6 +2069,9 @@ const SalesPage: React.FC = () => {
       resetSalesState();
     } else if (result.error) {
       setMessage({ type: "error", text: result.error });
+    }
+    } finally {
+      setIsSavingOrder(false);
     }
   };
 
@@ -2045,20 +2115,20 @@ const SalesPage: React.FC = () => {
     : [];
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className="space-y-2 h-full flex flex-col">
       {/* Header */}
-      <div>
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-red-500">
+          <h1 className="text-xl font-bold text-red-500">
             {editingOrderId
               ? `Edit Order: ${currentOrderNumber || editingOrderId}`
               : "Sales & Orders"}
           </h1>
-          <span className="text-xs font-semibold text-red-400 bg-red-900/30 px-2 py-1 rounded-full">
+          <span className="text-xs font-semibold text-red-400 bg-red-900/30 px-2 py-0.5 rounded-full">
             {cartItems.length} items
           </span>
         </div>
-        <p className="text-gray-400 mt-1 text-sm">
+        <p className="text-gray-400 text-xs">
           {editingOrderId
             ? "Update order items and details"
             : "Create orders from online or WhatsApp enquiries"}
@@ -2088,18 +2158,17 @@ const SalesPage: React.FC = () => {
       )}
 
       {/* Main Content - Two Columns */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-3 min-h-0">
         {/* Left Side - Customer & Products */}
-        <div className="lg:col-span-2 space-y-4 flex flex-col min-h-0">
+        <div className="lg:col-span-2 space-y-2 flex flex-col min-h-0">
           {/* Customer Selection */}
-          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 space-y-4">
-            {!editingOrderId && (
-              <div className="flex-shrink-0">
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Customer Type
-                </label>
-                <div className="flex gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer group">
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3">
+            {/* Single Row: Customer Type + Search + Add Button */}
+            <div className="flex items-center gap-2 mb-2">
+              {/* Customer Type Radio Buttons */}
+              {!editingOrderId && (
+                <div className="flex gap-2 flex-shrink-0">
+                  <label className="flex items-center gap-1.5 cursor-pointer group">
                     <input
                       type="radio"
                       name="customerType"
@@ -2112,11 +2181,11 @@ const SalesPage: React.FC = () => {
                       }
                       className="w-4 h-4 cursor-pointer"
                     />
-                    <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                    <span className="text-xs text-gray-300 group-hover:text-white transition-colors whitespace-nowrap">
                       🏢 Wholesale
                     </span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer group">
+                  <label className="flex items-center gap-1.5 cursor-pointer group">
                     <input
                       type="radio"
                       name="customerType"
@@ -2129,37 +2198,21 @@ const SalesPage: React.FC = () => {
                       }
                       className="w-4 h-4 cursor-pointer"
                     />
-                    <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                    <span className="text-xs text-gray-300 group-hover:text-white transition-colors whitespace-nowrap">
                       👤 Retail
                     </span>
                   </label>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Search Input */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-semibold text-red-400">
-                  Search Customer
-                </label>
-                {!editingOrderId && (
-                  <button
-                    onClick={() => setShowAddCustomerModal(true)}
-                    className="text-red-400 hover:text-red-300 font-bold text-lg transition-colors"
-                    title="Add new customer"
-                  >
-                    +
-                  </button>
-                )}
-              </div>
-              <div className="relative space-y-2">
+              {/* Search Input */}
+              <div className="flex-1 relative">
                 <input
                   type="text"
-                  placeholder="Search customer by name, ID, or mobile..."
+                  placeholder="🔍 Search customer by name, ID, or mobile..."
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                  className="w-full px-3 py-1.5 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                 />
 
                 {customerSearch && filteredCustomers.length > 0 && (
@@ -2193,19 +2246,31 @@ const SalesPage: React.FC = () => {
                 {customerSearch && filteredCustomers.length === 0 && (
                   <button
                     onClick={() => setShowAddCustomerModal(true)}
-                    className="w-full px-4 py-2 border-2 border-dashed border-red-600 text-red-400 rounded-lg hover:bg-red-900/20 text-sm font-medium transition-colors"
+                    className="absolute top-full left-0 right-0 w-full px-4 py-2 border-2 border-dashed border-red-600 text-red-400 rounded-lg hover:bg-red-900/20 text-sm font-medium transition-colors mt-1 bg-gray-800"
                   >
                     + Add New Customer
                   </button>
                 )}
               </div>
+
+              {/* Add Customer Button */}
+              {!editingOrderId && (
+                <button
+                  onClick={() => setShowAddCustomerModal(true)}
+                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors text-sm whitespace-nowrap flex-shrink-0"
+                  title="Add new customer"
+                >
+                  + Add
+                </button>
+              )}
             </div>
 
+            {/* Selected Customer Display */}
             {selectedCustomer && (
-              <div className="bg-gray-700/50 border border-red-600/30 rounded p-3">
+              <div className="bg-gray-700/50 border border-red-600/30 rounded p-2">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-semibold text-gray-100">
+                    <p className="font-semibold text-gray-100 text-sm">
                       ID: {selectedCustomer.customer_id || selectedCustomer.id}
                     </p>
                     <p className="text-xs text-gray-400">
@@ -2224,8 +2289,8 @@ const SalesPage: React.FC = () => {
           </div>
 
           {/* Product Selection */}
-          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="space-y-4 flex flex-col min-h-0">
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="space-y-2 flex flex-col min-h-0">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-semibold text-red-400">
@@ -2248,7 +2313,7 @@ const SalesPage: React.FC = () => {
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
                     onFocus={() => setShowProductSearch(true)}
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                    className="w-full px-3 py-1.5 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
                   />
 
                   {showProductSearch &&
@@ -2292,7 +2357,7 @@ const SalesPage: React.FC = () => {
 
               {selectedProduct && (
                 <div className="flex-1 overflow-y-auto min-h-0">
-                  <div className="bg-gray-700/50 border border-red-600/30 rounded-lg p-4 space-y-3">
+                  <div className="bg-gray-700/50 border border-red-600/30 rounded-lg p-3 space-y-2">
                     <div>
                       <p className="font-semibold text-gray-100">
                         {selectedProduct.name || selectedProduct.product_name}
@@ -2302,60 +2367,9 @@ const SalesPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-red-400 mb-2">
-                          Select Size
-                        </label>
-                        <select
-                          value={selectedSize}
-                          onChange={(e) => setSelectedSize(e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                        >
-                          <option value="">-- Choose Size --</option>
-                          {availableSizes.length > 0 ? (
-                            availableSizes.map((size) => (
-                              <option key={size.size_id} value={size.size_name}>
-                                {size.size_name}
-                              </option>
-                            ))
-                          ) : (
-                            <option disabled>No sizes available</option>
-                          )}
-                        </select>
-                      </div>
-
-                      {selectedSize && (
-                        <div>
-                          <label className="block text-xs font-semibold text-red-400 mb-2">
-                            Select Color
-                          </label>
-                          <select
-                            value={selectedColor}
-                            onChange={(e) => setSelectedColor(e.target.value)}
-                            className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
-                          >
-                            <option value="">-- Choose Color --</option>
-                            {availableColors.length > 0 ? (
-                              availableColors.map((color) => (
-                                <option
-                                  key={color.color_id}
-                                  value={color.color_name}
-                                >
-                                  {color.color_name}
-                                </option>
-                              ))
-                            ) : (
-                              <option disabled>No colors available</option>
-                            )}
-                          </select>
-                        </div>
-                      )}
-                    </div>
-
-                    {selectedSize &&
-                      selectedColor &&
-                      (() => {
+                    <div className="space-y-2">
+                      {/* Row 1: Size, Color, Qty, Price - All in one row */}
+                      {selectedSize && selectedColor && (() => {
                         const availableQty =
                           productStock.find(
                             (stock) =>
@@ -2377,13 +2391,72 @@ const SalesPage: React.FC = () => {
                           .reduce((sum, item) => sum + item.quantity, 0);
 
                         const remainingQty = availableQty - cartQtyForProduct;
+                        const productCostVal =
+                          parsePrice(
+                            selectedProduct.product_cost ||
+                              selectedProduct.cost_price ||
+                              selectedProduct.costPrice
+                          ) || 0;
+                        const printCostVal =
+                          parsePrice(
+                            selectedProduct.print_cost || 0
+                          ) || 0;
+                        const totalCost = productCostVal + printCostVal;
+                        const currentPrice = parseFloat(selectedPrice) || 0;
+                        const isBelowCost = selectedPrice && currentPrice < totalCost;
 
                         return (
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-4 gap-2">
                             <div>
-                              <label className="block text-xs font-semibold text-red-400 mb-2">
-                                Qty (Avl: {availableQty}, Cart:{" "}
-                                {cartQtyForProduct})
+                              <label className="block text-xs font-semibold text-red-400 mb-1">
+                                Size
+                              </label>
+                              <select
+                                value={selectedSize}
+                                onChange={(e) => setSelectedSize(e.target.value)}
+                                className="w-full px-2 py-1.5 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                              >
+                                <option value="">-- Size --</option>
+                                {availableSizes.length > 0 ? (
+                                  availableSizes.map((size) => (
+                                    <option key={size.size_id} value={size.size_name}>
+                                      {size.size_name}
+                                    </option>
+                                  ))
+                                ) : (
+                                  <option disabled>No sizes</option>
+                                )}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-semibold text-red-400 mb-1">
+                                Color
+                              </label>
+                              <select
+                                value={selectedColor}
+                                onChange={(e) => setSelectedColor(e.target.value)}
+                                className="w-full px-2 py-1.5 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                              >
+                                <option value="">-- Color --</option>
+                                {availableColors.length > 0 ? (
+                                  availableColors.map((color) => (
+                                    <option
+                                      key={color.color_id}
+                                      value={color.color_name}
+                                    >
+                                      {color.color_name}
+                                    </option>
+                                  ))
+                                ) : (
+                                  <option disabled>No colors</option>
+                                )}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-semibold text-red-400 mb-1">
+                                Qty (Avl: {availableQty})
                               </label>
                               <input
                                 type="number"
@@ -2392,18 +2465,18 @@ const SalesPage: React.FC = () => {
                                 value={selectedQty}
                                 onChange={(e) => setSelectedQty(e.target.value)}
                                 placeholder="Qty"
-                                className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                                className="w-full px-2 py-1.5 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
                               />
                               {remainingQty <= 0 && (
-                                <p className="text-xs text-red-400 mt-1">
+                                <p className="text-[10px] text-red-400 mt-0.5">
                                   ⚠️ Out of stock
                                 </p>
                               )}
                             </div>
 
                             <div>
-                              <label className="block text-xs font-semibold text-red-400 mb-2">
-                                Price (Rs.)
+                              <label className="block text-xs font-semibold text-red-400 mb-1">
+                                Price (Rs.) {isBelowCost && <span className="text-red-400">⚠️</span>}
                               </label>
                               <input
                                 type="number"
@@ -2414,56 +2487,68 @@ const SalesPage: React.FC = () => {
                                   setSelectedPrice(e.target.value)
                                 }
                                 placeholder="Price"
-                                className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                                className="w-full px-2 py-1.5 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
                               />
-                              <div className="mt-1 space-y-1 text-xs">
-                                <p className="text-gray-400">
-                                  Default: Rs.{" "}
-                                  {selectedProduct
-                                    ? getProductPrice(selectedProduct).toFixed(
-                                        2
-                                      )
-                                    : "0.00"}
-                                </p>
-                                {selectedProduct &&
-                                  (() => {
-                                    const productCostVal =
-                                      parsePrice(
-                                        selectedProduct.product_cost ||
-                                          selectedProduct.cost_price ||
-                                          selectedProduct.costPrice
-                                      ) || 0;
-                                    const printCostVal =
-                                      parsePrice(
-                                        selectedProduct.print_cost || 0
-                                      ) || 0;
-                                    const totalCost =
-                                      productCostVal + printCostVal;
-                                    const currentPrice =
-                                      parseFloat(selectedPrice) || 0;
-                                    const isBelowCost =
-                                      selectedPrice && currentPrice < totalCost;
-
-                                    return (
-                                      <>
-                                        <p className="text-yellow-400 font-semibold">
-                                          Cost = Rs. {productCostVal.toFixed(2)}{" "}
-                                          + Rs. {printCostVal.toFixed(2)} = Rs.{" "}
-                                          {totalCost.toFixed(2)}
-                                        </p>
-                                        {isBelowCost && (
-                                          <p className="text-red-400 font-semibold flex items-center gap-1">
-                                            ⚠️ Price is below cost!
-                                          </p>
-                                        )}
-                                      </>
-                                    );
-                                  })()}
-                              </div>
+                              <p className="text-[10px] text-gray-400 mt-0.5">
+                                Default: Rs. {selectedProduct ? getProductPrice(selectedProduct).toFixed(2) : "0.00"}
+                              </p>
                             </div>
                           </div>
                         );
                       })()}
+
+                      {!selectedSize || !selectedColor ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-semibold text-red-400 mb-1">
+                              Size
+                            </label>
+                            <select
+                              value={selectedSize}
+                              onChange={(e) => setSelectedSize(e.target.value)}
+                              className="w-full px-2 py-1.5 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none"
+                            >
+                              <option value="">-- Size --</option>
+                              {availableSizes.length > 0 ? (
+                                availableSizes.map((size) => (
+                                  <option key={size.size_id} value={size.size_name}>
+                                    {size.size_name}
+                                  </option>
+                                ))
+                              ) : (
+                                <option disabled>No sizes</option>
+                              )}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-red-400 mb-1">
+                              Color
+                            </label>
+                            <select
+                              value={selectedColor}
+                              onChange={(e) => setSelectedColor(e.target.value)}
+                              disabled={!selectedSize}
+                              className="w-full px-2 py-1.5 bg-gray-600 border border-gray-500 text-white rounded text-sm focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <option value="">-- Color --</option>
+                              {availableColors.length > 0 ? (
+                                availableColors.map((color) => (
+                                  <option
+                                    key={color.color_id}
+                                    value={color.color_name}
+                                  >
+                                    {color.color_name}
+                                  </option>
+                                ))
+                              ) : (
+                                <option disabled>No colors</option>
+                              )}
+                            </select>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
 
                     {selectedSize && selectedColor && selectedQty && (
                       <button
@@ -2494,11 +2579,11 @@ const SalesPage: React.FC = () => {
         </div>
 
         {/* Right Side - Cart & Billing */}
-        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 flex flex-col min-h-0">
-          <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex flex-col min-h-0">
+          <div className="flex justify-between items-center mb-2 pb-2 border-b border-gray-700">
             <div>
-              <h2 className="text-xl font-bold text-red-500">Order Summary</h2>
-              <span className="text-sm bg-red-900/30 text-red-400 px-2 py-1 rounded inline-block mt-2">
+              <h2 className="text-lg font-bold text-red-500">Order Summary</h2>
+              <span className="text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded inline-block mt-1">
                 {cartItems.length} items
               </span>
             </div>
@@ -2524,19 +2609,19 @@ const SalesPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-2 mb-4">
+          <div className="flex-1 overflow-y-auto space-y-1.5 mb-2">
             {cartItems.length > 0 ? (
               cartItems.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-gray-700/50 p-3 rounded border border-gray-600 hover:border-red-600/50 transition-colors"
+                  className="bg-gray-700/50 p-2 rounded border border-gray-600 hover:border-red-600/50 transition-colors"
                 >
-                  <div className="flex justify-between items-start mb-2">
+                  <div className="flex justify-between items-start mb-1">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-100">
+                      <p className="text-xs font-medium text-gray-100">
                         {item.productName}
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-[10px] text-gray-400">
                         ID: {item.productId} • {item.size} • {item.color}
                       </p>
                     </div>
@@ -2604,7 +2689,7 @@ const SalesPage: React.FC = () => {
               )}
           </div>
 
-          <div className="space-y-2 border-t border-gray-700 pt-3 mb-3">
+          <div className="space-y-1 border-t border-gray-700 pt-2 mb-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Subtotal:</span>
               <span className="font-semibold text-gray-100">
@@ -2660,7 +2745,7 @@ const SalesPage: React.FC = () => {
             )}
           </div>
 
-          <div className="mb-3 pb-3 border-b border-gray-700">
+          <div className="mb-2 pb-2 border-b border-gray-700">
             <PaymentMethodSelector
               paymentMethod={paymentMethod}
               onPaymentMethodChange={handlePaymentMethodChange}
@@ -2679,7 +2764,7 @@ const SalesPage: React.FC = () => {
             />
 
             {paymentMethod === "cash" && (
-              <div className="space-y-1 mt-3">
+              <div className="space-y-1 mt-2">
                 <label className="block text-xs font-semibold text-green-400">
                   Cash Amount (Rs.) <span className="text-red-500">*</span>
                   {editingOrderId && balanceDue > 0 && (
@@ -2737,21 +2822,21 @@ const SalesPage: React.FC = () => {
             isEditingOrder={!!editingOrderId}
           />
 
-          <div className="grid grid-cols-2 gap-2 mt-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handleSaveAndExport}
-              disabled={!selectedCustomer || cartItems.length === 0}
-              className="bg-purple-600 text-white py-2 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors text-sm"
+              disabled={!selectedCustomer || cartItems.length === 0 || isSavingOrder}
+              className="bg-purple-600 text-white py-1.5 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors text-sm"
             >
-              📥 Export
+              {isSavingOrder ? "⏳ Saving..." : "📥 Export"}
             </button>
 
             <button
               onClick={handlePrintAndExport}
-              disabled={!selectedCustomer || cartItems.length === 0}
-              className="bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors text-sm"
+              disabled={!selectedCustomer || cartItems.length === 0 || isSavingOrder}
+              className="bg-blue-600 text-white py-1.5 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors text-sm"
             >
-              🖨️ Print
+              {isSavingOrder ? "⏳ Saving..." : "🖨️ Print"}
             </button>
           </div>
         </div>
@@ -2760,8 +2845,8 @@ const SalesPage: React.FC = () => {
       {showAddCustomerModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-6 border-b border-red-600 flex justify-between items-center sticky top-0">
-              <h2 className="text-2xl font-bold">Add New Customer</h2>
+            <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-4 border-b border-red-600 flex justify-between items-center sticky top-0">
+              <h2 className="text-lg font-bold">Add New Customer</h2>
               <button
                 onClick={() => {
                   setShowAddCustomerModal(false);
@@ -2779,7 +2864,7 @@ const SalesPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-4 space-y-3">
               {customerModalError && (
                 <div className="bg-red-900/30 border-2 border-red-600 text-red-300 p-3 rounded-lg flex items-start gap-3">
                   <span className="text-xl">✕</span>
@@ -2881,11 +2966,11 @@ const SalesPage: React.FC = () => {
                 />
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-gray-700">
+              <div className="flex gap-3 pt-3 border-t border-gray-700">
                 <button
                   onClick={handleAddCustomer}
                   disabled={isCreatingCustomer}
-                  className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-red-600 text-white py-1.5 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                   {isCreatingCustomer ? "Creating..." : "Add Customer"}
                 </button>
@@ -2901,7 +2986,7 @@ const SalesPage: React.FC = () => {
                     setCustomerModalSuccess("");
                   }}
                   disabled={isCreatingCustomer}
-                  className="flex-1 bg-gray-700 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-gray-700 text-gray-300 py-1.5 rounded-lg font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                   Cancel
                 </button>
@@ -2913,9 +2998,9 @@ const SalesPage: React.FC = () => {
 
       {showNotesModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700 space-y-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-4 border border-gray-700 space-y-3">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold text-red-500">Order Notes</h2>
+              <h2 className="text-lg font-bold text-red-500">Order Notes</h2>
               <button
                 onClick={() => setShowNotesModal(false)}
                 className="text-gray-400 hover:text-red-400 text-xl"
@@ -2928,13 +3013,13 @@ const SalesPage: React.FC = () => {
               value={orderNotes}
               onChange={(e) => setOrderNotes(e.target.value)}
               placeholder="Add notes about this order... e.g., specific alterations, rush order, special requests, etc."
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded text-sm placeholder-gray-500 focus:border-red-500 focus:outline-none min-h-[150px] resize-none"
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded text-sm placeholder-gray-500 focus:border-red-500 focus:outline-none min-h-[100px] resize-none"
             />
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setShowNotesModal(false)}
-                className="flex-1 bg-red-600 text-white py-2 rounded font-semibold hover:bg-red-700 transition-colors"
+                className="flex-1 bg-red-600 text-white py-1.5 rounded font-semibold hover:bg-red-700 transition-colors text-sm"
               >
                 Done
               </button>

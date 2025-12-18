@@ -124,10 +124,10 @@ export const saveAsPDF = async (
     const arrayBuffer = await pdfBlob.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
-    // Use "Dennep Pos Invoices" folder for all exports
-    const dirPath = 'Dennep Pos Invoices';
+    // Use "Dennep Pos Documents" folder for all exports
+    const dirPath = 'Dennep Pos Documents';
     try {
-      await createDir(dirPath, { dir: BaseDirectory.Download, recursive: true });
+      await createDir(dirPath, { dir: BaseDirectory.Document, recursive: true });
     } catch (e) {
       console.log('Directory creation info:', e);
     }
@@ -142,12 +142,12 @@ export const saveAsPDF = async (
     await writeBinaryFile(
       filePath,
       uint8Array,
-      { dir: BaseDirectory.Download }
+      { dir: BaseDirectory.Document }
     );
 
     console.log(`Saved PDF: ${filePath}`);
 
-    await message(`Successfully saved PDF (${pagesNeeded} page${pagesNeeded > 1 ? 's' : ''}) to:\nDownloads\\${dirPath}`, {
+    await message(`Successfully saved PDF (${pagesNeeded} page${pagesNeeded > 1 ? 's' : ''}) to:\nDocuments\\${dirPath}`, {
       title: 'Export Successful',
       type: 'info'
     });

@@ -44,6 +44,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     name: "",
     costPrice: "",
     printCost: "",
+    sewingCost: "",
+    extraCost: "",
     retailPrice: "",
     wholesalePrice: "",
   });
@@ -168,6 +170,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         name: "",
         costPrice: "",
         printCost: "",
+        sewingCost: "",
+        extraCost: "",
         retailPrice: "",
         wholesalePrice: "",
       });
@@ -184,6 +188,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       name: "",
       costPrice: "",
       printCost: "",
+      sewingCost: "",
+      extraCost: "",
       retailPrice: "",
       wholesalePrice: "",
     });
@@ -230,6 +236,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
     const cost = parseFloat(formData.costPrice);
     const printCost = parseFloat(formData.printCost || "0");
+    const sewingCost = parseFloat(formData.sewingCost || "0");
+    const extraCost = parseFloat(formData.extraCost || "0");
     const retailPrice = parseFloat(formData.retailPrice);
     const wholesalePrice = parseFloat(formData.wholesalePrice || "0");
 
@@ -239,6 +247,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     }
     if (isNaN(printCost) || printCost < 0) {
       showNotification("Valid Print Cost is required (>= 0)", "error");
+      return;
+    }
+    if (isNaN(sewingCost) || sewingCost < 0) {
+      showNotification("Valid Sewing Cost is required (>= 0)", "error");
+      return;
+    }
+    if (isNaN(extraCost) || extraCost < 0) {
+      showNotification("Valid Extra Cost is required (>= 0)", "error");
       return;
     }
     if (isNaN(retailPrice) || retailPrice < 0) {
@@ -667,7 +683,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                     if (nameInput) nameInput.focus();
                   }
                 }}
-                className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+                className="w-full px-3 py-1.5 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
               />
             </div>
 
@@ -686,7 +702,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                     handleCategoryChange(value);
                   }
                 }}
-                className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
+                className="w-full px-3 py-1.5 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none text-sm"
               >
                 {(dbCategories || []).map((cat) => (
                   <option key={cat.category_id} value={cat.category_id}>
@@ -719,112 +735,123 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                   if (costInput) costInput.focus();
                 }
               }}
-              className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+              className="w-full px-3 py-1.5 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
             />
           </div>
 
-          {/* Row 3: Prices (4 columns) */}
-          <div className="grid grid-cols-4 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-red-400 mb-2">
-                Product Cost (Rs.) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                data-field="costPrice"
-                value={formData.costPrice}
-                onChange={(e) => {
-                  setFormData({ ...formData, costPrice: e.target.value });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    const printInput = document.querySelector(
-                      'input[data-field="printCost"]'
-                    ) as HTMLInputElement;
-                    if (printInput) printInput.focus();
-                  }
-                }}
-                className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
-              />
+          {/* Row 3: Cost Fields (3x2 Grid) */}
+          <div>
+            <label className="block text-sm font-semibold text-red-400 mb-2">
+              Cost Breakdown
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {/* Product Cost */}
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-400 mb-1">
+                  Product Cost <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  data-field="costPrice"
+                  value={formData.costPrice}
+                  onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                  className="w-full px-2 py-1.5 bg-gray-700 border border-red-600/30 text-white placeholder-gray-500 rounded text-xs focus:border-red-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Print Cost */}
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-400 mb-1">
+                  Print Cost <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  data-field="printCost"
+                  value={formData.printCost}
+                  onChange={(e) => setFormData({ ...formData, printCost: e.target.value })}
+                  className="w-full px-2 py-1.5 bg-gray-700 border border-red-600/30 text-white placeholder-gray-500 rounded text-xs focus:border-red-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Sewing Cost */}
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-400 mb-1">
+                  Sewing Cost
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  data-field="sewingCost"
+                  value={formData.sewingCost}
+                  onChange={(e) => setFormData({ ...formData, sewingCost: e.target.value })}
+                  className="w-full px-2 py-1.5 bg-gray-700 border border-red-600/30 text-white placeholder-gray-500 rounded text-xs focus:border-red-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Extra Cost */}
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-400 mb-1">
+                  Extra Cost
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  data-field="extraCost"
+                  value={formData.extraCost}
+                  onChange={(e) => setFormData({ ...formData, extraCost: e.target.value })}
+                  className="w-full px-2 py-1.5 bg-gray-700 border border-red-600/30 text-white placeholder-gray-500 rounded text-xs focus:border-red-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Retail Price */}
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-400 mb-1">
+                  Retail Price <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  data-field="retailPrice"
+                  value={formData.retailPrice}
+                  onChange={(e) => setFormData({ ...formData, retailPrice: e.target.value })}
+                  className="w-full px-2 py-1.5 bg-gray-700 border border-red-600/30 text-white placeholder-gray-500 rounded text-xs focus:border-red-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Wholesale Price */}
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-400 mb-1">
+                  Wholesale Price <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  data-field="wholesalePrice"
+                  value={formData.wholesalePrice}
+                  onChange={(e) => setFormData({ ...formData, wholesalePrice: e.target.value })}
+                  className="w-full px-2 py-1.5 bg-gray-700 border border-red-600/30 text-white placeholder-gray-500 rounded text-xs focus:border-red-500 focus:outline-none"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-red-400 mb-2">
-                Print Cost (Rs.) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                data-field="printCost"
-                value={formData.printCost}
-                onChange={(e) => {
-                  setFormData({ ...formData, printCost: e.target.value });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    const retailInput = document.querySelector(
-                      'input[data-field="retailPrice"]'
-                    ) as HTMLInputElement;
-                    if (retailInput) retailInput.focus();
-                  }
-                }}
-                className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-red-400 mb-2">
-                Retail Price (Rs.) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                data-field="retailPrice"
-                value={formData.retailPrice}
-                onChange={(e) => {
-                  setFormData({ ...formData, retailPrice: e.target.value });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    const wholesaleInput = document.querySelector(
-                      'input[data-field="wholesalePrice"]'
-                    ) as HTMLInputElement;
-                    if (wholesaleInput) wholesaleInput.focus();
-                  }
-                }}
-                className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-red-400 mb-2">
-                Wholesale Price (Rs.){" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                data-field="wholesalePrice"
-                value={formData.wholesalePrice}
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    wholesalePrice: e.target.value,
-                  });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSaveProduct();
-                  }
-                }}
-                className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
-              />
+
+            {/* Total Cost Display */}
+            <div className="mt-2 p-2 bg-gray-900/50 border border-gray-700 rounded">
+              <p className="text-xs text-gray-400">
+                Total Cost: <span className="text-yellow-400 font-semibold">Rs. {(
+                  (parseFloat(formData.costPrice) || 0) +
+                  (parseFloat(formData.printCost) || 0) +
+                  (parseFloat(formData.sewingCost) || 0) +
+                  (parseFloat(formData.extraCost) || 0)
+                ).toFixed(2)}</span>
+              </p>
             </div>
           </div>
 

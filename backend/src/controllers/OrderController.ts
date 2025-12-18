@@ -644,6 +644,32 @@ class OrderController {
   }
 
   /**
+   * GET /orders/:id/items-grouped - Get order items grouped by product and price
+   * Used by Reports page to show aggregated cost analysis
+   */
+  async getOrderItemsGrouped(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      const items = await OrderItemModel.getOrderItemsGrouped(Number(id));
+
+      res.json({
+        success: true,
+        data: items,
+        message: `Retrieved ${items.length} grouped items`,
+      });
+    } catch (error: any) {
+      logger.error("Error in getOrderItemsGrouped:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch grouped order items",
+        details: error.message,
+      });
+    }
+  }
+
+
+  /**
    * Helper method to generate receipt HTML
    */
   private generateReceiptHTML(order: any): string {

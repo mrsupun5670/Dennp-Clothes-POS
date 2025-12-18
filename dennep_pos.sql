@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Dec 11, 2025 at 09:12 AM
+-- Generation Time: Dec 18, 2025 at 03:12 AM
 -- Server version: 11.8.3-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -125,8 +125,8 @@ CREATE TABLE `bank_accounts` (
 --
 
 INSERT INTO `bank_accounts` (`bank_account_id`, `shop_id`, `bank_name`, `initial_balance`, `current_balance`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Commercial Bank', 150000.00, 150000.00, '2025-11-24 04:26:21', '2025-12-11 06:27:24'),
-(2, 1, 'Bank of Ceylon', 80000.00, 80000.00, '2025-11-24 04:26:21', '2025-12-11 06:27:16');
+(1, 1, 'Commercial Bank', 0.00, 0.00, '2025-11-24 04:26:21', '2025-12-17 13:59:14'),
+(2, 1, 'Bank of Ceylon', 0.00, 0.00, '2025-11-24 04:26:21', '2025-12-13 08:27:14');
 
 -- --------------------------------------------------------
 
@@ -164,11 +164,8 @@ CREATE TABLE `categories` (
 --
 
 INSERT INTO `categories` (`category_id`, `shop_id`, `category_name`, `size_type_id`, `created_at`, `updated_at`) VALUES
-(1, 1, 'T-Shirts', 1, '2025-11-24 04:26:21', '2025-11-25 10:40:07'),
-(2, 1, 'Women_Jeans', 2, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(3, 1, 'Kids_Trousers', 3, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(4, 1, 'Footwear', 2, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(5, 1, 'Accessories', 1, '2025-11-24 04:26:21', '2025-11-24 04:26:21');
+(13, 1, 'Regular T Shirts', 1, '2025-12-13 08:49:16', '2025-12-13 08:49:16'),
+(14, 1, 'Oversized T Shirts', 2, '2025-12-13 08:51:08', '2025-12-13 08:51:08');
 
 -- --------------------------------------------------------
 
@@ -203,13 +200,23 @@ CREATE TABLE `colors` (
 --
 
 INSERT INTO `colors` (`color_id`, `shop_id`, `color_name`, `hex_code`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Black', '#000000', '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(2, 1, 'White', '#FFFFFF', '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(3, 1, 'Navy Blue', '#000080', '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(4, 1, 'Red', '#FF0000', '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(5, 1, 'Grey', '#808080', '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(7, 1, 'Purple', NULL, '2025-11-25 14:08:15', '2025-11-25 14:08:15'),
-(8, 1, 'Blue', NULL, '2025-11-25 14:11:05', '2025-11-25 14:11:05');
+(11, 1, 'Black', NULL, '2025-12-13 08:59:34', '2025-12-13 11:35:44'),
+(12, 1, 'White', NULL, '2025-12-13 08:59:59', '2025-12-13 11:35:49'),
+(13, 1, 'Red', NULL, '2025-12-17 17:48:37', '2025-12-17 17:48:37'),
+(14, 1, 'Yellow', NULL, '2025-12-17 17:50:25', '2025-12-17 17:50:25'),
+(15, 1, 'Navy blue', NULL, '2025-12-17 17:52:38', '2025-12-17 17:52:38'),
+(16, 1, 'Pastel pink', NULL, '2025-12-17 17:54:43', '2025-12-17 17:54:43'),
+(17, 1, 'Merron', NULL, '2025-12-17 17:55:49', '2025-12-17 17:55:49'),
+(18, 1, 'Light blue', NULL, '2025-12-17 17:57:31', '2025-12-17 17:57:31'),
+(19, 1, 'Medium blue', NULL, '2025-12-17 17:59:06', '2025-12-17 17:59:06'),
+(20, 1, 'Light damro green', NULL, '2025-12-17 18:00:30', '2025-12-17 18:00:30'),
+(21, 1, 'Apple green', NULL, '2025-12-17 18:03:27', '2025-12-17 18:03:27'),
+(22, 1, 'Dark ash marl', NULL, '2025-12-17 18:04:17', '2025-12-17 18:04:17'),
+(23, 1, 'light beige', NULL, '2025-12-17 18:05:18', '2025-12-17 18:05:18'),
+(24, 1, 'Pastel charcoal', NULL, '2025-12-17 18:06:45', '2025-12-17 18:06:45'),
+(25, 1, 'Purple', NULL, '2025-12-17 18:12:07', '2025-12-17 18:12:07'),
+(26, 1, 'Musted', NULL, '2025-12-17 18:12:51', '2025-12-17 18:12:51'),
+(27, 1, 'Light brown', NULL, '2025-12-17 18:14:39', '2025-12-17 18:14:39');
 
 -- --------------------------------------------------------
 
@@ -227,14 +234,6 @@ CREATE TABLE `customers` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `customers`
---
-
-INSERT INTO `customers` (`customer_id`, `shop_id`, `mobile`, `email`, `orders_count`, `total_spent`, `created_at`, `updated_at`) VALUES
-(1001, 1, '0772010915', 'supun9402@gmail.com', 2, 12000.00, '2025-12-06 17:27:36', '2025-12-07 18:47:37'),
-(1002, 1, '0778223712', NULL, 20, 82000.01, '2025-12-07 01:58:17', '2025-12-10 10:43:20');
 
 -- --------------------------------------------------------
 
@@ -345,18 +344,6 @@ CREATE TABLE `payment_notes` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `payment_notes`
---
-
-INSERT INTO `payment_notes` (`payment_note_id`, `shop_id`, `amount`, `payment_method`, `bank_name`, `bank_branch_name`, `payment_date`, `payment_time`, `created_at`, `updated_at`) VALUES
-(2, 1, 5000.00, 'Cash', NULL, NULL, '2025-12-08', '00:28:00', '2025-12-08 19:11:26', '2025-12-08 19:11:26'),
-(3, 1, 3000.00, 'Bank Transfer', 'Commercial Bank', NULL, '2025-12-08', '00:48:00', '2025-12-08 19:18:14', '2025-12-08 19:18:14'),
-(4, 1, 7000.00, 'Bank Deposit', 'Bank of Ceylon', 'Kurunegala', '2025-12-08', '00:48:00', '2025-12-08 19:18:30', '2025-12-08 19:18:30'),
-(5, 1, 5000.00, 'Bank Deposit', 'Commercial Bank', 'Kandy', '2025-12-09', '15:58:00', '2025-12-10 10:28:39', '2025-12-10 10:28:39'),
-(7, 1, 4000.00, 'Cash', NULL, NULL, '2025-12-10', '21:19:00', '2025-12-10 15:49:52', '2025-12-10 15:49:52'),
-(8, 1, 4000.00, 'Bank Transfer', 'Commercial Bank', NULL, '2025-12-11', '12:03:00', '2025-12-11 06:33:52', '2025-12-11 06:33:52');
-
 -- --------------------------------------------------------
 
 --
@@ -372,6 +359,8 @@ CREATE TABLE `products` (
   `wholesale_price` decimal(12,2) DEFAULT NULL,
   `product_cost` decimal(12,2) NOT NULL DEFAULT 0.00,
   `print_cost` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `sewing_cost` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `extra_cost` decimal(12,2) NOT NULL DEFAULT 0.00,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -380,12 +369,13 @@ CREATE TABLE `products` (
 -- Dumping data for table `products`
 --
 
-INSERT INTO `products` (`product_id`, `shop_id`, `product_name`, `category_id`, `retail_price`, `wholesale_price`, `product_cost`, `print_cost`, `created_at`, `updated_at`) VALUES
-('1001', 1, 'Premium Cotton Crew Tee', 1, 2500.00, 1500.00, 500.00, 30.00, '2025-11-24 04:26:21', '2025-11-25 06:15:38'),
-('1002', 3, 'High-Waist Skinny Jean', 1, 6500.00, 4000.00, 500.00, 20.00, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-('1003', 1, 'Kids Elastic Trousers', 1, 1800.00, 1000.00, 600.00, 33.00, '2025-11-24 04:26:21', '2025-12-07 17:44:30'),
-('1004', 2, 'Leather Formal Shoes', 4, 9000.00, 5500.00, 1000.00, 70.00, '2025-11-24 04:26:21', '2025-11-25 06:16:24'),
-('T-1005', 1, 'Test 1', 5, 1500.00, 1000.00, 500.00, 50.00, '2025-12-07 07:31:39', '2025-12-11 09:10:14');
+INSERT INTO `products` (`product_id`, `shop_id`, `product_name`, `category_id`, `retail_price`, `wholesale_price`, `product_cost`, `print_cost`, `sewing_cost`, `extra_cost`, `created_at`, `updated_at`) VALUES
+('RTN01', 1, 'Regular RTNB01', 13, 1200.00, 850.00, 520.00, 0.00, 60.00, 20.00, '2025-12-17 20:27:43', '2025-12-17 20:28:38'),
+('RTNB02', 1, 'Regular RTNB02', 13, 1200.00, 950.00, 540.00, 0.00, 60.00, 20.00, '2025-12-17 20:30:15', '2025-12-17 20:30:15'),
+('RTS01', 1, 'Regular RTB01', 13, 1200.00, 850.00, 520.00, 0.00, 60.00, 20.00, '2025-12-17 18:16:10', '2025-12-17 20:32:03'),
+('RTS02', 1, 'Regular TRB02', 13, 1200.00, 950.00, 540.00, 0.00, 60.00, 20.00, '2025-12-17 19:26:49', '2025-12-17 20:31:55'),
+('RTSW01', 1, 'Regular RTW01', 13, 1200.00, 850.00, 520.00, 0.00, 60.00, 20.00, '2025-12-17 19:41:25', '2025-12-17 20:31:44'),
+('RTSW02', 1, 'Regular RTW02', 13, 1200.00, 950.00, 540.00, 0.00, 60.00, 20.00, '2025-12-17 20:24:34', '2025-12-17 20:31:36');
 
 -- --------------------------------------------------------
 
@@ -405,14 +395,28 @@ CREATE TABLE `product_colors` (
 --
 
 INSERT INTO `product_colors` (`product_color_id`, `product_id`, `color_id`, `created_at`) VALUES
-(1, '1001', 1, '2025-11-24 04:26:21'),
-(2, '1001', 2, '2025-11-24 04:26:21'),
-(3, '1001', 3, '2025-11-24 04:26:21'),
-(4, '1002', 3, '2025-11-24 04:26:21'),
-(5, '1002', 5, '2025-11-24 04:26:21'),
-(6, '1003', 1, '2025-11-24 04:26:21'),
-(7, '1003', 4, '2025-11-24 04:26:21'),
-(8, '1004', 1, '2025-11-24 04:26:21');
+(45, 'RTS01', 11, '2025-12-17 18:16:14'),
+(46, 'RTS01', 12, '2025-12-17 18:16:14'),
+(47, 'RTS01', 13, '2025-12-17 18:16:15'),
+(48, 'RTS01', 14, '2025-12-17 18:16:15'),
+(49, 'RTS01', 15, '2025-12-17 18:16:15'),
+(50, 'RTS01', 16, '2025-12-17 18:16:16'),
+(51, 'RTS01', 17, '2025-12-17 18:16:16'),
+(52, 'RTS01', 18, '2025-12-17 18:16:16'),
+(53, 'RTS01', 19, '2025-12-17 18:16:16'),
+(54, 'RTS01', 20, '2025-12-17 18:16:17'),
+(55, 'RTS01', 21, '2025-12-17 18:16:17'),
+(56, 'RTS01', 22, '2025-12-17 18:16:17'),
+(57, 'RTS01', 23, '2025-12-17 18:16:17'),
+(58, 'RTS01', 24, '2025-12-17 18:16:18'),
+(59, 'RTS01', 25, '2025-12-17 18:16:18'),
+(60, 'RTS01', 26, '2025-12-17 18:16:18'),
+(61, 'RTS01', 27, '2025-12-17 18:16:18'),
+(63, 'RTS02', 11, '2025-12-17 19:26:50'),
+(66, 'RTSW01', 12, '2025-12-17 19:41:26'),
+(72, 'RTSW02', 12, '2025-12-17 20:24:35'),
+(75, 'RTN01', 15, '2025-12-17 20:27:44'),
+(77, 'RTNB02', 15, '2025-12-17 20:30:15');
 
 -- --------------------------------------------------------
 
@@ -432,13 +436,28 @@ CREATE TABLE `product_sizes` (
 --
 
 INSERT INTO `product_sizes` (`product_size_id`, `product_id`, `size_id`, `created_at`) VALUES
-(1, '1001', 1, '2025-11-24 04:26:21'),
-(2, '1001', 2, '2025-11-24 04:26:21'),
-(3, '1001', 3, '2025-11-24 04:26:21'),
-(4, '1002', 4, '2025-11-24 04:26:21'),
-(5, '1002', 5, '2025-11-24 04:26:21'),
-(6, '1003', 6, '2025-11-24 04:26:21'),
-(7, '1004', 7, '2025-11-24 04:26:21');
+(53, 'RTS01', 21, '2025-12-17 18:16:19'),
+(54, 'RTS01', 22, '2025-12-17 18:16:19'),
+(55, 'RTS01', 23, '2025-12-17 18:16:19'),
+(56, 'RTS01', 24, '2025-12-17 18:16:20'),
+(57, 'RTS01', 18, '2025-12-17 19:02:35'),
+(59, 'RTS01', 19, '2025-12-17 19:02:36'),
+(61, 'RTS02', 26, '2025-12-17 19:26:50'),
+(62, 'RTS02', 27, '2025-12-17 19:26:50'),
+(69, 'RTSW01', 30, '2025-12-17 19:41:27'),
+(70, 'RTSW01', 18, '2025-12-17 19:41:27'),
+(71, 'RTSW01', 22, '2025-12-17 19:41:27'),
+(72, 'RTSW01', 19, '2025-12-17 19:41:27'),
+(73, 'RTSW01', 24, '2025-12-17 19:41:27'),
+(81, 'RTSW01', 17, '2025-12-17 19:57:20'),
+(86, 'RTS01', 17, '2025-12-17 20:19:23'),
+(95, 'RTSW02', 26, '2025-12-17 20:24:35'),
+(96, 'RTSW02', 27, '2025-12-17 20:24:35'),
+(101, 'RTN01', 18, '2025-12-17 20:27:44'),
+(102, 'RTN01', 17, '2025-12-17 20:27:45'),
+(103, 'RTN01', 19, '2025-12-17 20:27:45'),
+(104, 'RTN01', 24, '2025-12-17 20:27:45'),
+(109, 'RTNB02', 27, '2025-12-17 20:30:15');
 
 -- --------------------------------------------------------
 
@@ -492,21 +511,6 @@ CREATE TABLE `shop_inventory` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `shop_inventory`
---
-
-INSERT INTO `shop_inventory` (`inventory_id`, `shop_id`, `item_name`, `quantity_in_stock`, `unit_cost`, `created_at`, `updated_at`) VALUES
-(1, 1, 'POS Thermal Paper Roll', 50, 150.00, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(2, 1, 'Shopping Bags (Large)', 200, 25.00, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(3, 2, 'POS Thermal Paper Roll', 30, 150.00, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(4, 1, 'Thread Black', 5, 300.00, '2025-11-25 09:00:59', '2025-12-06 10:26:13'),
-(5, 1, 'Zippers', 100, 500.00, '2025-11-26 06:29:39', '2025-12-06 10:26:19'),
-(6, 1, 'Buttons', 50, 858.00, '2025-11-25 09:55:05', '2025-12-06 10:26:24'),
-(7, 1, 'Thermal Paper Roll', 50, 150.00, '2025-11-25 09:23:56', '2025-12-06 10:25:54'),
-(8, 1, 'Test', 50, 700.00, '2025-11-26 04:48:41', '2025-12-07 02:21:06'),
-(9, 1, 'Test2', 5, 200.00, '2025-12-07 02:30:51', '2025-12-07 02:30:51');
-
 -- --------------------------------------------------------
 
 --
@@ -529,18 +533,24 @@ CREATE TABLE `shop_product_stock` (
 --
 
 INSERT INTO `shop_product_stock` (`stock_id`, `shop_id`, `product_id`, `size_id`, `color_id`, `stock_qty`, `created_at`, `updated_at`) VALUES
-(1, 1, '1001', 1, 1, 45, '2025-11-24 04:26:21', '2025-12-09 17:02:53'),
-(2, 1, '1001', 2, 2, 40, '2025-11-24 04:26:21', '2025-12-09 17:11:21'),
-(3, 1, '1002', 4, 3, 30, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(5, 1, '1004', 7, 1, 15, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(6, 2, '1001', 3, 3, 40, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(7, 2, '1002', 5, 5, 25, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(8, 1, '1001', 3, 1, 15, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(15, 1, '1002', 4, 5, 14, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(16, 1, '1002', 5, 5, 14, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(43, 1, '1003', 6, 1, 0, '2025-12-07 17:44:30', '2025-12-09 17:02:53'),
-(44, 1, '1003', 6, 4, 3, '2025-12-07 17:44:30', '2025-12-10 10:43:20'),
-(48, 1, 'T-1005', 3, 1, 5, '2025-12-11 09:10:14', '2025-12-11 09:10:14');
+(185, 1, 'RTN01', 17, 15, 7, '2025-12-17 20:28:39', '2025-12-17 20:28:39'),
+(186, 1, 'RTN01', 18, 15, 1, '2025-12-17 20:28:39', '2025-12-17 20:28:39'),
+(187, 1, 'RTN01', 19, 15, 1, '2025-12-17 20:28:39', '2025-12-17 20:28:39'),
+(188, 1, 'RTN01', 24, 15, 4, '2025-12-17 20:28:39', '2025-12-17 20:28:39'),
+(189, 1, 'RTNB02', 27, 15, 1, '2025-12-17 20:30:15', '2025-12-17 20:30:15'),
+(201, 1, 'RTSW02', 26, 12, 11, '2025-12-17 20:31:37', '2025-12-17 20:31:37'),
+(202, 1, 'RTSW02', 27, 12, 8, '2025-12-17 20:31:37', '2025-12-17 20:31:37'),
+(203, 1, 'RTSW01', 17, 12, 20, '2025-12-17 20:31:44', '2025-12-17 20:31:44'),
+(204, 1, 'RTSW01', 18, 12, 16, '2025-12-17 20:31:44', '2025-12-17 20:31:44'),
+(205, 1, 'RTSW01', 19, 12, 43, '2025-12-17 20:31:44', '2025-12-17 20:31:44'),
+(206, 1, 'RTSW01', 24, 12, 22, '2025-12-17 20:31:44', '2025-12-17 20:31:44'),
+(207, 1, 'RTSW01', 30, 12, 5, '2025-12-17 20:31:45', '2025-12-17 20:31:45'),
+(208, 1, 'RTS02', 26, 11, 14, '2025-12-17 20:31:56', '2025-12-17 20:31:56'),
+(209, 1, 'RTS02', 27, 11, 1, '2025-12-17 20:31:56', '2025-12-17 20:31:56'),
+(210, 1, 'RTS01', 17, 11, 10, '2025-12-17 20:32:04', '2025-12-17 20:32:04'),
+(211, 1, 'RTS01', 18, 11, 12, '2025-12-17 20:32:04', '2025-12-17 20:32:04'),
+(212, 1, 'RTS01', 19, 11, 25, '2025-12-17 20:32:04', '2025-12-17 20:32:04'),
+(213, 1, 'RTS01', 24, 11, 15, '2025-12-17 20:32:04', '2025-12-17 20:32:04');
 
 -- --------------------------------------------------------
 
@@ -562,18 +572,18 @@ CREATE TABLE `sizes` (
 --
 
 INSERT INTO `sizes` (`size_id`, `shop_id`, `size_name`, `size_type_id`, `created_at`, `updated_at`) VALUES
-(1, 1, 'S', 1, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(2, 1, 'M', 1, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(3, 1, 'L', 1, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(4, 1, '30', 2, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(5, 1, '32', 2, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(6, 1, '34', 3, '2025-11-24 04:26:21', '2025-12-06 10:26:59'),
-(7, 1, '8', 2, '2025-11-24 04:26:21', '2025-11-24 04:26:21'),
-(9, 1, 'XL', 1, '2025-11-25 13:41:03', '2025-11-25 13:41:03'),
-(10, 1, '28', 2, '2025-11-25 14:10:49', '2025-11-25 14:10:49'),
-(11, 1, 'XS', 1, '2025-11-25 15:57:45', '2025-11-25 15:57:45'),
-(12, 1, 'XXL', 2, '2025-11-26 04:45:37', '2025-11-26 04:45:37'),
-(13, 1, 'XXL', 1, '2025-11-26 04:45:44', '2025-11-26 04:45:44');
+(17, 1, 'M', 1, '2025-12-13 08:58:36', '2025-12-13 08:58:36'),
+(18, 1, 'S', 1, '2025-12-13 08:58:44', '2025-12-13 08:58:44'),
+(19, 1, 'L', 1, '2025-12-13 08:59:04', '2025-12-13 08:59:04'),
+(20, 1, 'XL', 1, '2025-12-13 08:59:12', '2025-12-13 08:59:12'),
+(21, 1, 'S', 2, '2025-12-13 09:47:44', '2025-12-13 09:47:44'),
+(22, 1, 'M', 2, '2025-12-13 10:23:04', '2025-12-13 11:36:19'),
+(23, 1, 'L', 2, '2025-12-13 10:23:26', '2025-12-13 10:23:26'),
+(24, 1, 'XL', 2, '2025-12-13 10:23:51', '2025-12-13 10:23:51'),
+(26, 1, 'XXL', 1, '2025-12-13 17:36:15', '2025-12-13 17:36:15'),
+(27, 1, 'XXXL', 1, '2025-12-13 17:36:33', '2025-12-13 17:36:33'),
+(30, 1, 'XS', 1, '2025-12-17 17:46:35', '2025-12-17 17:46:35'),
+(33, 1, '4XL', 1, '2025-12-17 19:44:03', '2025-12-17 19:44:03');
 
 -- --------------------------------------------------------
 
@@ -871,7 +881,7 @@ ALTER TABLE `bank_collections`
 -- AUTO_INCREMENT for table `categories`
 --
 ALTER TABLE `categories`
-  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `cities`
@@ -883,7 +893,7 @@ ALTER TABLE `cities`
 -- AUTO_INCREMENT for table `colors`
 --
 ALTER TABLE `colors`
-  MODIFY `color_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `color_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `customers`
@@ -901,37 +911,37 @@ ALTER TABLE `districts`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=127;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
+  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=264;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=113;
 
 --
 -- AUTO_INCREMENT for table `payment_notes`
 --
 ALTER TABLE `payment_notes`
-  MODIFY `payment_note_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `payment_note_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `product_colors`
 --
 ALTER TABLE `product_colors`
-  MODIFY `product_color_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `product_color_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=85;
 
 --
 -- AUTO_INCREMENT for table `product_sizes`
 --
 ALTER TABLE `product_sizes`
-  MODIFY `product_size_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `product_size_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=134;
 
 --
 -- AUTO_INCREMENT for table `provinces`
@@ -955,13 +965,13 @@ ALTER TABLE `shop_inventory`
 -- AUTO_INCREMENT for table `shop_product_stock`
 --
 ALTER TABLE `shop_product_stock`
-  MODIFY `stock_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
+  MODIFY `stock_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=214;
 
 --
 -- AUTO_INCREMENT for table `sizes`
 --
 ALTER TABLE `sizes`
-  MODIFY `size_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `size_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT for table `size_types`

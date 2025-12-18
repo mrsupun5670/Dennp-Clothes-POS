@@ -64,6 +64,8 @@ const ProductsPage: React.FC = () => {
     printCost: "",
     retailPrice: "",
     wholesalePrice: "",
+    sewingCost: "",
+    extraCost: "",
   });
 
   // Backend state / Notifications
@@ -274,6 +276,8 @@ const ProductsPage: React.FC = () => {
       printCost: "",
       retailPrice: "",
       wholesalePrice: "",
+      sewingCost: "",
+      extraCost: "",
     });
   };
 
@@ -288,6 +292,8 @@ const ProductsPage: React.FC = () => {
       printCost: "",
       retailPrice: "",
       wholesalePrice: "",
+      sewingCost: "",
+      extraCost: "",
     });
     setStockRows([]);
     setCustomSizes([]);
@@ -315,9 +321,9 @@ const ProductsPage: React.FC = () => {
       costPrice: product.cost.toString(),
       printCost: product.printCost ? product.printCost.toString() : "",
       retailPrice: product.retailPrice.toString(),
-      wholesalePrice: product.wholesalePrice
-        ? product.wholesalePrice.toString()
-        : "",
+      wholesalePrice: product.wholesalePrice ? product.wholesalePrice.toString() : "",
+      sewingCost: product.sewingCost ? product.sewingCost.toString() : "",
+      extraCost: product.extraCost ? product.extraCost.toString() : "",
     });
 
     // Build stock rows from actual stockDetails
@@ -437,6 +443,8 @@ const ProductsPage: React.FC = () => {
     const printCost = parseFloat(formData.printCost || "0");
     const retailPrice = parseFloat(formData.retailPrice);
     const wholesalePrice = parseFloat(formData.wholesalePrice || "0");
+    const sewingCost = parseFloat(formData.sewingCost || "0");
+    const extraCost = parseFloat(formData.extraCost || "0");
 
     if (isNaN(cost) || cost < 0) {
       showNotification("Valid Product Cost is required (>= 0)", "error");
@@ -557,6 +565,8 @@ const ProductsPage: React.FC = () => {
         description: "",
         product_cost: cost,
         print_cost: printCost,
+        sewing_cost: sewingCost,
+        extra_cost: extraCost,
         retail_price: retailPrice,
         wholesale_price: wholesalePrice || null,
         product_status: "active",
@@ -929,6 +939,8 @@ const ProductsPage: React.FC = () => {
         stockDetails: stockDetails, // Store full details for edit modal
         cost: parseFloat(p.product_cost) || 0,
         printCost: parseFloat(p.print_cost) || 0,
+        sewingCost: parseFloat(p.sewing_cost) || 0,
+        extraCost: parseFloat(p.extra_cost) || 0,
         qty: p.stock || 0, // Use stock from API
         retailPrice: parseFloat(p.retail_price) || 0,
         wholesalePrice: parseFloat(p.wholesale_price) || 0,
@@ -1123,6 +1135,12 @@ const ProductsPage: React.FC = () => {
                     Print Cost (Rs.)
                   </th>
                   <th className="px-4 py-2 text-right font-semibold text-red-400 text-xs">
+                    Sewing Cost (Rs.)
+                  </th>
+                  <th className="px-4 py-2 text-right font-semibold text-red-400 text-xs">
+                    Extra Cost (Rs.)
+                  </th>
+                  <th className="px-4 py-2 text-right font-semibold text-red-400 text-xs">
                     Retail Price (Rs.)
                   </th>
                   <th className="px-4 py-2 text-right font-semibold text-red-400 text-xs">
@@ -1163,6 +1181,16 @@ const ProductsPage: React.FC = () => {
                     <td className="px-6 py-4 text-right text-gray-300 font-semibold">
                       {product.printCost
                         ? product.printCost.toFixed(2)
+                        : "0.00"}
+                    </td>
+                    <td className="px-6 py-4 text-right text-gray-300 font-semibold">
+                      {product.sewingCost
+                        ? product.sewingCost.toFixed(2)
+                        : "0.00"}
+                    </td>
+                    <td className="px-6 py-4 text-right text-gray-300 font-semibold">
+                      {product.extraCost
+                        ? product.extraCost.toFixed(2)
                         : "0.00"}
                     </td>
                     <td className="px-6 py-4 text-right text-red-400 font-semibold">
@@ -1211,11 +1239,11 @@ const ProductsPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Row 1: Product Code & Category */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Row 1: Product Code, Category & Name (3 columns) */}
+              <div className="grid grid-cols-3 gap-3">
                 {/* Product Code */}
                 <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
+                  <label className="block text-xs font-semibold text-red-400 mb-1">
                     Product Code (Alphanumeric) {" "}
                     <span className="text-red-500">*</span>
                   </label>
@@ -1238,13 +1266,13 @@ const ProductsPage: React.FC = () => {
                         if (nameInput) nameInput.focus();
                       }
                     }}
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-1.5 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed text-xs"
                   />
                 </div>
 
                 {/* Category */}
                 <div>
-                  <label className="block text-sm font-semibold text-red-400 mb-2">
+                  <label className="block text-xs font-semibold text-red-400 mb-1">
                     Category <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -1257,7 +1285,7 @@ const ProductsPage: React.FC = () => {
                         handleCategoryChange(value);
                       }
                     }}
-                    className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
+                    className="w-full px-3 py-1.5 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none text-xs"
                   >
                     {(dbCategories || []).map((cat) => (
                       <option key={cat.category_id} value={cat.category_id}>
@@ -1267,37 +1295,38 @@ const ProductsPage: React.FC = () => {
                     <option value="add_category">+ Add Category</option>
                   </select>
                 </div>
-              </div>
-
-              {/* Row 2: Product Name */}
-              <div>
-                <label className="block text-sm font-semibold text-red-400 mb-2">
-                  Product Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., Blue T-Shirt"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const costInput = document.querySelector(
-                        'input[data-field="costPrice"]'
-                      ) as HTMLInputElement;
-                      if (costInput) costInput.focus();
+                {/* Product Name */}
+                <div>
+                  <label className="block text-xs font-semibold text-red-400 mb-1">
+                    Product Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Blue T-Shirt"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
                     }
-                  }}
-                  className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
-                />
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const costInput = document.querySelector(
+                          'input[data-field="costPrice"]'
+                        ) as HTMLInputElement;
+                        if (costInput) costInput.focus();
+                      }
+                    }}
+                    className="w-full px-3 py-1.5 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-xs"
+                  />
+                </div>
               </div>
 
               {/* Row 3: Prices (4 columns) */}
-              <div className="grid grid-cols-4 gap-3">
+              {/* Row 3: Prices (6 columns/grid for compact view) or 3x2 logic */}
+              <div className="grid grid-cols-3 gap-x-3 gap-y-2">
+                {/* Row 3.1: Costs */}
                 <div>
-                  <label className="block text-xs font-semibold text-red-400 mb-2">
+                  <label className="block text-[10px] font-semibold text-red-400 mb-1">
                     Product Cost (Rs.) <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1318,7 +1347,7 @@ const ProductsPage: React.FC = () => {
                         if (printInput) printInput.focus();
                       }
                     }}
-                    className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
+                    className="w-full px-2 py-1 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-xs"
                   />
                 </div>
                 <div>
@@ -1337,13 +1366,65 @@ const ProductsPage: React.FC = () => {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
+                        const sewingInput = document.querySelector(
+                          'input[data-field="sewingCost"]'
+                        ) as HTMLInputElement;
+                        if (sewingInput) sewingInput.focus();
+                      }
+                    }}
+                    className="w-full px-2 py-1 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-red-400 mb-2">
+                   Sewing Cost (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    data-field="sewingCost"
+                    value={formData.sewingCost}
+                    onChange={(e) => {
+                      setFormData({ ...formData, sewingCost: e.target.value });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const extraInput = document.querySelector(
+                          'input[data-field="extraCost"]'
+                        ) as HTMLInputElement;
+                        if (extraInput) extraInput.focus();
+                      }
+                    }}
+                    className="w-full px-2 py-1 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-xs"
+                  />
+                </div>
+
+                {/* Row 3.2: More Costs & Prices */}
+                <div>
+                  <label className="block text-xs font-semibold text-red-400 mb-2">
+                   Extra Cost (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    data-field="extraCost"
+                    value={formData.extraCost}
+                    onChange={(e) => {
+                      setFormData({ ...formData, extraCost: e.target.value });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
                         const retailInput = document.querySelector(
                           'input[data-field="retailPrice"]'
                         ) as HTMLInputElement;
                         if (retailInput) retailInput.focus();
                       }
                     }}
-                    className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
+                    className="w-full px-2 py-1 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-xs"
                   />
                 </div>
                 <div>
@@ -1368,7 +1449,7 @@ const ProductsPage: React.FC = () => {
                         if (wholesaleInput) wholesaleInput.focus();
                       }
                     }}
-                    className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
+                    className="w-full px-2 py-1 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-xs"
                   />
                 </div>
                 <div>
@@ -1394,7 +1475,7 @@ const ProductsPage: React.FC = () => {
                         handleSaveProduct();
                       }
                     }}
-                    className="w-full px-3 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
+                    className="w-full px-2 py-1 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-xs"
                   />
                 </div>
               </div>

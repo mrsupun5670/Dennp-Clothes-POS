@@ -17,6 +17,8 @@ interface Product {
   wholesale_price?: number;
   product_cost: number;
   print_cost: number;
+  sewing_cost: number;
+  extra_cost: number;
   stock: number;
   stockDetails?: StockDetail[];
 }
@@ -210,6 +212,8 @@ const StockPage: React.FC = () => {
                 <th className="py-3 px-4 text-left font-semibold border-b border-gray-700">Sizes (Qty)</th>
                 <th className="py-3 px-4 text-right font-semibold border-b border-gray-700">Prod. Cost</th>
                 <th className="py-3 px-4 text-right font-semibold border-b border-gray-700">Print Cost</th>
+                <th className="py-3 px-4 text-right font-semibold border-b border-gray-700">Sewing Cost</th>
+                <th className="py-3 px-4 text-right font-semibold border-b border-gray-700">Extra Cost</th>
                 <th className="py-3 px-4 text-right font-semibold border-b border-gray-700">Retail</th>
                 <th className="py-3 px-4 text-right font-semibold border-b border-gray-700">Wholesale</th>
               </tr>
@@ -236,6 +240,12 @@ const StockPage: React.FC = () => {
                   </td>
                   <td className="py-3 px-4 text-right text-gray-400">
                     {product.print_cost?.toFixed(2) || '0.00'}
+                  </td>
+                  <td className="py-3 px-4 text-right text-gray-400">
+                    {product.sewing_cost?.toFixed(2) || '0.00'}
+                  </td>
+                  <td className="py-3 px-4 text-right text-gray-400">
+                    {product.extra_cost?.toFixed(2) || '0.00'}
                   </td>
                   <td className="py-3 px-4 text-right text-green-400 font-medium">
                     {product.retail_price?.toFixed(2) || '0.00'}

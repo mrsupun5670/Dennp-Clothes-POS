@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { Command } from "@tauri-apps/api/shell";
 import { writeTextFile, createDir } from "@tauri-apps/api/fs";
-import { join, downloadDir } from "@tauri-apps/api/path";
+import { join, documentDir } from "@tauri-apps/api/path";
 import html2canvas from "html2canvas";
 import { useQuery } from "../hooks/useQuery";
 import { useShop } from "../context/ShopContext";
@@ -22,6 +22,25 @@ interface OrderItem {
   size_id?: number;
   color_name?: string;
   size_name?: string;
+}
+
+// Grouped order items with cost breakdowns
+interface GroupedOrderItem {
+  product_id: string;
+  product_name: string;
+  unit_price: number;
+  total_quantity: number;
+  product_cost: number;
+  print_cost: number;
+  sewing_cost: number;
+  extra_cost: number;
+  total_product_cost: number;
+  total_print_cost: number;
+  total_sewing_cost: number;
+  total_extra_cost: number;
+  total_cost: number;
+  total_sold: number;
+  profit: number;
 }
 
 interface Order {
@@ -187,7 +206,7 @@ const OrdersPage: React.FC = () => {
 
   // Order items loading state
   const [isLoadingItems, setIsLoadingItems] = useState(false);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [orderItems, setOrderItems] = useState<GroupedOrderItem[]>([]);
 
   // Order payments state - stores payment_method from payments table
   const [orderPayments, setOrderPayments] = useState<{ [orderId: number]: string }>({});
@@ -282,8 +301,9 @@ const OrdersPage: React.FC = () => {
     if (orders && orders.length > 0) {
       const paymentMap: { [orderId: number]: string } = {};
       orders.forEach((order: any) => {
-        // Use payment_method from API response, fallback to "Not specified" if null/empty
-        paymentMap[order.order_id] = order.payment_method || "Not specified";
+        // Handle null/undefined payment_method to prevent NaN
+        const pm = order.payment_method;
+        paymentMap[order.order_id] = (pm && pm !== 'null' && String(pm).trim()) || 'Not specified';
       });
       setOrderPayments(paymentMap);
     }
@@ -329,17 +349,18 @@ const OrdersPage: React.FC = () => {
       const fetchOrderItems = async () => {
         setIsLoadingItems(true);
         try {
+          // Fetch GROUPED order items with cost breakdowns
           const response = await fetch(
-            `${API_URL}/orders/${selectedOrderId}?shop_id=${shopId}`
+            `${API_URL}/orders/${selectedOrderId}/items-grouped`
           );
           const result = await response.json();
-          if (result.success && result.data.items) {
-            setOrderItems(result.data.items);
+          if (result.success && result.data) {
+            setOrderItems(result.data);
           } else {
             setOrderItems([]);
           }
         } catch (error) {
-          console.error("Error fetching order items:", error);
+          console.error("Error fetching grouped order items:", error);
           setOrderItems([]);
         } finally {
           setIsLoadingItems(false);
@@ -351,48 +372,46 @@ const OrdersPage: React.FC = () => {
 
   const printBill = async (order: Order) => {
     try {
-      // Allow printing regardless of payment status
-
-      // Allow printing for walk-in customers (no address required)
-
-      if (!orderItems || orderItems.length === 0) {
-        alert("❌ Order items not loaded. Please wait for items to load.");
+      // Fetch complete order with ungrouped items
+      const orderResponse = await fetch(`${API_URL}/orders/${order.order_id}?shop_id=${shopId}`);
+      
+      if (!orderResponse.ok) {
+        alert("❌ Could not fetch order details. Cannot print bill.");
+        return;
+      }
+      
+      const orderResult = await orderResponse.json();
+      
+      if (!orderResult.success || !orderResult.data) {
+        alert("❌ Order not found. Cannot print bill.");
+        return;
+      }
+      
+      const fullOrder = orderResult.data;
+      const printItems = fullOrder.items || [];
+      
+      if (printItems.length === 0) {
+        alert("❌ Order items not found. Cannot print bill.");
         return;
       }
 
-      const paymentMethod = orderPayments[order.order_id];
+      const paymentMethod = orderPayments[order.order_id] || "other";
       const validPaymentMethods = ["cash", "card", "online", "bank", "other"];
       const paymentMethodValue = validPaymentMethods.includes(paymentMethod)
         ? (paymentMethod as "cash" | "card" | "online" | "bank" | "other")
         : "other";
 
       const invoiceData = {
-        order_id: order.order_id,
-        order_number: order.order_number,
-        customer_id: order.customer_id,
-        total_items: order.total_items,
-        total_amount: order.total_amount,
-        final_amount: order.final_amount,
-        advance_paid: order.advance_paid,
-        balance_due: order.balance_due,
-        payment_status: order.payment_status,
+        ...fullOrder,
         payment_method: paymentMethodValue,
-        order_status: order.order_status,
-        notes: order.notes,
-        order_date: order.order_date,
-        recipient_name: order.recipient_name,
-        customer_mobile: order.customer_mobile,
-        recipient_phone: order.recipient_phone,
-        delivery_charge: order.delivery_charge,
-        delivery_line1: order.delivery_line1,
-        delivery_line2: order.delivery_line2,
-        delivery_city: order.delivery_city,
-        items: orderItems,
+        items: printItems,
       };
 
       const printContainer = document.createElement("div");
       printContainer.style.position = "fixed";
       printContainer.style.left = "-9999px";
+      printContainer.style.width = "210mm";
+      printContainer.style.background = "white";
       document.body.appendChild(printContainer);
 
       const root = ReactDOM.createRoot(printContainer);
@@ -400,94 +419,115 @@ const OrdersPage: React.FC = () => {
 
       setTimeout(async () => {
         try {
-          const invoiceHTML = printContainer.innerHTML;
-
-          const fullHtml = `
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Invoice</title>
-              <script src="https://cdn.tailwindcss.com"></script>
-              <style>
-                @page {
-                  size: A4 portrait;
-                  margin: 15mm;
-                }
-                body {
-                  margin: 0;
-                  padding: 0;
-                  font-family: Arial, sans-serif;
-                }
-                @media print {
-                  body { margin: 0; padding: 0; background: white; }
-                  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                }
-              </style>
-            </head>
-            <body>
-              ${invoiceHTML}
-            </body>
-            </html>
-          `;
-
-          // Call Tauri command to print silently
-          const { invoke } = await import('@tauri-apps/api/tauri');
-          await invoke('print_invoice', {
-            htmlContent: fullHtml,
-            invoiceNumber: order.order_number || 'TEMP'
+          const canvas = await html2canvas(printContainer, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            width: 794,
+            windowWidth: 794,
           });
 
-        } catch (e) {
-          console.error("Error printing bill:", e);
-          alert("Failed to print bill.");
+          const rotatedCanvas = document.createElement('canvas');
+          rotatedCanvas.width = canvas.height;
+          rotatedCanvas.height = canvas.width;
+          const ctx = rotatedCanvas.getContext('2d');
+          if (ctx) {
+            ctx.translate(rotatedCanvas.width / 2, rotatedCanvas.height / 2);
+            ctx.rotate(90 * Math.PI / 180);
+            ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+          }
+
+          const { documentDir } = await import("@tauri-apps/api/path");
+          const { createDir, writeBinaryFile, removeFile } = await import("@tauri-apps/api/fs");
+          const { join } = await import("@tauri-apps/api/path");
+
+          const documentDirPath = await documentDir();
+          const tempPath = await join(documentDirPath, "Dennep Pos Documents", "Temp");
+          await createDir(tempPath, { recursive: true });
+
+          const tempFileName = `print-temp-${fullOrder.order_number}-${Date.now()}.png`;
+          const tempFilePath = await join(tempPath, tempFileName);
+
+          await new Promise<void>((resolve, reject) => {
+            rotatedCanvas.toBlob(async (blob) => {
+              if (!blob) {
+                reject(new Error("Failed to generate image"));
+                return;
+              }
+
+              try {
+                const arrayBuffer = await blob.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+                await writeBinaryFile(tempFilePath, uint8Array);
+                resolve();
+              } catch (error) {
+                reject(error);
+              }
+            }, "image/png");
+          });
+
+          const command = new Command('cmd', ['/c', 'mspaint', '/pt', tempFilePath]);
+          await command.execute();
+
+          setTimeout(async () => {
+            try {
+              await removeFile(tempFilePath);
+            } catch (e) {
+              console.log('Could not delete temp file:', e);
+            }
+          }, 5000);
+
+          alert(`✅ Invoice ${fullOrder.order_number} sent to printer!`);
+        } catch (error) {
+          console.error('Print error:', error);
+          alert(`Failed to print: ${error}`);
         } finally {
           document.body.removeChild(printContainer);
         }
       }, 1000);
     } catch (error) {
       console.error("Error preparing for print:", error);
-      alert("Failed to prepare bill for printing.");
+      alert(`Failed to prepare bill: ${error}`);
     }
   };
 
   // Export invoice as image
   const exportInvoiceAsImage = async (order: Order) => {
     try {
-      if (!orderItems || orderItems.length === 0) {
-        alert("❌ Order items not loaded. Please wait for items to load.");
+      // Fetch complete order with ungrouped items (SAME AS PRINT)
+      const orderResponse = await fetch(`${API_URL}/orders/${order.order_id}?shop_id=${shopId}`);
+      
+      if (!orderResponse.ok) {
+        alert("❌ Could not fetch order details. Cannot export.");
+        return;
+      }
+      
+      const orderResult = await orderResponse.json();
+      
+      if (!orderResult.success || !orderResult.data) {
+        alert("❌ Order not found. Cannot export.");
+        return;
+      }
+      
+      const fullOrder = orderResult.data;
+      const exportItems = fullOrder.items || [];
+      
+      if (exportItems.length === 0) {
+        alert("❌ Order items not found. Cannot export.");
         return;
       }
 
-      const paymentMethod = orderPayments[order.order_id];
+      const paymentMethod = orderPayments[order.order_id] || "other";
       const validPaymentMethods = ["cash", "card", "online", "bank", "other"];
       const paymentMethodValue = validPaymentMethods.includes(paymentMethod)
         ? (paymentMethod as "cash" | "card" | "online" | "bank" | "other")
         : "other";
 
       const invoiceData = {
-        order_id: order.order_id,
-        order_number: order.order_number,
-        customer_id: order.customer_id,
-        total_items: order.total_items,
-        total_amount: order.total_amount,
-        final_amount: order.final_amount,
-        advance_paid: order.advance_paid,
-        balance_due: order.balance_due,
-        payment_status: order.payment_status,
+        ...fullOrder,
         payment_method: paymentMethodValue,
-        order_status: order.order_status,
-        notes: order.notes,
-        order_date: order.order_date,
-        recipient_name: order.recipient_name,
-        customer_mobile: order.customer_mobile,
-        recipient_phone: order.recipient_phone,
-        delivery_charge: order.delivery_charge,
-        delivery_line1: order.delivery_line1,
-        delivery_line2: order.delivery_line2,
-        delivery_city: order.delivery_city,
-        items: orderItems,
+        items: exportItems,
       };
 
       // Create a temporary container for rendering
@@ -523,9 +563,9 @@ const OrdersPage: React.FC = () => {
             }
 
             try {
-              // Save to downloads folder
-              const downloadDirPath = await downloadDir();
-              const invoicesPath = await join(downloadDirPath, "Dennep Pos Invoices");
+              // Save to Documents folder
+              const documentDirPath = await documentDir();
+              const invoicesPath = await join(documentDirPath, "Dennep Pos Documents", "Invoices");
               await createDir(invoicesPath, { recursive: true });
 
               const timestamp = new Date().toISOString().replace(/[:.]/g, "-").split("T")[0];
@@ -1100,6 +1140,12 @@ const OrdersPage: React.FC = () => {
                 <th className="px-6 py-3 text-right font-semibold text-red-400">
                   Order Total (Rs.)
                 </th>
+                <th className="px-6 py-3 text-right font-semibold text-red-400">
+                  Delivery (Rs.)
+                </th>
+                <th className="px-6 py-3 text-right font-semibold text-red-400">
+                  Final Amount (Rs.)
+                </th>
                 <th className="px-6 py-3 text-left font-semibold text-red-400">
                   Status
                 </th>
@@ -1140,8 +1186,14 @@ const OrdersPage: React.FC = () => {
                       <div>{new Date(order.updated_at || order.order_date).toLocaleDateString()}</div>
                       <div className="text-gray-500">{new Date(order.updated_at || order.order_date).toLocaleTimeString()}</div>
                     </td>
-                    <td className="px-6 py-4 text-right text-red-400 font-semibold">
+                    <td className="px-6 py-4 text-right text-green-400 font-semibold">
                       {parseFloat(String(order.total_amount)).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-right text-yellow-400">
+                      {parseFloat(String(order.delivery_charge || 0)).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-right text-blue-400 font-bold">
+                      {parseFloat(String(order.final_amount || 0)).toFixed(2)}
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -1293,12 +1345,6 @@ const OrdersPage: React.FC = () => {
                             <th className="px-4 py-3 text-center text-gray-300 font-semibold">
                               Qty
                             </th>
-                            <th className="px-4 py-3 text-center text-gray-300 font-semibold">
-                              Size
-                            </th>
-                            <th className="px-4 py-3 text-center text-gray-300 font-semibold">
-                              Color
-                            </th>
                             <th className="px-4 py-3 text-right text-gray-300 font-semibold">
                               Unit Price (Rs.)
                             </th>
@@ -1314,26 +1360,18 @@ const OrdersPage: React.FC = () => {
                                 {item.product_name}
                               </td>
                               <td className="px-4 py-3 text-center text-gray-300">
-                                {item.quantity}
-                              </td>
-                              <td className="px-4 py-3 text-center text-gray-300">
-                                {item.size_name || "N/A"}
-                              </td>
-                              <td className="px-4 py-3 text-center text-gray-300">
-                                {item.color_name || "N/A"}
+                                {item.total_quantity}
                               </td>
                               <td className="px-4 py-3 text-right text-gray-400">
-                                {parseFloat(String(item.sold_price)).toFixed(2)}
+                                {parseFloat(String(item.unit_price || 0)).toFixed(2)}
                               </td>
                               <td className="px-4 py-3 text-right text-red-400 font-semibold">
-                                {parseFloat(String(item.total_price)).toFixed(
-                                  2
-                                )}
+                                {parseFloat(String(item.total_sold || 0)).toFixed(2)}
                               </td>
                             </tr>
                           ))}
                           <tr className="bg-gray-700/50 font-semibold">
-                            <td colSpan={5} className="px-4 py-3 text-right">
+                            <td colSpan={3} className="px-4 py-3 text-right">
                               Subtotal:
                             </td>
                             <td className="px-4 py-3 text-right text-red-400">

@@ -15,6 +15,8 @@ export interface Product {
   print_cost: number;
   retail_price: number;
   wholesale_price?: number;
+  sewing_cost: number;
+  extra_cost: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -36,7 +38,10 @@ class ProductModel {
           p.product_cost, 
           p.print_cost, 
           p.retail_price, 
+          p.retail_price, 
           p.wholesale_price,
+          p.sewing_cost,
+          p.extra_cost,
           sps.stock_id,
           sps.stock_qty,
           sps.size_id,
@@ -65,6 +70,8 @@ class ProductModel {
             print_cost: row.print_cost,
             retail_price: row.retail_price,
             wholesale_price: row.wholesale_price,
+            sewing_cost: row.sewing_cost,
+            extra_cost: row.extra_cost,
             stock: 0,
             stockDetails: []
           });
@@ -220,8 +227,8 @@ class ProductModel {
       });
 
       const productResult = await query(
-        `INSERT INTO products (product_id, shop_id, product_name, category_id, product_cost, print_cost, retail_price, wholesale_price)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO products (product_id, shop_id, product_name, category_id, product_cost, print_cost, retail_price, wholesale_price, sewing_cost, extra_cost)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           productId,
           shopId,
@@ -231,6 +238,8 @@ class ProductModel {
           print_cost,
           retail_price,
           wholesale_price || null,
+          productData.sewing_cost || 0,
+          productData.extra_cost || 0,
         ]
       );
 
@@ -333,6 +342,8 @@ class ProductModel {
         "print_cost",
         "retail_price",
         "wholesale_price",
+        "sewing_cost",
+        "extra_cost",
       ];
 
       for (const field of updateableFields) {

@@ -166,7 +166,7 @@ const PaymentsPage: React.FC = () => {
       : 0;
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
+    <div className="space-y-3 h-full flex flex-col">
       {/* Notification */}
       {notification && (
         <div
@@ -184,26 +184,26 @@ const PaymentsPage: React.FC = () => {
       <div className="flex items-center gap-4">
         {/* Title and Count */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          <h1 className="text-2xl font-bold text-red-500">Payments</h1>
-          <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
+          <h1 className="text-xl font-bold text-red-500">Payments</h1>
+          <span className="text-xs font-semibold text-red-400 bg-red-900/30 px-2 py-0.5 rounded-full">
             {filteredPayments.length}
           </span>
         </div>
 
         {/* Inline Summary Cards - Compact */}
-        <div className="bg-gradient-to-r from-blue-900/40 to-blue-800/20 border border-blue-600/30 rounded-lg px-3 py-2 flex-shrink-0">
-          <p className="text-xs text-blue-300 font-semibold">Transactions</p>
-          <p className="text-lg font-bold text-blue-400">{summary.total_count}</p>
+        <div className="bg-gradient-to-r from-blue-900/40 to-blue-800/20 border border-blue-600/30 rounded-lg px-2 py-1.5 flex-shrink-0">
+          <p className="text-[10px] text-blue-300 font-semibold">Transactions</p>
+          <p className="text-base font-bold text-blue-400">{summary.total_count}</p>
         </div>
 
-        <div className="bg-gradient-to-r from-green-900/40 to-green-800/20 border border-green-600/30 rounded-lg px-3 py-2 flex-shrink-0">
-          <p className="text-xs text-green-300 font-semibold">Total Amount</p>
-          <p className="text-lg font-bold text-green-400">Rs. {(parseFloat(String(summary?.total_amount)) || 0).toFixed(2)}</p>
+        <div className="bg-gradient-to-r from-green-900/40 to-green-800/20 border border-green-600/30 rounded-lg px-2 py-1.5 flex-shrink-0">
+          <p className="text-[10px] text-green-300 font-semibold">Total Amount</p>
+          <p className="text-base font-bold text-green-400">Rs. {(parseFloat(String(summary?.total_amount)) || 0).toFixed(2)}</p>
         </div>
 
-        <div className="bg-gradient-to-r from-yellow-900/40 to-yellow-800/20 border border-yellow-600/30 rounded-lg px-3 py-2 flex-shrink-0">
-          <p className="text-xs text-yellow-300 font-semibold">Completed</p>
-          <p className="text-lg font-bold text-yellow-400">{completedPercentage}%</p>
+        <div className="bg-gradient-to-r from-yellow-900/40 to-yellow-800/20 border border-yellow-600/30 rounded-lg px-2 py-1.5 flex-shrink-0">
+          <p className="text-[10px] text-yellow-300 font-semibold">Completed</p>
+          <p className="text-base font-bold text-yellow-400">{completedPercentage}%</p>
         </div>
 
         {/* Search Bar */}
@@ -212,7 +212,7 @@ const PaymentsPage: React.FC = () => {
           placeholder="🔍 Search by ID, order, or transaction..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
+          className="flex-1 px-3 py-1.5 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
         />
       </div>
 
@@ -243,7 +243,7 @@ const PaymentsPage: React.FC = () => {
           <button
             key={method.value}
             onClick={() => setFilterMethod(method.value)}
-            className={`px-4 py-2 rounded-full font-semibold text-sm text-white transition-all ${
+            className={`px-3 py-1.5 rounded-full font-semibold text-xs text-white transition-all ${
               filterMethod === method.value
                 ? `${method.color} ring-2 ring-offset-2 ring-offset-gray-800`
                 : "bg-gray-700 text-gray-300 hover:bg-gray-600"
@@ -257,7 +257,7 @@ const PaymentsPage: React.FC = () => {
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
+          className="px-2 py-1.5 bg-gray-700 border border-red-600/30 text-white text-xs rounded-lg focus:border-red-500 focus:outline-none"
         >
           <option value="all">📊 All Status</option>
           <option value="completed">✅ Completed</option>
@@ -272,7 +272,7 @@ const PaymentsPage: React.FC = () => {
           onChange={(e) =>
             setFilterDateRange(e.target.value as "all" | "today" | "week" | "month")
           }
-          className="px-3 py-2 bg-gray-700 border border-red-600/30 text-white text-sm rounded-lg focus:border-red-500 focus:outline-none"
+          className="px-2 py-1.5 bg-gray-700 border border-red-600/30 text-white text-xs rounded-lg focus:border-red-500 focus:outline-none"
         >
           <option value="all">📅 All Time</option>
           <option value="today">📆 Today</option>
@@ -296,25 +296,25 @@ const PaymentsPage: React.FC = () => {
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
-                    Payment ID
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
+                    Order Number
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Customer ID
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Bank Name
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Branch Name
                   </th>
-                  <th className="px-6 py-3 text-center font-semibold text-red-400">
+                  <th className="px-4 py-2 text-center font-semibold text-red-400 text-xs">
                     Payment Type
                   </th>
-                  <th className="px-6 py-3 text-right font-semibold text-red-400">
+                  <th className="px-4 py-2 text-right font-semibold text-red-400 text-xs">
                     Amount (Rs.)
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Date & Time
                   </th>
                 </tr>
@@ -341,27 +341,27 @@ const PaymentsPage: React.FC = () => {
                       key={payment.payment_id}
                       className="hover:bg-gray-700/30 transition-all cursor-pointer"
                     >
-                      <td className="px-6 py-4 text-gray-200 font-mono font-semibold">
-                        #{payment.payment_id}
+                      <td className="px-4 py-2 text-gray-200 font-mono font-semibold text-xs">
+                        {payment.order_number || "N/A"}
                       </td>
-                      <td className="px-6 py-4 text-gray-300">
+                      <td className="px-4 py-2 text-gray-300 text-xs">
                         {payment.customer_id ? `#${payment.customer_id}` : "_"}
                       </td>
-                      <td className="px-6 py-4 text-gray-300">
+                      <td className="px-4 py-2 text-gray-300 text-xs">
                         {bankNameDisplay}
                       </td>
-                      <td className="px-6 py-4 text-gray-300">
+                      <td className="px-4 py-2 text-gray-300 text-xs">
                         {branchNameDisplay}
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPaymentMethodBadgeColor(payment.payment_method)}`}>
+                      <td className="px-4 py-2 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${getPaymentMethodBadgeColor(payment.payment_method)}`}>
                           {paymentTypeDisplay.toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right text-green-400 font-bold">
+                      <td className="px-4 py-2 text-right text-green-400 font-bold text-xs">
                         Rs. {(parseFloat(String(payment?.payment_amount)) || 0).toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 text-gray-400 text-xs">
+                      <td className="px-4 py-2 text-gray-400 text-[10px]">
                         <div>{new Date(payment.updated_at).toLocaleDateString()}</div>
                         <div className="text-gray-500">{new Date(payment.updated_at).toLocaleTimeString()}</div>
                       </td>

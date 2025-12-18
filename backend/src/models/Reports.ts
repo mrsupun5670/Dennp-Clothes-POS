@@ -28,6 +28,8 @@ export interface CostBreakdown {
   totalRevenue: number;
   totalProductCost: number;
   totalPrintCost: number;
+  totalSewingCost: number;
+  totalExtraCost: number;
   totalDeliveryCost: number;
   totalCost: number;
   totalProfit: number;
@@ -114,11 +116,13 @@ class ReportsModel {
   ): Promise<CostBreakdown> {
     try {
       const results = await query(
-        `SELECT SUM(oi.total_price) as totalRevenue,
+        `SELECT SUM(DISTINCT o.final_amount) as totalRevenue,
                 SUM(oi.quantity * p.product_cost) as totalProductCost,
                 SUM(oi.quantity * p.print_cost) as totalPrintCost,
-                SUM(o.delivery_charge) as totalDeliveryCost,
-                SUM(oi.quantity * (p.product_cost + p.print_cost) + COALESCE(o.delivery_charge, 0)) as totalCost,
+                SUM(oi.quantity * p.sewing_cost) as totalSewingCost,
+                SUM(oi.quantity * p.extra_cost) as totalExtraCost,
+                SUM(DISTINCT o.delivery_charge) as totalDeliveryCost,
+                SUM(oi.quantity * (p.product_cost + p.print_cost + p.sewing_cost + p.extra_cost)) + SUM(DISTINCT COALESCE(o.delivery_charge, 0)) as totalCost,
                 COUNT(DISTINCT oi.item_id) as itemCount,
                 COUNT(DISTINCT o.order_id) as orderCount
          FROM order_items oi
@@ -135,8 +139,10 @@ class ReportsModel {
       const totalRevenue = parseFloat(row.totalRevenue) || 0;
       const totalProductCost = parseFloat(row.totalProductCost) || 0;
       const totalPrintCost = parseFloat(row.totalPrintCost) || 0;
+      const totalSewingCost = parseFloat(row.totalSewingCost) || 0;
+      const totalExtraCost = parseFloat(row.totalExtraCost) || 0;
       const totalDeliveryCost = parseFloat(row.totalDeliveryCost) || 0;
-      const totalCost = totalProductCost + totalPrintCost + totalDeliveryCost;
+      const totalCost = totalProductCost + totalPrintCost + totalSewingCost + totalExtraCost + totalDeliveryCost;
       const totalProfit = totalRevenue - totalCost;
 
       logger.debug('Retrieved cost breakdown', { shopId, startDate, endDate });
@@ -145,6 +151,8 @@ class ReportsModel {
         totalRevenue,
         totalProductCost,
         totalPrintCost,
+        totalSewingCost,
+        totalExtraCost,
         totalDeliveryCost,
         totalCost,
         totalProfit,

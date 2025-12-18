@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import routes from './routes';
+import healthRoutes from './routes/healthRoutes';
 import { config } from './config/env';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
@@ -49,14 +50,8 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 // API Routes
 app.use('/api', routes);
 
-// Health check
-app.get('/health', (_req: Request, res: Response) => {
-  res.json({
-    success: true,
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-  });
-});
+// Health check with database verification
+app.use('/api', healthRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

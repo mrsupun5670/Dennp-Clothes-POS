@@ -175,7 +175,7 @@ const BankAccountsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
+    <div className="space-y-3 h-full flex flex-col">
       {/* Error Message Display */}
       {errorMessage && (
         <div className="bg-red-900/30 border-2 border-red-600 text-red-300 p-4 rounded-lg flex items-start gap-3">
@@ -203,25 +203,25 @@ const BankAccountsPage: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-red-500">Bank Accounts</h1>
-            <span className="text-sm font-semibold text-red-400 bg-red-900/30 px-3 py-1 rounded-full">
+            <h1 className="text-xl font-bold text-red-500">Bank Accounts</h1>
+            <span className="text-xs font-semibold text-red-400 bg-red-900/30 px-2 py-0.5 rounded-full">
               {bankAccounts.length} accounts
             </span>
           </div>
-          <p className="text-gray-400 mt-2">
+          <p className="text-gray-400 mt-1 text-xs">
             Manage bank collections & reconciliation
           </p>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-2">
           <div className="text-right">
-            <p className="text-sm text-gray-400">Total Bank Balance</p>
-            <p className="text-2xl font-bold text-green-400">
+            <p className="text-xs text-gray-400">Total Bank Balance</p>
+            <p className="text-lg font-bold text-green-400">
               Rs. {parseFloat(String(totalBankBalance)).toFixed(2)}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-gray-400">Total Collected</p>
-            <p className="text-2xl font-bold text-blue-400">
+            <p className="text-xs text-gray-400">Total Collected</p>
+            <p className="text-lg font-bold text-blue-400">
               Rs. {parseFloat(String(totalCollected)).toFixed(2)}
             </p>
           </div>
@@ -237,7 +237,7 @@ const BankAccountsPage: React.FC = () => {
           <button
             key={tab.id}
             onClick={() => setSelectedTab(tab.id as any)}
-            className={`px-4 py-3 font-semibold transition-all border-b-2 ${
+            className={`px-3 py-2 font-semibold transition-all border-b-2 text-sm ${
               selectedTab === tab.id
                 ? "border-b-red-600 text-red-400"
                 : "border-b-transparent text-gray-400 hover:text-red-400"
@@ -260,7 +260,7 @@ const BankAccountsPage: React.FC = () => {
               placeholder="Search by bank name, branch, or collection ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none"
+              className="w-full px-3 py-1.5 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none text-sm"
             />
           </div>
           <div className="space-y-2">
@@ -270,7 +270,7 @@ const BankAccountsPage: React.FC = () => {
             <select
               value={selectedBank}
               onChange={(e) => setSelectedBank(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none"
+              className="w-full px-3 py-1.5 bg-gray-700 border-2 border-red-600/30 text-white rounded-lg focus:border-red-500 focus:outline-none text-sm"
             >
               <option value="all">All Banks</option>
               {uniqueBanks.map((bank) => (
@@ -285,7 +285,7 @@ const BankAccountsPage: React.FC = () => {
 
       {/* TAB 1: BANK SUMMARY */}
       {selectedTab === "summary" && (
-        <div className="flex-1 overflow-hidden flex flex-col space-y-4">
+        <div className="flex-1 overflow-hidden flex flex-col space-y-2">
           {loading ? (
             <div className="flex-1 flex items-center justify-center bg-gray-800/50 border border-gray-700 rounded-lg">
               <p className="text-gray-400 text-lg">Loading bank accounts...</p>
@@ -295,15 +295,15 @@ const BankAccountsPage: React.FC = () => {
               <p className="text-gray-400 text-lg">No active bank accounts found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 overflow-y-auto">
               {bankAccounts.map((account) => (
                 <div
                   key={account.bank_account_id}
-                  className="bg-gradient-to-br from-gray-800/80 to-gray-900/50 border-2 border-red-600/30 rounded-lg p-6 hover:border-red-600/60 transition-all"
+                  className="bg-gradient-to-br from-gray-800/80 to-gray-900/50 border-2 border-red-600/30 rounded-lg p-4 hover:border-red-600/60 transition-all"
                 >
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-3">
                     <div>
-                      <h3 className="text-xl font-bold text-red-400">
+                      <h3 className="text-lg font-bold text-red-400">
                         {account.bank_name}
                       </h3>
                       <p className="text-xs text-gray-400 mt-1">
@@ -314,13 +314,13 @@ const BankAccountsPage: React.FC = () => {
                       <p className="text-xs text-gray-400 mb-1">
                         Current Balance
                       </p>
-                      <p className="text-2xl font-bold text-green-400">
+                      <p className="text-lg font-bold text-green-400">
                         Rs. {parseFloat(String(account.current_balance)).toFixed(2)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="space-y-2 bg-gray-700/30 rounded p-3 mb-4">
+                  <div className="space-y-1.5 bg-gray-700/30 rounded p-2 mb-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Initial Balance:</span>
                       <span className="text-gray-300">Rs. {parseFloat(String(account.initial_balance)).toFixed(2)}</span>
@@ -338,7 +338,7 @@ const BankAccountsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="border-t border-gray-700 pt-3 space-y-2">
+                  <div className="border-t border-gray-700 pt-2 space-y-1.5">
                     <p className="text-xs text-gray-400 mb-1">
                       Created: {formatSriLankanDate(account.created_at)}
                     </p>
@@ -347,7 +347,7 @@ const BankAccountsPage: React.FC = () => {
                     </p>
                     <button
                       onClick={() => handleOpenCollectionModal(account)}
-                      className="w-full bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors mt-3"
+                      className="w-full bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors mt-2"
                     >
                       💰 Collect Money
                     </button>
@@ -366,22 +366,22 @@ const BankAccountsPage: React.FC = () => {
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-gray-700/80 border-b-2 border-red-600 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Collection ID
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Bank Name
                   </th>
-                  <th className="px-6 py-3 text-right font-semibold text-red-400">
+                  <th className="px-4 py-2 text-right font-semibold text-red-400 text-xs">
                     Amount (Rs.)
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Collection Date
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Notes
                   </th>
-                  <th className="px-6 py-3 text-left font-semibold text-red-400">
+                  <th className="px-4 py-2 text-left font-semibold text-red-400 text-xs">
                     Recorded At
                   </th>
                 </tr>
@@ -393,22 +393,22 @@ const BankAccountsPage: React.FC = () => {
                       key={col.collection_id}
                       className="hover:bg-gray-700/30 border-l-4 border-l-blue-600 transition-all"
                     >
-                      <td className="px-6 py-4 text-gray-200 font-medium font-mono">
+                      <td className="px-4 py-2 text-gray-200 font-medium font-mono text-xs">
                         #{col.collection_id}
                       </td>
-                      <td className="px-6 py-4 text-gray-300">
+                      <td className="px-4 py-2 text-gray-300 text-xs">
                         {col.bank_name || 'N/A'}
                       </td>
-                      <td className="px-6 py-4 text-right text-blue-400 font-bold">
+                      <td className="px-4 py-2 text-right text-blue-400 font-bold text-xs">
                         Rs. {parseFloat(String(col.collection_amount)).toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 text-gray-300">
+                      <td className="px-4 py-2 text-gray-300 text-xs">
                         {formatSriLankanDate(col.collection_date)}
                       </td>
-                      <td className="px-6 py-4 text-gray-400 text-xs">
+                      <td className="px-4 py-2 text-gray-400 text-[10px]">
                         {col.notes || '-'}
                       </td>
-                      <td className="px-6 py-4 text-gray-400 text-xs">
+                      <td className="px-4 py-2 text-gray-400 text-[10px]">
                         {formatSriLankanDateTime(col.created_at)}
                       </td>
                     </tr>
@@ -434,8 +434,8 @@ const BankAccountsPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-800 rounded-lg shadow-2xl border-2 border-red-600 w-full max-w-lg">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-6 border-b border-red-600 flex justify-between items-center">
-              <h2 className="text-2xl font-bold">💰 Record Collection</h2>
+            <div className="bg-gradient-to-r from-red-700 to-red-900 text-white p-4 border-b border-red-600 flex justify-between items-center">
+              <h2 className="text-lg font-bold">💰 Record Collection</h2>
               <button
                 onClick={handleCloseCollectionModal}
                 className="text-white hover:text-red-200 transition-colors text-2xl"
@@ -445,7 +445,7 @@ const BankAccountsPage: React.FC = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-5">
+            <div className="p-4 space-y-3">
               {/* Status Message */}
               {collectionStatus.type && (
                 <div className={`p-4 rounded-lg border-2 ${
@@ -468,18 +468,18 @@ const BankAccountsPage: React.FC = () => {
               )}
 
               {/* Bank Account Details */}
-              <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 space-y-3">
+              <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Bank:</span>
                   <span className="text-gray-200 font-semibold">
                     {selectedBankAccount.bank_name}
                   </span>
                 </div>
-                <div className="border-t border-gray-600 pt-3 flex justify-between">
+                <div className="border-t border-gray-600 pt-2 flex justify-between">
                   <span className="text-gray-300 font-semibold">
                     Current Balance:
                   </span>
-                  <span className="text-green-400 font-bold text-lg">
+                  <span className="text-green-400 font-bold text-base">
                     Rs. {parseFloat(String(selectedBankAccount.current_balance)).toFixed(2)}
                   </span>
                 </div>
@@ -527,24 +527,24 @@ const BankAccountsPage: React.FC = () => {
                   value={collectionNotes}
                   onChange={(e) => setCollectionNotes(e.target.value)}
                   placeholder="Add any notes about this collection..."
-                  rows={3}
+                  rows={2}
                   className="w-full px-4 py-2 bg-gray-700 border-2 border-red-600/30 text-white placeholder-gray-500 rounded-lg focus:border-red-500 focus:outline-none resize-none"
                 />
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-gray-700">
+              <div className="flex gap-3 pt-3 border-t border-gray-700">
                 <button
                   onClick={handleRecordCollection}
                   disabled={isSubmitting || !collectionAmount || parseFloat(collectionAmount) <= 0 || parseFloat(collectionAmount) > parseFloat(String(selectedBankAccount.current_balance))}
-                  className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
+                  className="flex-1 bg-green-600 text-white py-1.5 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed text-sm"
                 >
                   {isSubmitting ? 'Recording...' : '✓ Record Collection'}
                 </button>
                 <button
                   onClick={handleCloseCollectionModal}
                   disabled={isSubmitting}
-                  className="flex-1 bg-gray-700 text-gray-300 py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors disabled:cursor-not-allowed"
+                  className="flex-1 bg-gray-700 text-gray-300 py-1.5 rounded-lg font-semibold hover:bg-gray-600 transition-colors disabled:cursor-not-allowed text-sm"
                 >
                   Cancel
                 </button>

@@ -43,6 +43,11 @@
             "name": "cmd",
             "cmd": "cmd",
             "args": true
+          },
+          {
+            "name": "rundll32",
+            "cmd": "rundll32",
+            "args": true
           }
         ]
       },

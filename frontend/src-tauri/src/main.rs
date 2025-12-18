@@ -18,17 +18,8 @@ fn main() {
       #[cfg(target_os = "windows")]
       {
         println!("Running on Windows");
-        
-        // Auto-start backend server in hidden mode
-        println!("Starting backend server...");
-        let backend_script = r"C:\Program Files\Dennp Clothes POS\start-backend-hidden.vbs";
-        
-        match Command::new("wscript.exe")
-          .arg(backend_script)
-          .spawn() {
-            Ok(_) => println!("Backend server started successfully"),
-            Err(e) => eprintln!("Failed to start backend server: {}", e),
-          }
+        // Backend is started automatically by Task Scheduler on system startup
+        // No need to start it from the app
       }
 
       Ok(())

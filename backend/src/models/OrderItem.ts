@@ -156,6 +156,8 @@ class OrderItemModel {
          p.product_name,
          p.product_cost,
          p.print_cost,
+         p.sewing_cost,
+         p.extra_cost,
          c.color_name,
          s.size_name
          FROM order_items oi
@@ -171,6 +173,46 @@ class OrderItemModel {
       return results as any[];
     } catch (error) {
       logger.error('Error fetching order items with details:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get order items GROUPED by product_id and sold_price
+   * This reduces the number of rows by combining items with same product and price
+   * Includes detailed cost breakdowns and profit calculations
+   */
+  async getOrderItemsGrouped(orderId: number): Promise<any[]> {
+    try {
+      const results = await query(
+        `SELECT
+         oi.product_id,
+         p.product_name,
+         oi.sold_price as unit_price,
+         SUM(oi.quantity) as total_quantity,
+         p.product_cost,
+         p.print_cost,
+         p.sewing_cost,
+         p.extra_cost,
+         (p.product_cost * SUM(oi.quantity)) as total_product_cost,
+         (p.print_cost * SUM(oi.quantity)) as total_print_cost,
+         (p.sewing_cost * SUM(oi.quantity)) as total_sewing_cost,
+         (p.extra_cost * SUM(oi.quantity)) as total_extra_cost,
+         ((p.product_cost + p.print_cost + p.sewing_cost + p.extra_cost) * SUM(oi.quantity)) as total_cost,
+         SUM(oi.total_price) as total_sold,
+         (SUM(oi.total_price) - ((p.product_cost + p.print_cost + p.sewing_cost + p.extra_cost) * SUM(oi.quantity))) as profit
+         FROM order_items oi
+         JOIN products p ON oi.product_id = p.product_id
+         WHERE oi.order_id = ?
+         GROUP BY oi.product_id, oi.sold_price
+         ORDER BY oi.product_id, oi.sold_price`,
+        [orderId]
+      );
+
+      logger.debug('Retrieved grouped order items', { orderId, count: (results as any[]).length });
+      return results as any[];
+    } catch (error) {
+      logger.error('Error fetching grouped order items:', error);
       throw error;
     }
   }

@@ -12,6 +12,7 @@ interface StockDetail {
 
 interface Product {
   product_id: string;
+  product_code: string;
   product_name: string;
   retail_price: number;
   wholesale_price?: number;
@@ -206,7 +207,7 @@ const StockPage: React.FC = () => {
           <table className="min-w-full text-sm">
             <thead className="bg-gray-900 text-gray-200">
               <tr>
-                <th className="py-3 px-4 text-left font-semibold border-b border-gray-700">ID</th>
+                <th className="py-3 px-4 text-left font-semibold border-b border-gray-700">Product Code</th>
                 <th className="py-3 px-4 text-left font-semibold border-b border-gray-700">Name</th>
                 <th className="py-3 px-4 text-left font-semibold border-b border-gray-700">Colors (Qty)</th>
                 <th className="py-3 px-4 text-left font-semibold border-b border-gray-700">Sizes (Qty)</th>
@@ -221,7 +222,7 @@ const StockPage: React.FC = () => {
             <tbody className="divide-y divide-gray-700">
               {products.map((product) => (
                 <tr key={product.product_id} className="hover:bg-gray-700/50 transition-colors">
-                  <td className="py-3 px-4 text-blue-400 font-mono">{product.product_id}</td>
+                  <td className="py-3 px-4 text-blue-400 font-mono">{product.product_code}</td>
                   <td className="py-3 px-4 text-white font-medium">
                       {product.product_name}
                       {/* INLINE DEBUGGING */}

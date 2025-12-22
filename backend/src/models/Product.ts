@@ -32,7 +32,8 @@ class ProductModel {
     try {
       const queryStr = `
         SELECT 
-          p.product_id, 
+          p.product_id,
+          p.product_code, 
           p.product_name, 
           p.category_id, 
           p.product_cost, 
@@ -64,6 +65,7 @@ class ProductModel {
         if (!productsMap.has(row.product_id)) {
           productsMap.set(row.product_id, {
             product_id: row.product_id,
+            product_code: row.product_code,
             product_name: row.product_name,
             category_id: row.category_id,
             product_cost: row.product_cost,
